@@ -1,0 +1,2 @@
+ZAIN.NET COVER V4.6
+OCR Cepat/Teliti per zona; mode detail kontras dan threshold adaptif; OCR NIM yang hilang dicoba ulang; worker Indonesia dipakai ulang. Tidak ada API/token. PDF/Word unchanged.

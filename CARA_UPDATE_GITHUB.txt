@@ -1,0 +1,12 @@
+CARA UPDATE ZAIN.NET COVER V4.6 — GITHUB PAGES
+
+1. Buka repository GitHub Edit-Hard-Cover > Code > branch main.
+2. Klik Add file > Upload files.
+3. Dari folder V4.6 hasil ekstrak, tarik SELURUH isi folder (index.html, app.js, document-reader.js, ocr-fast.js, ocr-zones.js, style.css, assets/, vendor/, dan lainnya) ke area upload.
+4. Commit perubahan. Pastikan file ocr-zones.js (BARU) juga terunggah dan struktur folder tidak berlapis dua.
+5. Tunggu deploy melalui tab Actions. Buka Pages dan lakukan hard refresh Ctrl+F5. Di HP, coba mode incognito atau hapus cache situs.
+6. Periksa header/footernya bertuliskan V4.6, bukan V4.5.
+7. Uji unggah foto: mulai dengan Mode Cepat, jika sebagian kata hilang ulangi dengan Mode Teliti.
+8. Verifikasi judul/nama/NIM dengan foto sebelum memilih ketebalan dan mengunduh PDF.
+
+Tidak perlu API key/token. Model Tesseract diunduh dari internet pertama kali.

@@ -196,7 +196,7 @@ async function ocrOne(order){
     const kind=isPdf(order.file)?'PDF':isWord(order.file)?'Word':isPhoto(order.file)?'Foto':null;
     if(!kind)throw Error('Format berkas tidak didukung.');
     const method=kind==='PDF'?readPDF:kind==='Word'?readWord:readPhoto;
-    const timeout=kind==='Foto'?155000:kind==='PDF'?155000:70000;
+    const timeout=kind==='Foto'?($('ocrAccuracy')?.value==='detail'?250000:220000):kind==='PDF'?250000:70000;
     const setStage=message=>{
       if (order.status!=='membaca') return;
       const label=`${orderNumber(order)}/${orders.length} · ${order.file.name} — ${message}`;
@@ -344,7 +344,7 @@ $('downloadButton').addEventListener('click',()=>{
   saveBlob(a.pdfBlob,`${String(orderNumber(a)).padStart(2,'0')}_${safeName(a.data.nama)}_${a.style.toUpperCase()}_${a.thickness}MM.pdf`);
 });
 async function loadStatus(){
- $('connection').textContent='GitHub Pages V4.5 • Tanpa API/token';
+ $('connection').textContent='GitHub Pages V4.6 • Tanpa API/token';
  $('serverDot').classList.add('online');
  notice('Mode lokal: Word dan PDF teks dibaca di browser tanpa OCR lokal. Foto dan PDF scan memakai OCR Tesseract lokal (model bahasa mungkin perlu diunduh).','info');
  // JANGAN menunggu template saat memuat UI; tidak membuat tombol membaca macet.

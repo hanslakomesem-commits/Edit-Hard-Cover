@@ -1,3 +1,31 @@
+# ZAIN.NET COVER V4.6 — PENINGKATAN OCR TANPA TOKEN
+
+**Gunakan sebagai pengganti SELURUH isi V4.5 di root repository GitHub Pages.**
+
+## Apa yang baru
+- OCR Cepat: pengenalan satu halaman, dengan ulang pada zona judul atau nama/NIM jika field penting kosong.
+- OCR Teliti: membaca foto penuh + zona judul, nama/NIM, dan identitas kampus; gambar zona dipertajam dan bisa memakai threshold adaptif pada hasil yang kurang jelas.
+- Batas resolusi/memori di HP: sekitar 2.4 megapiksel tiap zona, tidak memproses satu foto menjadi gambar tanpa batas.
+- Worker Tesseract Indonesia (`ind`) dipakai ulang; tidak perlu pergantian model bahasa ketika berpindah mode.
+- Hasil zona hanya mengisi kolom yang sebelumnya kosong. Jika hasil berbeda, aplikasi memperingatkan agar manusia memeriksa, tidak mengarang kata.
+- PDF/Word berisi teks tetap dibaca dari halaman pertama tanpa AI/biaya token. PDF scan memakai jalur OCR foto hanya untuk halaman pertama.
+- Semua fitur V4.5 (cover polos/warna, Unicode, 10–28 mm, batch, ekspor) tetap disertakan.
+
+## Batasan
+- OCR lokal bukan mesin pengenal format asli (italic) yang andal. Operator wajib memeriksa judul, italic, NIM, dan transliterasi sebelum mencetak.
+- OCR lokal tidak dapat menjamin setiap huruf benar (contoh foto Mara: Q bisa dikenali sebagai O). Jangan mengubah identitas yang meragukan secara otomatis.
+- Zona otomatis cocok untuk foto cover yang dipotret tegak dan mencakup seluruh lembar. Foto miring drastis atau foto terpotong sebaiknya difoto ulang.
+- Mode Teliti menjalankan sampai empat pembacaan dan **dapat lebih lambat** daripada Cepat pada HP dengan RAM rendah. Gunakan bila mode Cepat kurang akurat.
+- Tesseract.js dan pustaka PDF mengunduh aset pertama kali dari CDN. Ini **tanpa token API**, tidak harus offline sejak instalasi pertama.
+- Ini proyek statis GitHub Pages. Agar perubahan terlihat, unggah semua file/folder pada root repositori, bukan hanya index.html. Setelah deploy, muat ulang dengan Ctrl+F5 atau hapus cache Chrome.
+
+## Cara menguji
+1. Unggah satu foto seperti sampel Zihad atau Mara, pilih `Cepat`, tekan Baca Terpilih. Periksa data.
+2. Pilih `Teliti`, tekan Baca Terpilih lagi. Bandingkan kesalahan secara visual.
+3. Uji satu PDF asli dan DOCX asli: diproses tanpa OCR jika punya text layer.
+4. Uji tanda petik lengkung “ ” dan transliterasi setelah membuat PDF.
+5. Cetak percobaan skala 100%, cocokkan garis dan posisi punggung.
+
 # ZAIN.NET COVER V4.4 — GitHub Pages • Tanpa token API
 
 Versi perbaikan pembacaan berkas dan OCR lokal dari V4.3. Website **statis**; cukup unggah seluruh isi folder ke root repository GitHub Pages. Tidak memerlukan server Node.js, Python, atau API Gemini untuk mengolah berkas.
@@ -48,7 +76,7 @@ Jalankan `node tests/test_reader.mjs` pada Node 22 jika ingin mengulang. Yang te
 
 Tes modul tersebut **tidak** membuktikan akurasi OCR foto nyata atau presisi ekspor PDF. Untuk menyelidiki berkas tertentu yang masih gagal, lampirkan DOCX/PDF tersebut dan pesan error dari V4.4.
 
-## Pembaruan V4.5 — PDF Unicode tanpa upload font manual
+## Riwayat V4.5 — PDF Unicode tanpa upload font manual
 
 Versi ini menanggulangi pesan `Karakter “ (U+201C) tidak didukung Times bawaan` yang muncul untuk judul dengan petik melengkung seperti **“KARTINI NYANTRI”**.
 
@@ -61,7 +89,7 @@ Versi ini menanggulangi pesan `Karakter “ (U+201C) tidak didukung Times bawaan
 
 ### Uji ulang masalah tanda petik
 
-1. Deploy V4.5 ke GitHub Pages (pastikan footer tertulis `V4.5` dan lakukan hard reload jika masih versi lama).
+1. Deploy V4.6 ke GitHub Pages (pastikan footer tertulis `V4.6` dan lakukan hard reload jika masih versi lama).
 2. Gunakan judul `ANALISIS PENDIDIKAN KARAKTER ISLAM PADA BUKU “KARTINI NYANTRI” DAN RELEVANSINYA DALAM PENEGAKAN ISLAM MODERAT`.
 3. Lengkapi identitas yang relevan, pilih punggung 10–27 mm, tekan **Buat & Lihat PDF**. Pertama kali browser perlu mengunduh font Unicode.
 4. Jika unduhan font atau fontkit diblokir oleh jaringan, aplikasi akan menjelaskan masalahnya. Jalur opsional adalah unggah dua font TTF/OTF dengan glyph Unicode yang diperlukan.

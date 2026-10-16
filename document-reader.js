@@ -1,6 +1,7 @@
 /* ZAIN.NET • pembaca PDF & DOCX di perangkat pengguna. Tidak ada layanan OCR berbayar. */
 import {categorize} from './classifier.js';
-import {recognizeLocal, setOCRProgress} from './ocr-fast.js';
+import {recognizeLocalResult, prepareOCRZones, setOCRProgress} from './ocr-fast.js';
+import {normalizedLines, mergeZones} from './ocr-zones.js';
 export {setOCRProgress} from './ocr-fast.js';
 
 export function withTimeout(promise,ms,label){
@@ -23,10 +24,44 @@ function pdfLines(items){
  for(const item of spans){let group=groups.find(g=>Math.abs(g.y-item.y)<2.3);if(!group){group={y:item.y,items:[]};groups.push(group);}group.items.push(item);}
  return groups.sort((a,b)=>b.y-a.y).map(g=>clean(g.items.sort((a,b)=>a.x-b.x).map(i=>i.text).join(' '))).filter(Boolean);
 }
-async function localOCR(blob,tag='Foto', options={}){
- const text=await recognizeLocal(blob, {detail:!!options.detail});
- const lines=text.split(/\r?\n/gu).map(clean).filter(Boolean);
- return normalizedResult(lines,[`OCR ${tag} berjalan lokal tanpa API. Periksa nama, NIM, italic, dan diakritik sebelum cetak.`]);
+// Baca foto sekali pada mode Cepat; bila judul/NIM hilang atau pengguna memilih Teliti,
+// ulangi hanya area yang relevan dengan resolusi lebih besar. Semua proses di browser.
+async function localOCR(blob, tag='Foto', options={}) {
+ const stage=message=>{try{options.onProgress?.(message);}catch{}};
+ const detail=!!options.detail;
+ stage('OCR penuh: menyiapkan teks seluruh halaman');
+ const full=await recognizeLocalResult(blob,{lang:'ind',psm:'3',maxSide:detail?2400:2100});
+ const lines=normalizedLines(full.text);
+ const base=normalizedResult(lines,[`OCR ${tag} diproses lokal tanpa token. Selalu cocokkan setiap karakter dengan sumber.`]);
+ const confidence=Number.isFinite(full.confidence)?Math.round(full.confidence):null;
+ if(confidence!==null && confidence>=0 && confidence<60)base.warnings.push(`Keyakinan OCR penuh ${confidence}% (rendah). Cek judul, nama, dan NIM.`);
+ if(!lines.length)base.warnings.push('OCR keseluruhan belum menemukan teks; mode Teliti mencoba membaca zona.');
+ const essentialMissing=!base.judul||!base.nama||!base.nim;
+ // Mode Cepat: hanya satu percobaan jika lengkap, pembacaan identitas tambahan jika belum lengkap.
+ // Mode Teliti: judul, identitas, dan bagian bawah dibaca ulang secara terpisah.
+ const zonesNeeded=detail||!lines.length?['judul','identitas','kampus']:(essentialMissing?['judul','identitas','kampus'].filter(k=>k==='judul'?!base.judul:k==='identitas'?!base.nama||!base.nim:false):[]);
+ if(!zonesNeeded.length)return base;
+ stage(detail?'Mode Teliti: membaca ulang tiga zona':'Memulihkan kolom yang belum terbaca');
+ let blobs={};
+ try {blobs=await prepareOCRZones(blob,{threshold:detail && confidence!==null && confidence<72});}
+ catch(error){base.warnings.push(`Gagal memproses zona: ${error.message}. Hasil utama tetap dapat dikoreksi.`);return base;}
+ const zoneText={};
+ for(const key of zonesNeeded){
+   stage(`OCR zona ${key} (${zonesNeeded.indexOf(key)+1}/${zonesNeeded.length})`);
+   try{
+     const result=await recognizeLocalResult(blobs[key],{lang:'ind',isPrepared:true,psm:'6'});
+     zoneText[key]=result.text;
+   }catch(error){
+     base.warnings.push(`Zona ${key}: ${error.message}. Koreksi lewat editor bila perlu.`);
+   }
+ }
+ const merged=mergeZones(base,zoneText,{full:full.confidence});
+ merged.warnings=merged.warnings.filter(w=>!w.startsWith('Periksa kolom belum terdeteksi:'));
+ const remaining=['judul','nama','nim','prodi','fakultas','universitas','jenis_dokumen','bulan_tahun'].filter(k=>!merged[k]);
+ if(remaining.length)merged.warnings.push(`Kolom yang masih perlu diisi: ${remaining.join(', ')}.`);
+ if(detail)merged.warnings.push('Hasil zona harus diverifikasi. Deteksi italic dan ejaan/transliterasi dari foto belum dijamin oleh OCR lokal.');
+ stage('Selesai menggabungkan hasil OCR dan pemeriksaan zona');
+ return merged;
 }
 export async function readPhoto(file,options={}){return localOCR(file,'foto',options);}
 export async function readPDF(file,options={}){
@@ -102,7 +137,7 @@ function parseEarlyParagraph(xml) {
 }
 export async function readWord(file,options={}) {
  const stage = message => { try { options.onProgress?.(message); } catch (_) {} };
- if (!globalThis.JSZip) throw Error('JSZip tidak tersedia. Website V4.5 menyertakan JSZip lokal; pastikan folder vendor ikut diunggah.');
+ if (!globalThis.JSZip) throw Error('JSZip tidak tersedia. Website V4.6 menyertakan JSZip lokal; pastikan folder vendor ikut diunggah.');
  stage('Membuka file DOCX secara lokal');
  const array=await withTimeout(file.arrayBuffer(),15000,'Membaca file Word');
  const zip=await withTimeout(globalThis.JSZip.loadAsync(array),24000,'Membuka paket Word');

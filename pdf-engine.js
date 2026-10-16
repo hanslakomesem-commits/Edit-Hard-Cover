@@ -1,11 +1,12 @@
 /**
- * ZAIN.NET PDF engine, Node.js edition for AI Studio Build.
+ * ZAIN.NET PDF engine, static-browser GitHub Pages edition V4.5.
  * Each page begins with the already cleaned ORIGINAL PDF vector master.
  * No template lines, crop marks, or cover geometry are re-created here.
  * Important: Tinos is not the commercial Times New Roman face used in the
  * supplied PDF. Production printing still requires a proof and font review.
  */
 import {colorGuideGeometry, SOURCE_SPINE, mmPoint} from './guide-geometry.js';
+import {getAutomaticUnicodeFonts} from './font-unicode.js';
 const {PDFDocument, StandardFonts, degrees, rgb}=globalThis.PDFLib||{};
 const ALL=Array.from({length:19},(_,i)=>i+10);
 let LAYOUT=null,MASTER=null,COLOR_MASTERS=null,COLOR_TRANSPARENT=null;
@@ -60,24 +61,30 @@ function validate(data,thickness){
  return normalizeTitleSegments(data);
 }
 
+/** Embed Unicode fonts in every generated PDF; no silent character replacement. */
 async function getFonts(pdf,warnings=[]){
- const customBold=userFontBold,customItalic=userFontItalic;
- if(customBold&&customItalic){
-  const kit=globalThis.fontkit||globalThis.Fontkit;
-  if(!kit)fail('Pustaka fontkit tidak termuat. Cek sambungan CDN, lalu ulangi.');
-  pdf.registerFontkit(kit);
-  try{
-   const b=await pdf.embedFont(customBold,{subset:true});
-   const i=await pdf.embedFont(customItalic,{subset:true});
-   return {bold:[{font:b,face:{hasGlyphForCodePoint:cp=>b.getCharacterSet().includes(cp)}}],
-           italic:[{font:i,face:{hasGlyphForCodePoint:cp=>i.getCharacterSet().includes(cp)}}]};
-  }catch(err){fail('Gagal memasukkan font kustom: '+String(err.message||err));}
+ let boldBytes=userFontBold,italicBytes=userFontItalic;
+ let source='font milik pengguna';
+ if(!(boldBytes&&italicBytes)){
+  const automatic=await getAutomaticUnicodeFonts(message=>{
+   try{globalThis.dispatchEvent?.(new CustomEvent('zainnet-font-status',{detail:message}));}catch{}
+  });
+  boldBytes=automatic.bold;italicBytes=automatic.italic;
+  source='Tinos Unicode otomatis';
  }
- const bold=await pdf.embedFont(StandardFonts.TimesRomanBold);
- const italic=await pdf.embedFont(StandardFonts.TimesRomanBoldItalic);
- const supportsAscii={hasGlyphForCodePoint:(cp)=>cp>=32&&cp<=126};
- warnings.push('Menggunakan Times Roman Bold standar PDF untuk ASCII. Untuk ā/ḥ/ṣ atau italic Unicode, unggah font TTF/OTF secara lokal.');
- return {bold:[{font:bold,face:supportsAscii}],italic:[{font:italic,face:supportsAscii}]};
+ const kit=globalThis.fontkit||globalThis.Fontkit;
+ if(!kit)fail('Komponen fontkit gagal dimuat. Periksa jaringan CDN atau refresh website. Font Unicode tidak dapat digunakan tanpa komponen ini.');
+ pdf.registerFontkit(kit);
+ try{
+  const [bold,italic]=await Promise.all([
+   pdf.embedFont(boldBytes,{subset:true}),pdf.embedFont(italicBytes,{subset:true})
+  ]);
+  const boldSet=new Set(bold.getCharacterSet()), italicSet=new Set(italic.getCharacterSet());
+  try{globalThis.dispatchEvent?.(new CustomEvent('zainnet-font-status',{detail:`Font Unicode aktif: ${source}. Siap membuat PDF.`}));}catch{}
+  warnings.push(`Font PDF: ${source}. Pastikan tampilan sesuai contoh sebelum cetak.`);
+  return {bold:[{font:bold,face:{hasGlyphForCodePoint:cp=>boldSet.has(cp)}}],
+          italic:[{font:italic,face:{hasGlyphForCodePoint:cp=>italicSet.has(cp)}}]};
+ }catch(err){fail('Font Unicode tidak berhasil ditanamkan ke PDF: '+String(err.message||err)+'. Gunakan TTF/OTF yang valid atau coba ulang saat jaringan stabil.');}
 }
 function chars(str){return Array.from(str);}
 function selectGlyph(fonts,style,ch){
@@ -85,7 +92,7 @@ function selectGlyph(fonts,style,ch){
  const cp=ch.codePointAt(0);
  // The bundled latin-ext fallback is only chosen when the primary lacks glyph.
  const chosen=fonts[wanted].find(e=>e.face.hasGlyphForCodePoint(cp));
- if(!chosen)fail(`Karakter ${ch} (U+${cp.toString(16).toUpperCase()}) tidak didukung Times bawaan. Unggah font Unicode tebal dan tebal miring TTF/OTF terlebih dahulu.`);
+ if(!chosen)fail(`Karakter ${ch} (U+${cp.toString(16).toUpperCase()}) belum didukung oleh font Unicode aktif. Pilih font TTF/OTF yang memiliki karakter ini, tanpa mengubah teks sumber.`);
  return chosen;
 }
 function runs(fonts,text,italic){

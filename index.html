@@ -4,12 +4,12 @@
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 <meta name="theme-color" content="#0f467e" />
-<title>ZAIN.NET Cover V4.4 — GitHub Pages Tanpa API</title>
+<title>ZAIN.NET Cover V4.5 — GitHub Pages Tanpa API</title>
 <link rel="stylesheet" href="./style.css"/>
 </head>
 <body>
 <header class="topbar">
- <div class="brand"><div class="logo">Z<span>•</span></div><div><strong>ZAIN.NET <span>COVER</span></strong><small>GitHub Pages • V4.4 • Tanpa API</small></div></div>
+ <div class="brand"><div class="logo">Z<span>•</span></div><div><strong>ZAIN.NET <span>COVER</span></strong><small>GitHub Pages • V4.5 • Tanpa API</small></div></div>
  <div class="header-right"><span class="dot" id="serverDot"></span><span id="connection">Menyiapkan mode lokal...</span></div>
 </header>
 <main class="container">
@@ -75,10 +75,10 @@
   <div class="result-actions"><button type="button" class="btn btn-primary" id="generateButton">◫ Buat & Lihat PDF</button><button type="button" class="btn btn-secondary" id="downloadButton" disabled>↓ Download PDF</button></div>
   <div class="preview-outer"><div id="previewEmpty"><span>▣</span><strong>Pratinjau akan muncul di sini</strong><p>Isi data, pilih ketebalan, lalu tekan “Buat & Lihat PDF”.</p></div><iframe id="pdfPreview" class="hidden" title="Preview PDF Hard Cover" loading="lazy"></iframe></div>
   <div class="micro-note"><a href="./assets/contoh_serli_10mm.pdf" target="_blank" rel="noopener">Lihat PDF contoh Serli 10 mm</a> &nbsp;·&nbsp; <a href="./assets/contoh_serli_27mm.pdf" target="_blank" rel="noopener">Lihat PDF contoh Serli 27 mm</a></div>
-  <div class="safety"><strong>Periksa setiap pesanan sebelum cetak.</strong> Font sumber adalah Times New Roman Bold. Jika font Anda belum diunggah, aplikasi menggunakan Times Roman standar jika font pengguna tidak disediakan; hasil tetap perlu diperiksa pada printer dan skala 100%.</div>
+  <div class="safety"><strong>Periksa setiap pesanan sebelum cetak.</strong> Font sumber adalah Times New Roman Bold. Aplikasi menggunakan font Unicode otomatis Tinos Bold/Bold Italic; bentuk huruf belum tentu identik dengan Times New Roman asli. Tetap periksa pada printer dan skala 100%.</div>
  </section>
- <footer>© ZAIN.NET • COVER V4.4 GitHub Pages • Tanpa API/Token • Foto OCR lokal, PDF &amp; Word halaman awal • Periksa PDF sebelum cetak</footer>
-<section class="card" style="margin-top:16px"><h2>Font Unicode tambahan (opsional)</h2><p>Jika judul menggunakan ā, ḥ, ṣ, ḍ, atau simbol lain, unggah sendiri font TTF/OTF yang boleh Anda gunakan. Tanpa font tambahan, generator memakai font Times bawaan PDF yang terbatas pada karakter standar.</p><label>Font tebal <input type="file" id="fontBoldInput" accept=".ttf,.otf"/></label> <label>Font tebal miring <input type="file" id="fontItalicInput" accept=".ttf,.otf"/></label><p id="fontStatus" class="micro-note">Opsional; file font tidak dikirim ke server mana pun.</p></section>
+ <footer>© ZAIN.NET • COVER V4.5 GitHub Pages • Tanpa API/Token • Foto OCR lokal, PDF &amp; Word halaman awal • Periksa PDF sebelum cetak</footer>
+<section class="card" style="margin-top:16px"><h2>Font Unicode otomatis (V4.5)</h2><p>Aplikasi otomatis mengambil font Unicode Tinos Bold dan Bold Italic dari sumber terbuka saat PDF pertama dibuat. Mendukung petik melengkung “ ” dan banyak karakter transliterasi Arab-Latin. Tidak memakai token AI. Perlu internet ketika font belum masuk cache browser. Font milik sendiri boleh diunggah jika Anda ingin font lain.</p><label>Font tebal <input type="file" id="fontBoldInput" accept=".ttf,.otf"/></label> <label>Font tebal miring <input type="file" id="fontItalicInput" accept=".ttf,.otf"/></label><p id="fontStatus" class="micro-note">Otomatis memakai font Unicode saat membuat PDF. Unggah font sendiri hanya jika diperlukan.</p></section>
 </main>
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script defer src="./vendor/jszip.min.js"></script>

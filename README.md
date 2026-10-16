@@ -47,3 +47,24 @@ Jalankan `node tests/test_reader.mjs` pada Node 22 jika ingin mengulang. Yang te
 - Gagal memuat model — simulasi melempar error, tidak menggantung selamanya.
 
 Tes modul tersebut **tidak** membuktikan akurasi OCR foto nyata atau presisi ekspor PDF. Untuk menyelidiki berkas tertentu yang masih gagal, lampirkan DOCX/PDF tersebut dan pesan error dari V4.4.
+
+## Pembaruan V4.5 — PDF Unicode tanpa upload font manual
+
+Versi ini menanggulangi pesan `Karakter “ (U+201C) tidak didukung Times bawaan` yang muncul untuk judul dengan petik melengkung seperti **“KARTINI NYANTRI”**.
+
+- Ekspor PDF tidak lagi memakai `StandardFonts.TimesRomanBold` sebagai font utama. Sistem mengambil **Tinos Bold** dan **Tinos Bold Italic** berformat TTF secara otomatis dari sumber terbuka melalui CDN GitHub/Google Fonts, lalu menanamkannya ke PDF menggunakan `pdf-lib` dan `@pdf-lib/fontkit`. Tidak ada token API maupun login.
+- **Penting:** pada pembuatan PDF pertama, akses internet ke CDN/font host dibutuhkan. Browser dapat menyimpan font di cache. Setelah font berhasil dimuat sekali dalam satu sesi, tidak diunduh berulang untuk setiap mahasiswa. Jika font host diblokir, aplikasi menampilkan error dan Anda boleh mengunggah font TTF/OTF milik Anda pada kolom opsional.
+- Judul menggunakan petik lengkung `“”`, diakritik latin `ā ī ū ḥ ṣ ḍ ṭ ẓ`, dan format italic tetap dipertahankan bila glyph tersedia pada font. Huruf Arab murni / ligatur kompleks masih di luar dukungan generator saat ini dan ditolak agar tidak salah cetak.
+- Hasil masih menggunakan **Tinos** (serif kompatibel Times), **bukan** font Times New Roman berlisensi yang sama persis. Sebelum produksi bandingkan cetakan dengan master asli.
+- Font Tinos: hak cipta pemilik font, lisensi SIL Open Font License, informasi: https://github.com/googlefonts/tinos. File sumber ZIP ini **tidak menyertakan font**.
+- Jalur **Foto OCR lokal, PDF teks halaman pertama, dan Word DOCX** tetap sama dengan V4.4. Pilihan Polos/warna 10–28 mm, batch ZIP/PDF gabungan, dan pembatasan keamanan cover warna 28 mm juga tidak berubah.
+
+### Uji ulang masalah tanda petik
+
+1. Deploy V4.5 ke GitHub Pages (pastikan footer tertulis `V4.5` dan lakukan hard reload jika masih versi lama).
+2. Gunakan judul `ANALISIS PENDIDIKAN KARAKTER ISLAM PADA BUKU “KARTINI NYANTRI” DAN RELEVANSINYA DALAM PENEGAKAN ISLAM MODERAT`.
+3. Lengkapi identitas yang relevan, pilih punggung 10–27 mm, tekan **Buat & Lihat PDF**. Pertama kali browser perlu mengunduh font Unicode.
+4. Jika unduhan font atau fontkit diblokir oleh jaringan, aplikasi akan menjelaskan masalahnya. Jalur opsional adalah unggah dua font TTF/OTF dengan glyph Unicode yang diperlukan.
+5. Periksa bahwa bentuk petik tidak berubah, judul tidak keluar area, posisi punggung presisi, dan ukuran PDF sesuai jenis cover.
+
+**Cakupan pengujian:** Sintaks dan tes logika font dibuat di source. Kami tidak mengklaim ekspor PDF nyata di browser telah lulus sebelum dites di GitHub Pages; CDN tidak dapat diakses dari lingkungan pembuatan source ini.

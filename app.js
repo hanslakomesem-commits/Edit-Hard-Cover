@@ -344,7 +344,7 @@ $('downloadButton').addEventListener('click',()=>{
   saveBlob(a.pdfBlob,`${String(orderNumber(a)).padStart(2,'0')}_${safeName(a.data.nama)}_${a.style.toUpperCase()}_${a.thickness}MM.pdf`);
 });
 async function loadStatus(){
- $('connection').textContent='GitHub Pages • Mode tanpa API/token';
+ $('connection').textContent='GitHub Pages V4.5 • Tanpa API/token';
  $('serverDot').classList.add('online');
  notice('Mode lokal: Word dan PDF teks dibaca di browser tanpa OCR lokal. Foto dan PDF scan memakai OCR Tesseract lokal (model bahasa mungkin perlu diunduh).','info');
  // JANGAN menunggu template saat memuat UI; tidak membuat tombol membaca macet.
@@ -352,12 +352,13 @@ async function loadStatus(){
  checkAssets().catch(error=>notice('Master PDF belum termuat: '+error.message+'. Upload seluruh folder assets saat deploy.','error'));
 }
 const fontBold=$('fontBoldInput'),fontItalic=$('fontItalicInput');
+window.addEventListener('zainnet-font-status',event=>{if($('fontStatus'))$('fontStatus').textContent=String(event.detail||'Sedang memuat font Unicode…');});
 async function updateFonts(){
  try{
  const [b,i]=await Promise.all([fontBold.files[0]?.arrayBuffer(),fontItalic.files[0]?.arrayBuffer()]);
- if(Boolean(b)!==Boolean(i)){$('fontStatus').textContent='Unggah kedua font: Bold dan Bold Italic (keduanya diperlukan).';setUserFonts(null,null);return;}
+ if(Boolean(b)!==Boolean(i)){$('fontStatus').textContent='Unggah kedua font Bold dan Bold Italic. Sementara itu font Unicode otomatis tetap digunakan.';setUserFonts(null,null);return;}
  setUserFonts(b?new Uint8Array(b):null,i?new Uint8Array(i):null);
- $('fontStatus').textContent=b?'Font milik Anda siap dipakai untuk PDF Unicode.':'Font Times bawaan PDF dipakai untuk karakter standar.';
+ $('fontStatus').textContent=b?'Font kustom siap dipakai untuk PDF Unicode.':'Font Unicode Tinos otomatis akan diambil saat membuat PDF pertama; internet diperlukan jika belum tersimpan di cache browser.';
  }catch(error){$('fontStatus').textContent='Font gagal dibaca: '+error.message;}
 }
 fontBold.addEventListener('change',updateFonts);fontItalic.addEventListener('change',updateFonts);

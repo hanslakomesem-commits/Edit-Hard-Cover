@@ -1,4 +1,4 @@
-/* ZAIN.NET V4.4 — OCR lokal: satu worker yang dipakai ulang, resize sebelum OCR.
+/* ZAIN.NET V4.5 — OCR lokal: satu worker yang dipakai ulang, resize sebelum OCR.
  * Tidak mengirim foto ke server/API. Tesseract dan model bahasa tetap perlu diunduh
  * pada penggunaan pertama kecuali file model di-host di situs sendiri. */
 let worker = null;

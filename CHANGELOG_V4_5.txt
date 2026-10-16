@@ -1,0 +1,16 @@
+ZAIN.NET COVER V4.5 — Revisi Unicode & font PDF otomatis
+
+PERBAIKAN:
+- Tidak lagi menggunakan TimesRomanBold PDF bawaan yang menolak tanda petik melengkung U+201C dan U+201D.
+- Memuat Tinos Bold dan Tinos BoldItalic TTF otomatis dari sumber Google Fonts melalui HTTPS dengan fallback beberapa URL, tanpa token.
+- Kedua font dimasukkan ke PDF memakai pdf-lib + @pdf-lib/fontkit, dan dicek glyph per karakter.
+- Font diambil satu kali per sesi lalu digunakan ulang untuk semua pesanan.
+- Font user tetap dapat diunggah sebagai pilihan tambahan, tetapi tidak wajib untuk karakter standar Unicode Latin yang tersedia di Tinos.
+- Saat CDN diblokir/putus, tampilkan error lengkap beserta langkah penanganan; jangan menghapus tanda petik atau menormalisasi transliterasi otomatis.
+- Mode Polos, Merah, Maroon, Custom, 10–28 mm, batch, OCR lokal, Word, PDF dipertahankan.
+
+CATATAN PENTING:
+- Sumber font disediakan oleh pihak ketiga dan membutuhkan internet pada pemakaian pertama (atau cache yang masih tersedia).
+- ZIP tidak mengandung file font apa pun.
+- Font Unicode gratis Tinos bukan Times New Roman yang persis sama; wajib cek hasil sebelum produksi.
+- Pengujian otomatis pada source menguji struktur, logika pengunduhan font dengan mocked fetch dan pembacaan Word; test PDF browser asli tetap perlu di GitHub Pages.

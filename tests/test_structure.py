@@ -14,6 +14,6 @@ for file in ['warna_clean.pdf','warna_transparent_marks_logo.pdf']:
 app=(ROOT/'app.js').read_text()
 assert '/api/' not in app
 assert 'await worker()' in app
-assert 'finally{ocrBatchRunning=false;' in app
+assert "ocrBatchRunning=false;btnBusy($('ocrAllButton'),false);clearProgress();" in app
 assert all((ROOT/f).exists() for f in ['index.html','app.js','pdf-engine.js','document-reader.js','classifier.js','guide-geometry.js','style.css'])
 print('PASS: 19 template polos, 2 master warna, halaman fisik, tanpa /api, penyelesaian status antrean')

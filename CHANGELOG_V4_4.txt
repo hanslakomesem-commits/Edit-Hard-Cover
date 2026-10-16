@@ -1,0 +1,10 @@
+ZAIN.NET V4.4 (GitHub Pages, 0 token API)
+- Fix DOCX panjang: ekstraksi hanya bagian awal XML, tidak DOMParser seluruh dokumen.
+- JSZip disertakan lokal (vendor/jszip.min.js).
+- PDF baca halaman 1; PDF scan mengurangi resolusi render, abort render timeout.
+- OCR foto: worker Tesseract v5 cache per bahasa, praproses foto hingga 1900px,
+  mode Cepat (ind) / Teliti (ind+eng), progres status dan penanganan error.
+- Nama/NIM dipisahkan dan diperiksa manual; jenis dokumen tetap fleksibel.
+- Antrean Baca Semua menuntaskan state berhasil atau gagal dan lanjut pesanan lain.
+- Jenis Polos/Merah/Maroon/Custom, ukuran & template, batch PDF sama seperti V4.3.
+- OCR pertama kali masih butuh download model; untuk OCR nyata perlu uji di HP.

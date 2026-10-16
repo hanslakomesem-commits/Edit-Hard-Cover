@@ -2,6 +2,12 @@
 function compact(str){return String(str??'').replace(/\s+/gu,' ').trim();}
 const TYPES=/^(SKRIPSI|TESIS|THESIS|DISERTASI|DISSERTATION|MAKALAH|LAPORAN(?:\s+(?:AKHIR|PENELITIAN|MAGANG))?|TUGAS AKHIR|KARYA TULIS ILMIAH|PROPOSAL(?:\s+PENELITIAN)?)$/iu;
 const MONTHS='JANUARI|FEBRUARI|MARET|APRIL|MEI|JUNI|JULI|AGUSTUS|SEPTEMBER|OKTOBER|NOVEMBER|DESEMBER|JANUARY|FEBRUARY|MARCH|MAY|JUNE|JULY|AUGUST|SEPTEMBER|OCTOBER|NOVEMBER|DECEMBER';
+/** Only expand the confirmed alias for the university in this project. */
+export function canonicalUniversity(input){
+ const value=compact(input);
+ if(/^U\s*\.?I\s*\.?N\s*\.?\s*MADURA\s*\.?$/iu.test(value) || /^UIN\s*[-–]\s*MADURA$/iu.test(value)) return 'UNIVERSITAS ISLAM NEGERI MADURA';
+ return value;
+}
 export function categorize(lines, hints=[]){
  const txt=lines.map(compact).filter(Boolean), warnings=[...hints];
  const upper=txt.map(x=>x.toLocaleUpperCase('id-ID'));
@@ -23,7 +29,9 @@ export function categorize(lines, hints=[]){
  const universitasIndex=findIndex(/^(?:UNIVERSITAS|INSTITUT|SEKOLAH TINGGI|POLITEKNIK|UIN|IAIN|STAIN)\b/iu);
  const prodi=getAfter(prodiIndex,/^(?:PROGRAM\s+STUDI|PRODI|JURUSAN)\s*:?\s*/iu);
  const fakultas=getAfter(fakultasIndex,/^FAKULTAS\s*:?\s*/iu);
- const universitas=universitasIndex>=0?txt[universitasIndex]:'';
+ // Prefer a complete textual institution name over a shorter logo wordmark.
+ const spelledOut = txt.find(s=>/^(?:UNIVERSITAS|INSTITUT|SEKOLAH TINGGI|POLITEKNIK)\b/iu.test(s));
+ const universitas = canonicalUniversity(spelledOut || (universitasIndex>=0?txt[universitasIndex]:''));
  let date='';for(let i=upper.length-1;i>=0;i--){if(new RegExp(`^(?:${MONTHS})\\s+\\d{4}$|^\\d{4}$`,'iu').test(upper[i])){date=txt[i];break;}}
  let titleCandidates=txt.slice(0,kindIndex>=0?kindIndex:Math.min(5,txt.length));
  titleCandidates=titleCandidates.filter(s=> !/^UNIVERSITAS|^UIN |^KEMENTERIAN |^OLEH\b/iu.test(s));

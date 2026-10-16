@@ -1,0 +1,16 @@
+ZAIN.NET COVER V4.9 - 17 OKTOBER 2026
+
+1. Upload satu tombol: foto JPG/PNG/WebP, PDF dan Word DOCX dalam sekali pilih (batch 40).
+2. Format dideteksi otomatis dari file masing-masing. Tombol kamera dan input manual tetap ada.
+3. Perbaikan pengalaman unduh: tombol Download PDF membuat PDF jika belum ada,
+   plus tautan manual yang tidak menghilang saat unduhan otomatis diblokir browser.
+4. Download Batch menampilkan pesanan yang masih belum lengkap, tidak gagal diam-diam.
+5. Setelah disetujui, batch PDF/ZIP menyediakan tautan unduh manual permanen.
+6. Nama UNIVERSITAS ISLAM NEGERI MADURA dipilih dibanding tulisan logo UIN MADURA,
+   dan alias UIN MADURA diperluas ke nama resmi lengkap yang diketahui.
+7. Ukuran polos 480x330 dan warna 475x320, punggung 10-28 tetap seperti V4.8.
+
+Batas: aplikasi tetap butuh internet untuk memuat pdf-lib/fontkit/pdf.js/Tesseract/font Unicode dari CDN pertama kali.
+Tanpa token API dan tanpa Gemini. Selalu periksa pratinjau/cetak uji.
+
+8. Batch menawarkan melewati pesanan belum lengkap, dengan persetujuan pengguna.

@@ -1,3 +1,29 @@
+# Update penting V4.9
+
+**Upload satu pintu:** klik area upload dan pilih JPG, PNG, WebP, PDF, serta DOCX sekaligus. Deteksi jenis file dilakukan otomatis. Kamera dan pesanan manual tetap tersedia.
+
+**Perbaikan download:** tombol Download PDF dapat membuat PDF otomatis; setiap PDF atau ZIP batch yang selesai menyediakan **tautan unduh manual** (klik jika download otomatis tidak berjalan). Untuk batch, pesanan belum lengkap akan ditampilkan jelas; pengguna dapat memilih melewati pesanan tersebut dan mengunduh hanya pesanan yang lengkap. Semua pesanan lengkap perlu dikonfirmasi sebelum ekspor.
+
+**Universitas:** judul logo yang hanya menulis UIN MADURA tidak mengalahkan nama panjang UNIVERSITAS ISLAM NEGERI MADURA dari sumber. Singkatan UIN MADURA yang dikenali diperluas ke UNIVERSITAS ISLAM NEGERI MADURA di editor dan PDF. Untuk universitas lain, gunakan teks lengkap pada sumber; aplikasi tidak menebak singkatan yang tidak dikenal.
+
+**Belum divalidasi pada printer fisik.** CDN dan font Unicode masih perlu tersedia.
+
+---
+
+# ZAIN.NET COVER V4.9 — REVISI COVER DEPAN FIX + REFERENSI PUNGGUNG 3 BARIS LENGKAP
+
+**Download untuk GitHub Pages:** unggah seluruh isi ZIP di root repository.
+
+- **Cover depan warna** wajib mengikuti master yang sudah benar sebelumnya, `PILIHAN WARNA.pdf` (aset `assets/warna_clean.pdf` / logo aset); jangan menyalin cover depan dari file terbaru 10–28 mm.
+- **Cover depan polos** tetap mengikuti Serli; sama sekali tidak dipindahkan.
+- **Punggung tiga baris** sekarang punya referensi lengkap 19 ukuran: 10–24 dari file 17 halaman, 25 dan 26 dari `25-26 mm(1).pdf`, lalu 27–28 dari file lama. `assets/REFERENSI_WARNA_3_BARIS_10-28MM.pdf` merupakan arsip referensi, **bukan master produksi**.
+- **Punggung polos** dapat memakai prinsip pembagian tiga baris yang sama, tetapi tetap memakai ukuran/font/posisi punggung dari master polos.
+- **Pengaman:** warna 28 mm diblokir karena salah satu penanda potong paling kiri keluar bidang cetak 475 mm; ada peringatan tanda lain yang dipendekkan. Tidak menyatakan 100% presisi cetak tanpa proof printer.
+- **Foto, PDF halaman pertama, Word awal, batch, OCR lokal tanpa token, italic, Unicode, warna & ukuran** dipertahankan dari V4.7.
+- Baca laporan `AUDIT_WARNA_3_BARIS_V4_8.md` dan spreadsheet CSV sebelum produksi.
+
+---
+
 # ZAIN.NET COVER V4.6 — PENINGKATAN OCR TANPA TOKEN
 
 **Gunakan sebagai pengganti SELURUH isi V4.5 di root repository GitHub Pages.**
@@ -89,10 +115,16 @@ Versi ini menanggulangi pesan `Karakter “ (U+201C) tidak didukung Times bawaan
 
 ### Uji ulang masalah tanda petik
 
-1. Deploy V4.6 ke GitHub Pages (pastikan footer tertulis `V4.6` dan lakukan hard reload jika masih versi lama).
+1. Deploy V4.9 ke GitHub Pages (pastikan footer tertulis `V4.9` dan lakukan hard reload jika masih versi lama).
 2. Gunakan judul `ANALISIS PENDIDIKAN KARAKTER ISLAM PADA BUKU “KARTINI NYANTRI” DAN RELEVANSINYA DALAM PENEGAKAN ISLAM MODERAT`.
 3. Lengkapi identitas yang relevan, pilih punggung 10–27 mm, tekan **Buat & Lihat PDF**. Pertama kali browser perlu mengunduh font Unicode.
 4. Jika unduhan font atau fontkit diblokir oleh jaringan, aplikasi akan menjelaskan masalahnya. Jalur opsional adalah unggah dua font TTF/OTF dengan glyph Unicode yang diperlukan.
 5. Periksa bahwa bentuk petik tidak berubah, judul tidak keluar area, posisi punggung presisi, dan ukuran PDF sesuai jenis cover.
 
 **Cakupan pengujian:** Sintaks dan tes logika font dibuat di source. Kami tidak mengklaim ekspor PDF nyata di browser telah lulus sebelum dites di GitHub Pages; CDN tidak dapat diakses dari lingkungan pembuatan source ini.
+
+---
+
+## V4.7 — Pemeriksaan template warna tiga baris
+
+File baru `REFERENSI_WARNA_3_BARIS_17_HALAMAN.pdf` ditambahkan **sebagai referensi**, bukan sebagai master siap pakai tanpa validasi. Lihat `AUDIT_WARNA_3_BARIS.md` dan `AUDIT_3_BARIS_17_HALAMAN.csv` sebelum cetak. **File referensi tidak menyediakan 25 dan 26 mm**. Terdapat tanda potong di luar halaman dalam sejumlah ukuran. Engine mempertahankan layout depan warna dari `PILIHAN WARNA.pdf` dan menata judul di antara dua garis tengah serta memberi peringatan bila sudut kiri dipendekkan. Mode warna 28 mm tetap diblokir sampai master fisik aman. Ini mencegah hasil salah cetak, bukan kekurangan OCR. Perubahan mode warna ini tidak mengubah pembaca foto, PDF, Word, batch, font Unicode, atau master polos.

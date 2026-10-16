@@ -1,0 +1,14 @@
+ZAIN.NET COVER V4.8 — FRONT FIX + REFERENCE PUNGGUNG 3 BARIS 10–28 MM
+
+1. Cover depan polos tetap menggunakan standar Serli.
+2. Cover depan warna MERAH/MAROON/CUSTOM tetap menggunakan PILIHAN WARNA.pdf yang sudah disetujui; TIDAK disalin dari 19 referensi baru yang beberapa bergeser.
+3. Ref punggung 3 baris lengkap 10–28 mm dari gabungan: 17 halaman sebelumnya + 2 halaman 25/26 mm.
+4. Halaman 26, 27 dan 28 pada referensi memiliki pergeseran cover depan sekitar 5.9 mm. Referensi tersebut hanya pedoman punggung; pusat punggung dihitung dari dua garis kuning sebenarnya.
+5. Jika 2 baris tidak muat, generator mencoba 3 baris, dengan font contoh 10–11mm=6pt, 12mm=7pt, 13–28mm=9pt, kemudian adaptif sampai 6pt bila perlu.
+6. Panjang teks vertikal kini diseimbangkan terhadap pusat tinggi teks contoh (~104 mm dari atas), bukan dipasang pada posisi mulai tetap.
+7. Polos tetap punya aturan 2→3 baris otomatis tanpa menyalin warna/teks/logo dari master merah.
+8. Garis kuning kelompok kiri atas/bawah tetap bergeser bersama; master warna 28mm tetap memiliki penanda kiri yang melampaui kertas dan ekspor tetap diblokir sampai direvisi fisik.
+9. Masalah teks PERSPEK/TIF dan BumianyarKecamatan di PDF contoh TIDAK ditiru. Data yang masuk tetap berdasarkan sumber yang telah dikoreksi operator.
+10. Foto/OCR lokal, PDF halaman pertama, Word halaman pertama, mode batch, ZIP, PDF gabungan, Unicode tidak diubah.
+
+Status: referensi PDF nyata diaudit secara geometris; tes fungsi dan struktur dijalankan. PDF akhir browser/printer masih perlu proof fisik.

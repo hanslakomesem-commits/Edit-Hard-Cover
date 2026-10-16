@@ -1,0 +1,19 @@
+HASIL PEMERIKSAAN V4.9 - 17 Oktober 2026
+
+LULUS:
+- node --check semua modul JS.
+- Tes pemilihan format otomatis PDF/DOCX/JPG/JPEG/PNG/WebP.
+- Ekspansi UIN MADURA menjadi UNIVERSITAS ISLAM NEGERI MADURA.
+- Bila ada teks UNIVERSITAS lengkap dan logo UIN, versi lengkap diprioritaskan.
+- Tautan unduhan manual untuk satu PDF dan batch ZIP melalui simulasi DOM.
+- UI punya 1 input upload universal; tombol Download PDF tidak dinonaktifkan.
+- Reader DOCX nyata (fixture 125 halaman) dan PDF hanya halaman pertama (mock PDF.js).
+- Pemeriksaan master 19 punggung polos dan 2 template warna.
+- Tes penghitungan/penempatan 3 baris warna 10-28 mm (dengan guard 28 mm).
+
+BELUM DIUJI:
+- Download PDF produksi langsung di browser karena Chromium lingkungan uji memblokir semua navigasi.
+- Keberhasilan akses font Unicode, PDF.js dan pdf-lib pada perangkat atau jaringan pengguna.
+- Uji cetak fisik pada printer atau mesin percetakan.
+
+Jadi perubahan tombol/tautan telah diperiksa dalam simulasi, BUKAN bukti produksi 100%.

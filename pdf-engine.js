@@ -1,12 +1,14 @@
 /**
- * ZAIN.NET PDF engine, static-browser GitHub Pages edition V4.5.
+ * ZAIN.NET PDF engine, static-browser GitHub Pages edition V4.9.
  * Each page begins with the already cleaned ORIGINAL PDF vector master.
  * No template lines, crop marks, or cover geometry are re-created here.
  * Important: Tinos is not the commercial Times New Roman face used in the
  * supplied PDF. Production printing still requires a proof and font review.
  */
 import {colorGuideGeometry, SOURCE_SPINE, mmPoint} from './guide-geometry.js';
+import {threeLineReferenceStatus, withinSpine} from './color-spine-profile.js';
 import {getAutomaticUnicodeFonts} from './font-unicode.js';
+import {canonicalUniversity} from './classifier.js';
 const {PDFDocument, StandardFonts, degrees, rgb}=globalThis.PDFLib||{};
 const ALL=Array.from({length:19},(_,i)=>i+10);
 let LAYOUT=null,MASTER=null,COLOR_MASTERS=null,COLOR_TRANSPARENT=null;
@@ -245,7 +247,7 @@ async function generatePlainPDF(data,mm){
  single(page,fonts,`${conf.front_nim_prefix} ${norm(data.nim)}`,12,conf.front_cx,conf.front_nim_y,390,'NIM',warnings,9);
  single(page,fonts,`PROGRAM STUDI ${upper(data.prodi)}`,12,conf.front_cx,conf.front_prodi_y,395,'Prodi',warnings,9);
  single(page,fonts,`FAKULTAS ${upper(data.fakultas)}`,12,conf.front_cx,conf.front_fakultas_y,395,'Fakultas',warnings,9);
- single(page,fonts,upper(data.universitas),12,conf.front_cx,conf.front_universitas_y,395,'Universitas',warnings,9);
+ single(page,fonts,upper(canonicalUniversity(data.universitas)),12,conf.front_cx,conf.front_universitas_y,395,'Universitas',warnings,9);
  single(page,fonts,upper(data.bulan_tahun),12,conf.front_cx,conf.front_year_y,395,'Tanggal',warnings,9.5);
  const spine=chooseSpine(fonts,segs,mm,warnings);
  for(let i=0;i<spine.result.length;i++)renderLine(page,fonts,spine.result[i],spine.size,spine.xs[i],conf.spine_title_center_y,true);
@@ -297,30 +299,43 @@ function splitFrontTitle(fonts,segs,maxWidth=405,maxRows=5){
  }
  fail('Judul cover depan warna terlalu panjang untuk maksimal lima baris di posisi asli. Periksa dan ringkas hanya bila sesuai naskah.');
 }
+/** 3-line spine samples are the SPINE guide, never the FRONT master.
+ * For color 10/11 mm the supplied 3-line samples use 6 pt, 12 mm uses
+ * 7 pt, and 13–28 mm uses 9 pt. Two rows retain the preferred 8/9 pt.
+ * Horizontal center = midline of inner guides. Vertical center follows
+ * the text title area measured from the 19 provided sample pages.
+ */
 function colorSpine(fonts,segs,mm,warnings){
- // The front cover and logo are FIXED. The color spine right-side guideline
- // is at x=693.10 PDF points, matching both user-supplied pages. The left
- // guideline moves by the exact ordered thickness in millimeters.
  const {right,left,center:middle}=colorGuideGeometry(mm);
+ const reference=threeLineReferenceStatus(mm);
  const base=mm===10?8:9;
- const topCenterY=324;
- const maxLen=320;
- for(let size=base;size>=6;size--){
-  for(const allowed of [2,3]){
-   try{
-    const lines=spineRows(fonts,segs,size,maxLen,allowed);
-    const pitch=size*1.11;
-    // Size is real points; use bounding height no larger than available spine.
-    const span=(lines.length-1)*pitch+size*1.15;
-    if(span>right-left-1.1)continue;
-    const x=lines.map((_,i)=>middle+(lines.length-1)*pitch/2-i*pitch);
-    if(size<base)warnings.push(`Font judul punggung warna disesuaikan ${base} → ${size} pt.`);
-    if(lines.length>2)warnings.push('Judul punggung warna menggunakan 3 baris.');
-    return {lines,x,size,middle,centerY:topCenterY,edges:[left,right]};
-   } catch(error){if(!(error instanceof PDFPreflightError))throw error;}
-  }
+ const MAX_LINE_LEN=320;
+ const CENTER_FROM_TOP=104*72/25.4;
+ const choices=[{maxRows:2,size:base}];
+ choices.push({maxRows:3,size:Math.min(base,reference.sampleFontPt||base)});
+ for(let size=base-1;size>=6;size--){
+  choices.push({maxRows:2,size},{maxRows:3,size});
  }
- fail(`Judul punggung warna ${mm} mm belum muat 3 baris pada ukuran minimum 6 pt. PDF tidak dibuat.`);
+ const seen=new Set();
+ for(const choice of choices){
+  const key=`${choice.maxRows}:${choice.size}`;if(seen.has(key))continue;seen.add(key);
+  try{
+   const lines=spineRows(fonts,segs,choice.size,MAX_LINE_LEN,choice.maxRows);
+   const count=lines.length;
+   if(!withinSpine(choice.size,count,right-left,1.1))continue;
+   const pitch=choice.size*1.11;
+   const x=lines.map((_,i)=>middle+(count-1)*pitch/2-i*pitch);
+   // Each line has a different printed length; individually center the
+   // vertical span so none floats toward the bottom of the hard cover.
+   const fromTop=lines.map(line=>CENTER_FROM_TOP-measure(fonts,line,choice.size)/2);
+   if(fromTop.some(y=>y<30*72/25.4))continue;
+   if(lines.some((line,i)=>fromTop[i]+measure(fonts,line,choice.size)>180*72/25.4))continue;
+   if(count===3)warnings.push('Judul punggung menggunakan 3 baris, mengikuti pedoman punggung PDF terbaru.');
+   if(choice.size<base)warnings.push(`Font punggung ${base} pt → ${choice.size} pt agar tetap di antara dua garis kuning.`);
+   return {lines,x,fromTop,size:choice.size,middle,edges:[left,right],count};
+  }catch(error){if(!(error instanceof PDFPreflightError))throw error;}
+ }
+ fail(`Judul punggung ${mm} mm tidak muat dalam 2–3 baris pada ukuran minimum 6 pt. File diblokir agar tidak salah cetak.`);
 }
 /** Original yellow crop ticks are replaced after covering only the top/bottom
  * strips of the CLEAN original master. Every LEFT tick, including the far
@@ -366,6 +381,16 @@ async function generateColorPDF(data,mm,mode,customColor){
  // production safety failure, not a cosmetic warning. 28mm on the supplied
  // color master has this problem; never export a PDF with a missing trim mark.
  const anticipatedMarks=colorGuideGeometry(mm);
+ const refStatus=threeLineReferenceStatus(mm);
+ if(refStatus.warning)warnings.push(refStatus.warning);
+ // Physical page clipping: the left horizontal corner segment can run past
+ // x=0 even before the vertical guide does. Never conceal this adjustment.
+ const leftCornerStart=anticipatedMarks.guidesLeft[0]-45;
+ if(leftCornerStart<0){
+  warnings.push(`Tanda sudut potong belakang dipendekkan ${(-leftCornerStart/mmPt(1)).toFixed(2)} mm agar tidak keluar kertas 475 mm. Jika tanda sudut harus panjang penuh, perlu revisi master cetak.`);
+ }
+ // Full 3-row reference is incomplete/unsafe; generate only from calibrated
+ // original yellow guidelines and reject any truly missing vertical tick.
  if(anticipatedMarks.leftmostMarkClipped){
    fail(`Mode warna ${mm} mm: garis potong kiri terluar keluar dari kertas 475 mm sebanyak ${(-anticipatedMarks.guidesLeft[0]/mmPt(1)).toFixed(2)} mm. PDF diblokir. Perlu master belakang yang diperbaiki atau penyesuaian trim yang disetujui operator.`);
  }
@@ -383,13 +408,13 @@ async function generateColorPDF(data,mm,mode,customColor){
  single(page,fonts,`NIM. ${norm(data.nim)}`,12,1000.7,641.4,330,'NIM warna',warnings,9,false,YELLOW);
  single(page,fonts,`PROGRAM STUDI ${upper(data.prodi)}`,12,1000.7,767.1,395,'Prodi warna',warnings,9,false,YELLOW);
  single(page,fonts,`FAKULTAS ${upper(data.fakultas)}`,12,1000.7,780.4,395,'Fakultas warna',warnings,9,false,YELLOW);
- single(page,fonts,upper(data.universitas),12,1000.7,793.7,395,'Universitas warna',warnings,9,false,YELLOW);
+ single(page,fonts,upper(canonicalUniversity(data.universitas)),12,1000.7,793.7,395,'Universitas warna',warnings,9,false,YELLOW);
  // Original colored samples print the YEAR only, not the month name.
  const yearMatch=norm(data.bulan_tahun).match(/\b\d{4}\b/u);
  const year=yearMatch?yearMatch[0]:norm(data.bulan_tahun);
  single(page,fonts,year,12,1000.7,807,250,'Tahun warna',warnings,9,false,YELLOW);
  const spine=colorSpine(fonts,segs,mm,warnings);
- for(let i=0;i<spine.lines.length;i++)renderLine(page,fonts,spine.lines[i],spine.size,spine.x[i],spine.centerY,true,YELLOW);
+ for(let i=0;i<spine.lines.length;i++)renderLine(page,fonts,spine.lines[i],spine.size,spine.x[i],spine.fromTop[i],true,YELLOW);
  // Two vertical lanes for document type and name, and a separate year below.
  // These are calculated from the ACTUAL available width for each order.
  const pitch=mm>=13?8.9:6.2;
@@ -400,7 +425,7 @@ async function generateColorPDF(data,mm,mode,customColor){
  const out=new Uint8Array(await doc.save({useObjectStreams:true}));
  const reread=await PDFDocument.load(out);
  if(reread.getPageCount()!==1||Math.abs(reread.getPage(0).getWidth()-mmPt(475))>.3||Math.abs(reread.getPage(0).getHeight()-mmPt(320))>.3)fail('PDF warna gagal validasi ukuran 475 × 320 mm.');
- return {bytes:out,warnings,details:{mode:type,mm,spine_font_pt:spine.size,spine_lines:spine.lines.length,guide_left:marks.left,guide_right:marks.right,paper_mm:COLOR_PRINT_MM,logo:'logo asli dari PDF warna'}};
+ return {bytes:out,warnings,details:{mode:type,mm,spine_font_pt:spine.size,spine_lines:spine.lines.length,reference_3row_page:refStatus.referencePage,reference_3row_verified:refStatus.referenceAvailable,guide_left:marks.left,guide_right:marks.right,paper_mm:COLOR_PRINT_MM,logo:'logo asli dari PDF warna'}};
 }
 
 /** Main public API, backward-compatible with V3.8 */

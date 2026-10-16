@@ -1,0 +1,12 @@
+ZAIN.NET COVER V4.7 — AUDIT WARNA 3 BARIS
+
+1. Menambahkan REFERENSI_WARNA_3_BARIS_17_HALAMAN.pdf sebagai arsip audit, BUKAN master produksi.
+2. Audit halaman 1–15 ≈10–24 mm, halaman 16=27 mm, halaman 17=28 mm. Ukuran 25/26 mm belum ada di file contoh.
+3. Menambahkan color-spine-profile.js agar batas tiga baris diuji berdasarkan dua garis kuning dalam dan tinggi font.
+4. Menambahkan peringatan ketika garis/tanda potong dipendekkan oleh batas kertas 475 mm.
+5. Mempertahankan larangan export warna 28 mm karena garis kiri di luar kertas. JANGAN menghapus guard sebelum master diperbaiki.
+6. Cover depan warna tetap dari PILIHAN WARNA.pdf, polos tetap standar Serli.
+7. Tiga sumber data Foto/OCR, PDF, Word; batch; italic; Unicode; dan pilihan warna tetap dipertahankan.
+8. Baca AUDIT_WARNA_3_BARIS.md: temuan aslinya berisi 15 halaman dengan elemen di luar batas dan pergeseran front di 27/28 mm.
+
+Status validasi: tes konfigurasi, pemisahan baris, struktur PDF sumber berhasil. Tes produksi pdf-lib browser dan printer belum dijalankan.

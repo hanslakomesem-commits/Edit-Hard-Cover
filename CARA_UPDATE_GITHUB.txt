@@ -1,12 +1,13 @@
-CARA UPDATE ZAIN.NET COVER V4.6 — GITHUB PAGES
+CARA UPDATE ZAIN.NET COVER V4.9 DI GITHUB PAGES
+1. Ekstrak ZIP ini.
+2. Buka repository Edit-Hard-Cover → Add file → Upload files.
+3. Pilih isi folder HASIL EKSTRAK, bukan folder luarnya dan bukan ZIP-nya.
+4. Pastikan index.html, app.js, pdf-engine.js, color-spine-profile.js, guide-geometry.js, assets/, vendor/ ikut terunggah.
+5. Commit changes ke branch main, tunggu Pages deploy.
+6. Refresh paksa Ctrl+F5, pastikan header/footer V4.9.
+7. Uji warna 10,12,25,26,27 mm; cek punggung dan cetak 100% sebelum produksi.
+8. Warna 28mm masih diblokir karena tanda potong melewati batas kertas.
 
-1. Buka repository GitHub Edit-Hard-Cover > Code > branch main.
-2. Klik Add file > Upload files.
-3. Dari folder V4.6 hasil ekstrak, tarik SELURUH isi folder (index.html, app.js, document-reader.js, ocr-fast.js, ocr-zones.js, style.css, assets/, vendor/, dan lainnya) ke area upload.
-4. Commit perubahan. Pastikan file ocr-zones.js (BARU) juga terunggah dan struktur folder tidak berlapis dua.
-5. Tunggu deploy melalui tab Actions. Buka Pages dan lakukan hard refresh Ctrl+F5. Di HP, coba mode incognito atau hapus cache situs.
-6. Periksa header/footernya bertuliskan V4.6, bukan V4.5.
-7. Uji unggah foto: mulai dengan Mode Cepat, jika sebagian kata hilang ulangi dengan Mode Teliti.
-8. Verifikasi judul/nama/NIM dengan foto sebelum memilih ketebalan dan mengunduh PDF.
-
-Tidak perlu API key/token. Model Tesseract diunduh dari internet pertama kali.
+Pastikan INDEX.HTML, APP.JS, CLASSIFIER.JS, PDF-ENGINE.JS, STYLE.CSS,
+dan semua folder ASSETS/VENDOR ikut diperbarui, bukan cuma index.html.
+Jika PDF gagal karena font CDN, cek koneksi atau unggah font Unicode sendiri.

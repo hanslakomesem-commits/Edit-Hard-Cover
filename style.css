@@ -27,3 +27,11 @@
 .input-modes>div{display:flex;flex-direction:column;gap:3px;padding:10px 8px;border:1px solid #d5e3f0;background:#f4f9ff;border-radius:9px}
 .input-modes b{font-size:12px;color:#175a95}.input-modes small{font-size:10px;color:#59718a;line-height:1.35}
 @media(max-width:620px){.input-modes{grid-template-columns:1fr}.input-modes>div{padding:7px 10px}}
+
+/* V4.9: persistent manual downloads, useful when mobile browsers block asynchronous anchor clicks. */
+.download-ready{margin:12px 0;background:#edfdf5;border:1px solid #a4d9bf;border-radius:12px;padding:13px;display:flex;flex-direction:column;gap:8px;color:#11543c;font-size:12px}
+.download-ready strong{font-size:13px}
+.download-real-link{display:inline-block;border-radius:10px;background:#087f58;color:#fff!important;text-align:center;text-decoration:none!important;font-weight:850;font-size:13px;padding:12px 14px;max-width:440px}
+.download-real-link:hover{background:#056d4c}
+.download-ready small{font-size:11px;color:#386b55}
+.dropzone{cursor:pointer}

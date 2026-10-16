@@ -137,7 +137,7 @@ function parseEarlyParagraph(xml) {
 }
 export async function readWord(file,options={}) {
  const stage = message => { try { options.onProgress?.(message); } catch (_) {} };
- if (!globalThis.JSZip) throw Error('JSZip tidak tersedia. Website V4.6 menyertakan JSZip lokal; pastikan folder vendor ikut diunggah.');
+ if (!globalThis.JSZip) throw Error('JSZip tidak tersedia. Website menyertakan JSZip lokal; pastikan folder vendor ikut diunggah.');
  stage('Membuka file DOCX secara lokal');
  const array=await withTimeout(file.arrayBuffer(),15000,'Membaca file Word');
  const zip=await withTimeout(globalThis.JSZip.loadAsync(array),24000,'Membuka paket Word');

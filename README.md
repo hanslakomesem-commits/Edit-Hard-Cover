@@ -1,3 +1,13 @@
+# ZAIN.NET COVER V4.10 — PERBAIKAN UPLOAD OTOMATIS
+
+**Perubahan:** memilih 1 atau banyak JPG/PNG/WebP/PDF/DOCX akan langsung memulai pembacaan tanpa tombol tambahan. Tombol “Baca Ulang Berkas Gagal” tersedia bila berkas gagal. Pembacaan berkas baru ketika antrean sibuk akan otomatis menyusul.
+
+**PDF digital:** PDF.js (CDN) membaca halaman 1. **Word DOCX:** JSZip lokal membaca bagian cover tanpa API. **Foto/PDF scan:** Tesseract lokal (CDN + model bahasa) dengan waktu yang dapat lebih lama. Seluruhnya tanpa token Gemini. Jika CDN tidak dapat diakses, pesan error akan muncul pada baris pesanan. Word DOCX tanpa pagination eksplisit masih menggunakan perkiraan bagian cover.
+
+**Catatan:** Ini bukan jaminan bahwa OCR mengenali setiap karakter benar atau bahwa PDF sudah aman cetak. Periksa setiap identitas dan hasil PDF.
+
+**Cara GitHub:** upload seluruh isi folder ini ke root repo, commit, tunggu Pages, Ctrl+F5. Pastikan `app.js` dan seluruh modul JS berada di root bersama `index.html`, serta `assets/` dan `vendor/` terunggah.
+
 # Update penting V4.9
 
 **Upload satu pintu:** klik area upload dan pilih JPG, PNG, WebP, PDF, serta DOCX sekaligus. Deteksi jenis file dilakukan otomatis. Kamera dan pesanan manual tetap tersedia.

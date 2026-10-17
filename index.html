@@ -4,12 +4,12 @@
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 <meta name="theme-color" content="#0f467e" />
-<title>ZAIN.NET Cover V4.9 — GitHub Pages Tanpa API</title>
-<link rel="stylesheet" href="./style.css"/>
+<title>ZAIN.NET Cover V4.10 — GitHub Pages Tanpa API</title>
+<link rel="stylesheet" href="./style.css?v=4.10"/>
 </head>
 <body>
 <header class="topbar">
- <div class="brand"><div class="logo">Z<span>•</span></div><div><strong>ZAIN.NET <span>COVER</span></strong><small>GitHub Pages • V4.9 • Tanpa API</small></div></div>
+ <div class="brand"><div class="logo">Z<span>•</span></div><div><strong>ZAIN.NET <span>COVER</span></strong><small>GitHub Pages • V4.10 • Tanpa API</small></div></div>
  <div class="header-right"><span class="dot" id="serverDot"></span><span id="connection">Menyiapkan mode lokal...</span></div>
 </header>
 <main class="container">
@@ -18,8 +18,8 @@
  <div id="notice" class="notice hidden" role="alert"></div>
  <div class="workspace">
  <section class="card upload-panel">
-  <div class="section-head"><span class="section-icon">01</span><div><h2>Satu tombol upload — otomatis kenali format</h2><p>JPG / PNG / WebP → OCR lokal · PDF → halaman 1 · Word DOCX → bagian cover</p></div></div>
-  <label class="dropzone" id="dropzone" for="universalInput"><input type="file" id="universalInput" accept=".jpg,.jpeg,.png,.webp,.pdf,.docx,image/jpeg,image/png,image/webp,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document" multiple hidden/><div id="emptyPreview"><div class="drop-icon">↥</div><h3>Upload foto, PDF, atau Word sekaligus</h3><p>Otomatis mengenali format · Maksimal 40 berkas · PDF/DOCX hanya bagian cover</p><div class="ghost-button">Pilih Semua Jenis Berkas</div></div><img id="imagePreview" class="hidden" alt="Pratinjau foto cover"/></label>
+  <div class="section-head"><span class="section-icon">01</span><div><h2>Satu tombol upload — langsung baca otomatis</h2><p>JPG / PNG / WebP → OCR lokal · PDF → halaman 1 · Word DOCX → bagian cover</p></div></div>
+  <label class="dropzone" id="dropzone" for="universalInput"><input type="file" id="universalInput" accept=".jpg,.jpeg,.png,.webp,.pdf,.docx,image/jpeg,image/png,image/webp,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document" multiple hidden/><div id="emptyPreview"><div class="drop-icon">↥</div><h3>Upload foto, PDF, atau Word sekaligus</h3><p>Berkas langsung dibaca setelah dipilih · Maksimal 40 berkas · PDF/DOCX hanya bagian cover</p><div class="ghost-button">Pilih Semua Jenis Berkas</div></div><img id="imagePreview" class="hidden" alt="Pratinjau foto cover"/></label>
   <input type="file" id="cameraInput" accept="image/jpeg,image/png,image/webp" capture="environment" hidden/>
   <div class="upload-actions"><button type="button" class="btn btn-outline" id="cameraButton">📷 Ambil foto kamera</button><button type="button" class="btn btn-outline" id="manualButton">+ Pesanan Manual</button></div>
   <div class="input-modes"><div><b>Foto</b><small>OCR lokal dengan mode Cepat dan Teliti per zona (tanpa API)</small></div><div><b>PDF</b><small>Teks halaman 1 lokal, OCR lokal bila PDF hasil scan</small></div><div><b>Word</b><small>Ekstraksi halaman pertama tanpa OCR</small></div></div>
@@ -27,7 +27,7 @@
   <div class="batch-header"><div><h3>Daftar pesanan <span id="orderCount">(0)</span></h3><p>Setiap nama memiliki <b>jenis cover</b> dan ketebalan sendiri.</p></div></div>
   <div id="ordersList" class="orders-list" aria-live="polite"><p class="empty-orders">Belum ada pesanan. Pilih beberapa foto sekaligus.</p></div>
   <div id="batchProgress" class="batch-progress hidden" role="status"></div>
-  <div class="batch-actions"><button type="button" class="btn btn-primary" id="ocrAllButton">✦ Baca Semua Berkas</button><button type="button" class="btn btn-outline" id="ocrButton">Baca Berkas Terpilih</button><select id="batchOutputMode" class="batch-output" aria-label="Bentuk hasil PDF massal"><option value="separate">PDF per orang (ZIP)</option><option value="combined">Gabung satu PDF</option><option value="both">ZIP PDF per orang + PDF gabungan</option></select><button type="button" class="btn btn-secondary" id="batchJobsButton">↓ Download Hasil Batch</button></div>
+  <div class="batch-actions"><button type="button" class="btn btn-primary" id="ocrAllButton">✦ Baca Ulang Berkas Gagal</button><button type="button" class="btn btn-outline" id="ocrButton">Baca Berkas Terpilih</button><select id="batchOutputMode" class="batch-output" aria-label="Bentuk hasil PDF massal"><option value="separate">PDF per orang (ZIP)</option><option value="combined">Gabung satu PDF</option><option value="both">ZIP PDF per orang + PDF gabungan</option></select><button type="button" class="btn btn-secondary" id="batchJobsButton">↓ Download Hasil Batch</button></div>
   <div id="batchFeedback" class="notice hidden" role="status"></div>
   <div id="batchDownloadArea" class="download-ready hidden" role="status"><strong id="batchDownloadMessage">File siap diunduh</strong><a id="batchDownloadLink" class="download-real-link" download>↓ Ketuk di sini untuk mengunduh hasil batch</a><small>Jika Chrome memblokir unduhan otomatis, ketuk tautan ini secara manual.</small></div>
   <div class="batch-note">Untuk setiap mahasiswa: cek hasil pembacaan → pilih ketebalan 10–28 mm → tandai diperiksa. Pilih <b>Polos, Merah, Maroon, atau Custom</b> untuk setiap foto. Unduh tiap orang dalam ZIP atau gabungkan semua sebagai satu PDF; ukuran tiap halaman tetap sesuai jenis cover.</div>
@@ -78,14 +78,28 @@
   <div class="micro-note"><a href="./assets/contoh_serli_10mm.pdf" target="_blank" rel="noopener">Lihat PDF contoh Serli 10 mm</a> &nbsp;·&nbsp; <a href="./assets/contoh_serli_27mm.pdf" target="_blank" rel="noopener">Lihat PDF contoh Serli 27 mm</a></div>
   <div class="safety"><strong>Periksa setiap pesanan sebelum cetak.</strong> Font sumber adalah Times New Roman Bold. Aplikasi menggunakan font Unicode otomatis Tinos Bold/Bold Italic; bentuk huruf belum tentu identik dengan Times New Roman asli. Tetap periksa pada printer dan skala 100%.</div>
  </section>
- <footer>© ZAIN.NET • COVER V4.9 GitHub Pages • Tanpa API/Token • Foto OCR lokal, PDF &amp; Word halaman awal • Periksa PDF sebelum cetak</footer>
-<section class="card" style="margin-top:16px"><h2>Font Unicode otomatis (V4.9)</h2><p>Aplikasi otomatis mengambil font Unicode Tinos Bold dan Bold Italic dari sumber terbuka saat PDF pertama dibuat. Mendukung petik melengkung “ ” dan banyak karakter transliterasi Arab-Latin. Tidak memakai token AI. Perlu internet ketika font belum masuk cache browser. Font milik sendiri boleh diunggah jika Anda ingin font lain.</p><label>Font tebal <input type="file" id="fontBoldInput" accept=".ttf,.otf"/></label> <label>Font tebal miring <input type="file" id="fontItalicInput" accept=".ttf,.otf"/></label><p id="fontStatus" class="micro-note">Otomatis memakai font Unicode saat membuat PDF. Unggah font sendiri hanya jika diperlukan.</p></section>
+ <footer>© ZAIN.NET • COVER V4.10 GitHub Pages • Tanpa API/Token • Foto OCR lokal, PDF &amp; Word halaman awal • Periksa PDF sebelum cetak</footer>
+<section class="card" style="margin-top:16px"><h2>Font Unicode otomatis (V4.10)</h2><p>Aplikasi otomatis mengambil font Unicode Tinos Bold dan Bold Italic dari sumber terbuka saat PDF pertama dibuat. Mendukung petik melengkung “ ” dan banyak karakter transliterasi Arab-Latin. Tidak memakai token AI. Perlu internet ketika font belum masuk cache browser. Font milik sendiri boleh diunggah jika Anda ingin font lain.</p><label>Font tebal <input type="file" id="fontBoldInput" accept=".ttf,.otf"/></label> <label>Font tebal miring <input type="file" id="fontItalicInput" accept=".ttf,.otf"/></label><p id="fontStatus" class="micro-note">Otomatis memakai font Unicode saat membuat PDF. Unggah font sendiri hanya jika diperlukan.</p></section>
 </main>
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script defer src="./vendor/jszip.min.js"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/@pdf-lib/fontkit@1.1.1/dist/fontkit.umd.min.js"></script>
 <script defer src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
-<script type="module" src="./app.js"></script>
+<script>
+  // Jika import modul gagal (misalnya file app.js/ocr-zones.js tidak ikut ter-upload),
+  // tampilkan error agar layar tidak diam setelah memilih berkas.
+  window.__zainnetAppBooted=false;
+  window.addEventListener('load',()=>setTimeout(()=>{
+    if(window.__zainnetAppBooted)return;
+    const notice=document.getElementById('notice');
+    if(notice){notice.className='notice error';notice.textContent='Aplikasi tidak berhasil memuat kode JavaScript. Periksa seluruh file JS di root GitHub (app.js, document-reader.js, classifier.js, ocr-fast.js, ocr-zones.js, pdf-engine.js). Refresh Ctrl+F5 setelah upload lengkap.';}
+  },4000));
+  window.addEventListener('unhandledrejection',event=>{
+    const notice=document.getElementById('notice');
+    if(notice){notice.className='notice error';notice.textContent='Kesalahan proses: '+(event.reason?.message||String(event.reason));}
+  });
+</script>
+<script type="module" src="./app.js?v=4.10"></script>
 </body>
 </html>

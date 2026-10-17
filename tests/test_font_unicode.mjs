@@ -12,7 +12,7 @@ assert.doesNotMatch(source,/tidak didukung Times bawaan/);
 assert.match(source,/Set\(bold\.getCharacterSet\(\)\)/);
 assert.match(source,/subset:true/);
 assert.match(source,/Font Unicode/);
-assert.match(html,/V4\.9/);
+assert.match(html,/V4\.10/);
 assert.match(html,/Tinos/);
 assert.match(app,/Font Unicode Tinos otomatis/);
 let hits=[];

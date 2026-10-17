@@ -4,7 +4,7 @@ import {generatePDF,checkAssets,setUserFonts} from './pdf-engine.js';
 import {canonicalUniversity} from './classifier.js';
 
 'use strict';
-// V4.9: one upload auto-classifies JPG, PDF and DOCX; resilient PDF download with explicit links.
+// V4.10: unggahan otomatis diproses + status yang tidak menggantung; semua input lokal tanpa API.
 const $ = id => document.getElementById(id);
 const FIELDS=['nama','nim','prodi','fakultas','universitas','jenis_dokumen','bulan_tahun'];
 const REQUIRED=['judul',...FIELDS];
@@ -19,6 +19,7 @@ const SAMPLE={judul:'KEMASLAHATAN DALAM SISTEM BAGI HASIL NELAYAN DI DESA BRANTA
 const escapeHTML=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let orders=[],nextId=1,activeId=null,availableMM=Array.from({length:19},(_,i)=>i+10);
 let pdfURL=null,painting=false,ocrBatchRunning=false,zipRunning=false;
+let autoReadTimer=null,autoReadPending=false;
 let pendingName='COVER.pdf';
 const downloadURLs={single:null,batch:null};
 function releaseDownload(which){
@@ -55,6 +56,18 @@ function btnBusy(button,busy,message='Memproses...'){
   else{button.textContent=button.dataset.originalText||button.textContent;button.disabled=false;}
 }
 function safeName(value){return String(value||'MAHASISWA').toLocaleUpperCase('id-ID').normalize('NFKD').replace(/[\u0300-\u036f]/g,'').replace(/[^A-Z0-9]+/g,'_').replace(/^_+|_+$/g,'').slice(0,45)||'MAHASISWA';}
+// Debounce agar banyak foto/PDF/DOCX yang dipilih bersama dibaca sebagai satu antrean.
+function scheduleAutoRead(){
+  if(autoReadTimer!==null)clearTimeout(autoReadTimer);
+  autoReadTimer=setTimeout(()=>{
+    autoReadTimer=null;
+    if(ocrBatchRunning){autoReadPending=true;return;}
+    void readAll({automatic:true});
+  },150);
+}
+function processingHint(order){
+  return isPdf(order?.file)?'PDF halaman 1':isWord(order?.file)?'Word DOCX cover':isPhoto(order?.file)?'Foto OCR lokal':'berkas';
+}
 function addOrders(files){
   const list=Array.from(files||[]);if(!list.length)return;
   releaseDownload('batch');
@@ -70,8 +83,12 @@ function addOrders(files){
   }
   if(added){selectOrder(activeId,false);step(1);}
   if(rejected.length)notice(`${added} berkas ditambahkan. ${rejected.length} tidak dimasukkan:\n${rejected.slice(0,5).join('\n')}`,'error');
-  else notice(`${added} berkas diterima dan dikenali otomatis. Klik "Baca Semua Berkas", periksa data, lalu pilih ketebalan untuk setiap pesanan.`,'success');
+  else notice(`${added} berkas diterima dan otomatis akan mulai dibaca. Tidak perlu menekan tombol Baca Semua.`,'success');
   renderOrders();
+  if(added){
+    progress(`Menyiapkan pembacaan otomatis ${orders.filter(o=>o.file&&o.status==='baru').length} berkas…`);
+    scheduleAutoRead();
+  }
 }
 function addManual(){
   releaseDownload('batch');
@@ -236,20 +253,31 @@ async function ocrOne(order){
     if(revision!==order.revision){order.warnings=['Data berubah saat proses berlangsung; koreksi Anda dipertahankan.'];order.status='periksa';}
     else {order.data={...newData(),...ocr,universitas:canonicalUniversity(ocr.universitas)};order.warnings=Array.isArray(ocr.warnings)?ocr.warnings:[];order.status='periksa';order.verified=false;order.pdfBlob=null;}
     if(activeId===order.id){paintData(order.data);showWarnings(order);clearPDFPreview();}
-    renderOrders();return true;
+    renderOrders();
+    if(!order.data?.judul && !order.data?.nama && !order.data?.nim){
+      order.status='gagal';
+      order.warnings=[...(order.warnings||[]),'Tidak ada identitas yang terbaca. Pastikan PDF/Word memiliki teks, atau coba OCR lokal untuk foto/scan. Anda tetap boleh mengisi formulir manual.'];
+      if(activeId===order.id)showWarnings(order);
+      renderOrders();
+      return false;
+    }
+    return true;
   }catch(error){if(/melewati|timeout|waktu proses/iu.test(String(error?.message||error)))void resetOCR();order.status='gagal';order.warnings=[String(error?.message||error)];if(activeId===order.id)showWarnings(order);renderOrders();return false;}
 }
 async function readSelected(){
+  if(ocrBatchRunning)return notice('Antrean otomatis masih memproses berkas. Tunggu hingga selesai atau pilih berkas setelahnya.','info');
   const a=active();if(!a)return notice('Tambahkan foto terlebih dahulu.','error');
   if(!a.file)return notice('Pesanan ini manual; tidak ada foto untuk dianalisis.','error');
   const btn=$('ocrButton');btnBusy(btn,true,'Membaca...');
   try{const success=await ocrOne(a);notice(success?`Berkas pesanan ${orderNumber(a)} terbaca. Periksa data dan pilih ketebalan.`:`Pembacaan gagal: ${a.warnings.join('; ')}`,success?'success':'error');if(success)step(2);}finally{btnBusy(btn,false);clearProgress();}
 }
-async function readAll(){
-  if(ocrBatchRunning)return;
+async function readAll({automatic=false}={}){
+  if(ocrBatchRunning){if(automatic)autoReadPending=true;return;}
   releaseDownload('batch');
-  const queue=orders.filter(o=>o.file && ['baru','gagal'].includes(o.status));
-  if(!queue.length)return notice('Tidak ada berkas baru atau gagal yang perlu dibaca.','info');
+  // Otomatis tidak mengulang file gagal tanpa henti. Tombol manual mengulang file gagal.
+  const queue=orders.filter(o=>o.file && (automatic?o.status==='baru':['baru','gagal'].includes(o.status)));
+  if(!queue.length){if(!automatic)notice('Tidak ada berkas baru atau gagal yang perlu dibaca.','info');return;}
+  notice(`${queue.length} berkas sedang dibaca ${automatic?'otomatis':''}. PDF/Word diproses lokal, foto memakai OCR lokal.`, 'info');
   
   ocrBatchRunning=true;btnBusy($('ocrAllButton'),true,'Sedang baca...');
   let completed=0,success=0;
@@ -263,7 +291,12 @@ async function readAll(){
   }
   try{await worker();notice(`Pembacaan selesai: ${success}/${queue.length} berhasil. Periksa setiap nama/NIM/judul dan tentukan ukuran punggung masing-masing.`,success===queue.length?'success':'info');step(2);}
   catch(error){notice('Antrean terhenti: '+String(error?.message||error),'error');}
-  finally{for(const o of queue){if(o.status==='membaca'){o.status='gagal';o.warnings=['Proses terhenti tanpa hasil; coba satu berkas kembali.'];}}renderOrders();ocrBatchRunning=false;btnBusy($('ocrAllButton'),false);clearProgress();}
+  finally{
+    for(const o of queue){if(o.status==='membaca'){o.status='gagal';o.warnings=['Proses terhenti tanpa hasil; coba satu berkas kembali.'];}}
+    renderOrders();ocrBatchRunning=false;btnBusy($('ocrAllButton'),false);clearProgress();
+    // Bila pengguna menambah file saat antrean sebelumnya berjalan, baca berkas baru setelahnya.
+    if(autoReadPending||orders.some(o=>o.file&&o.status==='baru')){autoReadPending=false;scheduleAutoRead();}
+  }
 }
 function approveActive(){
   const a=active();if(!a)return notice('Pilih pesanan terlebih dahulu.','error');
@@ -363,7 +396,7 @@ $('manualButton').addEventListener('click',addManual);
 for(const evt of ['dragenter','dragover'])$('dropzone').addEventListener(evt,event=>{event.preventDefault();$('dropzone').classList.add('dragover');});
 for(const evt of ['dragleave','drop'])$('dropzone').addEventListener(evt,event=>{event.preventDefault();$('dropzone').classList.remove('dragover');if(evt==='drop')addOrders(event.dataTransfer.files);});
 $('clearPhoto').addEventListener('click',()=>{const a=active();if(a)removeOrder(a.id);else notice('Tidak ada pesanan yang dipilih.');});
-$('ocrButton').addEventListener('click',readSelected);$('ocrAllButton').addEventListener('click',readAll);
+$('ocrButton').addEventListener('click',readSelected);$('ocrAllButton').addEventListener('click',()=>readAll({automatic:false}));
 $('titleEditor').addEventListener('input',markDirty);
 $('titleEditor').addEventListener('paste',event=>{event.preventDefault();document.execCommand('insertText',false,(event.clipboardData||window.clipboardData).getData('text/plain'));});
 document.querySelectorAll('#dataForm input').forEach(input=>input.addEventListener('input',markDirty));
@@ -399,7 +432,7 @@ $('downloadButton').addEventListener('click',()=>{
   notice('PDF telah disiapkan. Jika browser tidak langsung mengunduh, gunakan tombol hijau "Download" di bawah pratinjau.','success');
 });
 async function loadStatus(){
- $('connection').textContent='GitHub Pages V4.9 • Tanpa API/token';
+ $('connection').textContent='GitHub Pages V4.10 • Otomatis baca setelah upload • Tanpa token';
  $('serverDot').classList.add('online');
  notice('Mode lokal: Word dan PDF teks dibaca di browser tanpa OCR lokal. Foto dan PDF scan memakai OCR Tesseract lokal (model bahasa mungkin perlu diunduh).','info');
  // JANGAN menunggu template saat memuat UI; tidak membuat tombol membaca macet.
@@ -418,3 +451,4 @@ async function updateFonts(){
 }
 fontBold.addEventListener('change',updateFonts);fontItalic.addEventListener('change',updateFonts);
 paintData(newData());renderCoverStyle();loadStatus();
+globalThis.__zainnetAppBooted=true;

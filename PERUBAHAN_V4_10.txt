@@ -1,0 +1,29 @@
+ZAIN.NET COVER V4.10 — PERBAIKAN UPLOAD TANPA HASIL
+
+Perubahan aktual pada source:
+1. Memilih JPG/JPEG/PNG/WebP, PDF, atau DOCX langsung memicu pembacaan otomatis.
+2. Upload banyak berkas diproses berurutan; pesanan baru yang masuk saat antrean aktif tetap dibaca setelah antrean lama selesai.
+3. File gagal tidak menghentikan file lain; tombol baca ulang dipertahankan.
+4. Pesan kesalahan diberikan jika tidak ada judul/nama/NIM terdeteksi.
+5. Jika modul JavaScript gagal terpasang saat deploy, ditampilkan pesan kesalahan.
+6. Versi URL app.js/style.css diubah agar cache browser tidak mempertahankan kode lama.
+
+Bagian yang tidak berubah: template 10–28mm, cover polos/warna, logo, Unicode, PDF per orang/ZIP/gabungan, koreksi data manual.
+
+Pengujian yang telah dijalankan:
+- Sintaks JavaScript: berhasil.
+- UI otomatis dengan browser dan fungsi pembaca yang disimulasikan: 3 input langsung ditampilkan (PDF, Word, Foto), tanpa menekan tombol baca. Berhasil.
+- Upload berkas ketika antrean lain berjalan: dilanjutkan. Berhasil.
+- OCR disimulasikan gagal: Word/PDF lain tidak terkunci. Berhasil.
+- Parser Word DOCX asli 125 halaman: tes modul berhasil.
+- Ekstraksi PDF.js dan Tesseract: tes modul menggunakan mock, BUKAN tes browser sesungguhnya.
+- Ekspor PDF vektor nyata dan pengunduhan di GitHub Pages: BELUM diverifikasi end-to-end.
+
+Catatan: sumber JPG masih menggunakan Tesseract dan unduhan model OCR; sumber PDF memerlukan PDF.js dari CDN. Tanpa token Gemini, tetapi memerlukan internet untuk pustaka/model yang belum di-cache. Nama, NIM dan layout cetak tetap wajib diverifikasi.
+
+Cara pakai GitHub Pages:
+- Ekstrak ZIP, unggah seluruh isi folder ke ROOT repository Edit-Hard-Cover (jangan ZIP-nya).
+- Commit, tunggu deployment GitHub Pages, Ctrl+F5.
+- Pastikan label V4.10 tampil sebelum menguji.
+- Upload sekali; tunggu status selesai/perlu diperiksa.
+- Jika muncul pesan 'PDF.js gagal dimuat' atau 'OCR gagal', periksa koneksi CDN/model, dan kirim error yang tertulis.

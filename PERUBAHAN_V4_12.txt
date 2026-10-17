@@ -1,0 +1,15 @@
+ZAIN.NET COVER V4.12 — ATURAN PUNGGUNG 2 BARIS WAJIB DIDAHULUKAN
+
+UNTUK POLOS DAN WARNA:
+1. Ukuran 10 mm mencoba font 8 pt, lalu 7 pt, lalu 6 pt pada DUA BARIS.
+2. Ukuran 11–28 mm mencoba font 9 pt, lalu 8 pt, 7 pt, 6 pt pada DUA BARIS.
+3. HANYA JIKA semua percobaan dua baris gagal, coba TIGA BARIS,
+   mulai dari font utama sampai minimum 6 pt.
+4. Semua percobaan tetap diperiksa terhadap batas fisik punggung dan
+   zona aman vertikal. Tidak boleh memotong kata, istilah, atau diakritik.
+5. Judul hanya satu kata boleh tampil satu baris.
+6. Master cover depan Serli/warna, logo, ukuran cetak, upload, OCR,
+   pembacaan Word/PDF, ekspor batch, dan pengaman warna 28 mm TETAP.
+
+Pembaruan menambal fungsi chooseSpine dan colorSpine di pdf-engine.js,
+menambah tes test_v412_row_priority.mjs, serta menaikkan cache versi ke 4.12.

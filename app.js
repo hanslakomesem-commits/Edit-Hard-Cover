@@ -4,7 +4,7 @@ import {generatePDF,checkAssets,setUserFonts} from './pdf-engine.js';
 import {canonicalUniversity} from './classifier.js';
 
 'use strict';
-// V4.11: unggahan otomatis diproses + status yang tidak menggantung; semua input lokal tanpa API.
+// V4.12: unggahan otomatis diproses + status yang tidak menggantung; semua input lokal tanpa API.
 const $ = id => document.getElementById(id);
 const FIELDS=['nama','nim','prodi','fakultas','universitas','jenis_dokumen','bulan_tahun'];
 const REQUIRED=['judul',...FIELDS];
@@ -432,7 +432,7 @@ $('downloadButton').addEventListener('click',()=>{
   notice('PDF telah disiapkan. Jika browser tidak langsung mengunduh, gunakan tombol hijau "Download" di bawah pratinjau.','success');
 });
 async function loadStatus(){
- $('connection').textContent='GitHub Pages V4.11 • Otomatis baca setelah upload • Tanpa token';
+ $('connection').textContent='GitHub Pages V4.12 • Otomatis baca setelah upload • Tanpa token';
  $('serverDot').classList.add('online');
  notice('Mode lokal: Word dan PDF teks dibaca di browser tanpa OCR lokal. Foto dan PDF scan memakai OCR Tesseract lokal (model bahasa mungkin perlu diunduh).','info');
  // JANGAN menunggu template saat memuat UI; tidak membuat tombol membaca macet.

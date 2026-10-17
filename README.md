@@ -1,3 +1,13 @@
+# ZAIN.NET COVER V4.12 — DUA BARIS DIUTAMAKAN
+
+Aturan baru untuk **Polos maupun Warna**: gunakan judul punggung **dua baris lebih dahulu**. Coba font default (10 mm: 8 pt; 11–28 mm: 9 pt), lalu kecilkan bertahap hingga **6 pt**. **Hanya jika dua baris tetap tidak muat pada 6 pt**, gunakan tiga baris dan cari font terbesar yang aman. Judul satu kata boleh satu baris. Tidak boleh memotong judul atau keluar dua garis kuning.
+
+Seluruh posisi cover depan, logo, ukuran cetak, teks universitas lengkap, upload otomatis foto/PDF/Word, dan batch **tidak diubah**. Master tiga baris 10–28 mm tetap ada sebagai acuan khusus ketika diperlukan. Mode warna 28 mm tetap memiliki pengaman terhadap tanda potong yang melewati tepi kertas.
+
+Pengujian: `node tests/test_v412_row_priority.mjs` dan regresi pada `tests/`. Hasil tes dan batasnya dicatat dalam `HASIL_UJI_V4_12.md`. PDF nyata dan cetak fisik masih membutuhkan uji browser/percetakan sebelum produksi.
+
+---
+
 # ZAIN.NET COVER V4.11 — FIX POSISI JUDUL PUNGGUNG WARNA
 
 **Perbaikan utama:** titik tengah judul punggung warna mengikuti PDF referensi tiga baris: sekitar **295,0 pt dari atas (104,07 mm)** pada semua ketebalan 10–28 mm. Sebelumnya perhitungan panjang teks dikurangi dua kali sehingga judul panjang bisa menabrak tanda potong atas. V4.11 menghapus pengurangan ganda tersebut.

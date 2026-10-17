@@ -1,5 +1,5 @@
 /**
- * ZAIN.NET PDF engine, static-browser GitHub Pages edition V4.11.
+ * ZAIN.NET PDF engine, static-browser GitHub Pages edition V4.12.
  * Each page begins with the already cleaned ORIGINAL PDF vector master.
  * No template lines, crop marks, or cover geometry are re-created here.
  * Important: Tinos is not the commercial Times New Roman face used in the
@@ -163,7 +163,7 @@ function frontTitle(fonts,segs,config,data,warnings){
  }
  fail('Judul cover depan melebihi area yang tersedia pada template Serli; PDF tidak dibuat.');
 }
-function spineRows(fonts,segs,size,maxLen,maxRows){
+export function spineRows(fonts,segs,size,maxLen,maxRows,minRows=1){
  const toks=tokensFromSegments(segs); if(!toks.length)fail('Judul punggung kosong.');
  const words=[];let acc=[];
  for(const t of toks){if(t.text===' '){if(acc.length){words.push(acc);acc=[];}} else acc.push(t);}
@@ -178,7 +178,7 @@ function spineRows(fonts,segs,size,maxLen,maxRows){
   return parts;
  };
  // Keep the most balanced valid line lengths, do not split words or diacritics.
- for(let lines=1;lines<=Math.min(3,maxRows,n);lines++){
+ for(let lines=Math.min(minRows,n);lines<=Math.min(3,maxRows,n);lines++){
   let best=null;
   const check=(edges)=>{
    const result=[]; const lens=[];
@@ -198,23 +198,33 @@ function spineRows(fonts,segs,size,maxLen,maxRows){
  }
  fail(`Judul punggung tidak muat ${maxRows} baris dalam ${size} pt.`);
 }
-function spinePositions(size,mm,count){
- const c=LAYOUT[mm],left=c.left,right=c.right;
+function spinePositions(size,mm,count,layout=LAYOUT?.[mm]){
+ const c=layout,left=c.left,right=c.right;
  const pitch=size*1.13;
  const span=(count-1)*pitch+(0.892-(-0.216))*size;
  if(span>right-left-.30+0.001)fail('Baris punggung akan melewati garis batas fisik.');
  const base=(left+right)/2-(0.892-.216)*size/2;
  return Array.from({length:count},(_,i)=>base+(count-1)*pitch/2-i*pitch);
 }
-function chooseSpine(fonts,segs,mm,warnings){
+/** A title is split into THREE lines only after all allowed TWO-line sizes
+ * have failed. Font 10mm starts at 8 pt; other sizes start at 9 pt.
+ * A one-word title can naturally remain one line.
+ */
+export function spineRowPreferences(base,minFont=6){
+ const sizes=[];
+ for(let s=base;s>=minFont;s--)sizes.push(s);
+ return [...sizes.map(size=>({rows:2,size})),...sizes.map(size=>({rows:3,size}))];
+}
+export function chooseSpine(fonts,segs,mm,warnings,layout=LAYOUT?.[mm]){
+ if(!layout)fail(`Data kalibrasi punggung ${mm} mm belum tersedia.`);
  const base=mm===10?8:9;
- const cy=LAYOUT[mm].spine_title_center_y;
+ const cy=layout.spine_title_center_y;
  const maxLen=Math.min(460,2*(cy-54.5),2*(530-cy));
- for(const [rows,size] of [[2,base],...[base,base-1,base-2,base-3].filter(sz=>sz>=6).map(sz=>[3,sz])]){
+ for(const {rows,size} of spineRowPreferences(base)){
   try{
-   const result=spineRows(fonts,segs,size,maxLen,rows);
-   const xs=spinePositions(size,mm,result.length);
-   if(result.length===3)warnings.push(`Judul punggung ${mm} mm menjadi 3 baris.`);
+   const result=spineRows(fonts,segs,size,maxLen,rows,rows);
+   const xs=spinePositions(size,mm,result.length,layout);
+   if(result.length===3)warnings.push(`Judul punggung ${mm} mm menjadi 3 baris karena 2 baris tidak muat, bahkan pada 6 pt.`);
    if(size<base)warnings.push(`Font judul punggung otomatis diturunkan dari ${base} ke ${size} pt.`);
    return {result,xs,size};
   }catch(e){if(!(e instanceof PDFPreflightError))throw e;}
@@ -327,13 +337,12 @@ export function calibrateColorSpineTitleRows(lengthsPt,centerTopPt=COLOR_SPINE_T
    bottomLimitPt:COLOR_SPINE_TITLE_SAFE_BOTTOM_PT};
 }
 
-/** 3-line spine samples are the SPINE guide, never the FRONT master.
- * For color 10/11 mm the supplied 3-line samples use 6 pt, 12 mm uses
- * 7 pt, and 13–28 mm uses 9 pt. Two rows retain the preferred 8/9 pt.
- * Horizontal center = midline of inner guides. Vertical center follows
- * the text title area measured from the 19 provided sample pages.
+/** Color layout follows the fixed approved front master. The provided
+ * 3-line samples are a FALLBACK reference, never the default row count.
+ * Try 2 lines at 9/8, 8/7, 7/6, 6 pt BEFORE considering 3 lines.
+ * Horizontal center = inner yellow guides; vertical title center = 295 pt.
  */
-function colorSpine(fonts,segs,mm,warnings){
+export function colorSpine(fonts,segs,mm,warnings){
  const {right,left,center:middle}=colorGuideGeometry(mm);
  const reference=threeLineReferenceStatus(mm);
  const base=mm===10?8:9;
@@ -344,16 +353,11 @@ function colorSpine(fonts,segs,mm,warnings){
  // CAUTION: renderLine(vertical) ALREADY subtracts half the text advance.
  // Subtracting it again moved long titles into the top crop marks (V4.10 bug).
  const CENTER_FROM_TOP=COLOR_SPINE_TITLE_CENTER_TOP_PT;
- const choices=[{maxRows:2,size:base}];
- choices.push({maxRows:3,size:Math.min(base,reference.sampleFontPt||base)});
- for(let size=base-1;size>=6;size--){
-  choices.push({maxRows:2,size},{maxRows:3,size});
- }
- const seen=new Set();
- for(const choice of choices){
-  const key=`${choice.maxRows}:${choice.size}`;if(seen.has(key))continue;seen.add(key);
+ // Important: do NOT try three rows until two rows fail at every font size.
+ // This matches the workshop rule: 3 lines only when 2 cannot fit at >=6 pt.
+ for(const choice of spineRowPreferences(base)){
   try{
-   const lines=spineRows(fonts,segs,choice.size,MAX_LINE_LEN,choice.maxRows);
+   const lines=spineRows(fonts,segs,choice.size,MAX_LINE_LEN,choice.rows,choice.rows);
    const count=lines.length;
    if(!withinSpine(choice.size,count,right-left,1.1))continue;
    const pitch=choice.size*1.11;
@@ -365,7 +369,7 @@ function colorSpine(fonts,segs,mm,warnings){
    // renderLine() centers each rotated run internally using its measured width.
    if(!geometry.safe)continue;
    const fromTop=geometry.centerTopPt;
-   if(count===3)warnings.push('Judul punggung menggunakan 3 baris, mengikuti pedoman punggung PDF terbaru.');
+   if(count===3)warnings.push('Judul punggung menggunakan 3 baris karena 2 baris tidak muat meskipun font diturunkan hingga 6 pt.');
    if(choice.size<base)warnings.push(`Font punggung ${base} pt → ${choice.size} pt agar tetap di antara dua garis kuning.`);
    return {lines,x,fromTop,size:choice.size,middle,edges:[left,right],count,
      titleBoundsPt:{top:Math.min(...geometry.topPt),bottom:Math.max(...geometry.bottomPt)},

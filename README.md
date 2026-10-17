@@ -1,3 +1,20 @@
+# ZAIN.NET COVER V4.11 — FIX POSISI JUDUL PUNGGUNG WARNA
+
+**Perbaikan utama:** titik tengah judul punggung warna mengikuti PDF referensi tiga baris: sekitar **295,0 pt dari atas (104,07 mm)** pada semua ketebalan 10–28 mm. Sebelumnya perhitungan panjang teks dikurangi dua kali sehingga judul panjang bisa menabrak tanda potong atas. V4.11 menghapus pengurangan ganda tersebut.
+
+- Cover depan warna menggunakan master `assets/warna_clean.pdf` lama (tidak diubah).
+- Posisi logo, teks identitas depan, dan penanda kanan tidak berubah.
+- Baris punggung ditaruh di tengah dua garis kuning dalam bidang warna 475 × 320 mm.
+- Dua/tiga baris, font adaptif 9/8 → 7 → 6 pt dengan penolakan jika tidak muat.
+- Ada pemeriksaan bahwa ujung teks judul minimal 30 mm dari tepi atas dan maksimal 181 mm dari tepi atas, agar tidak menabrak zona data punggung lain.
+- Mode polos 480 × 330 mm tidak berubah.
+- Upload JPG / PDF / DOCX, tanpa token, batch, PDF per orang dan gabungan tetap tersedia.
+- Master 28 mm warna masih diblokir jika garis potong paling kiri keluar kertas (pengaman yang sudah ada).
+
+**Pengujian:** `node tests/test_v411_title_anchor.mjs`, `python tests/test_v411_reference_alignment.py`, jalankan pula tes V4.10. Lihat `PERBAIKAN_V4_11.txt`.
+
+**Catatan jujur:** Ekspor PDF end-to-end memakai pdf-lib dan font eksternal belum dapat dijalankan di lingkungan pengujian tanpa jaringan; cek PDF produksi lewat browser GitHub Pages dan lakukan uji cetak.
+
 # ZAIN.NET COVER V4.10 — PERBAIKAN UPLOAD OTOMATIS
 
 **Perubahan:** memilih 1 atau banyak JPG/PNG/WebP/PDF/DOCX akan langsung memulai pembacaan tanpa tombol tambahan. Tombol “Baca Ulang Berkas Gagal” tersedia bila berkas gagal. Pembacaan berkas baru ketika antrean sibuk akan otomatis menyusul.

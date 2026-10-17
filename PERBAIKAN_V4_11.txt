@@ -1,0 +1,9 @@
+ZAIN.NET COVER V4.11 — PERBAIKAN JUDUL PUNGGUNG WARNA
+
+Penyebab: fungsi colorSpine() mengatur CENTER_FROM_TOP dikurangi separuh panjang baris, padahal renderLine(vertical) sudah mengurangi separuh panjang ketika menggambar. Dengan judul panjang, posisi awal jadi CENTER - panjang penuh dan naik sampai garis potong atas.
+
+Perbaikan: ukur setiap baris, gunakan centerTopPt=295.0 pt (104.07 mm dari atas) tepat seperti 19 halaman PDF contoh, kemudian renderLine() menangani pemusatan per baris satu kali saja. Tambahkan pemeriksaan batas aman vertikal 30–181 mm dan perhitungan geometris yang dapat dites tanpa font/API.
+
+Perubahan terbatas pada judul punggung WARNA. Layout depan, logo, garis cetak, orientasi dokumen, punggung polos, upload, dan download tidak sengaja diubah.
+
+Pengujian otomatis: file baru tests/test_v411_title_anchor.mjs dan tests/test_v411_reference_alignment.py; hasil tercatat setelah dijalankan.

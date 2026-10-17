@@ -1,5 +1,5 @@
 /**
- * ZAIN.NET PDF engine, static-browser GitHub Pages edition V4.9.
+ * ZAIN.NET PDF engine, static-browser GitHub Pages edition V4.11.
  * Each page begins with the already cleaned ORIGINAL PDF vector master.
  * No template lines, crop marks, or cover geometry are re-created here.
  * Important: Tinos is not the commercial Times New Roman face used in the
@@ -299,6 +299,34 @@ function splitFrontTitle(fonts,segs,maxWidth=405,maxRows=5){
  }
  fail('Judul cover depan warna terlalu panjang untuk maksimal lima baris di posisi asli. Periksa dan ringkas hanya bila sesuai naskah.');
 }
+/** Color 3-line title anchor calibrated from all 19 reference PDF pages.
+ * PDF coordinates here are POINTS measured from the TOP of the page.
+ * The other engine uses bottom-origin coordinates, so only renderLine()
+ * converts a top-origin center to a PDF page drawing coordinate.
+ */
+export const COLOR_SPINE_TITLE_CENTER_TOP_PT=295.0;
+export const COLOR_SPINE_TITLE_SAFE_TOP_PT=30*72/25.4;
+export const COLOR_SPINE_TITLE_SAFE_BOTTOM_PT=181*72/25.4;
+/**
+ * Return true visual bounds for rotated title lines; useful both during
+ * production and for tests. Each line has its own actual font advance width.
+ * The engine draws each line centered on centerTopPt, not shifted by half its
+ * advance twice. This fixes the title entering the top crop-mark region.
+ */
+export function calibrateColorSpineTitleRows(lengthsPt,centerTopPt=COLOR_SPINE_TITLE_CENTER_TOP_PT){
+ if(!Array.isArray(lengthsPt)||!lengthsPt.length||lengthsPt.length>3||
+     lengthsPt.some(w=>!Number.isFinite(w)||w<=0)||!Number.isFinite(centerTopPt)){
+   throw new Error('Geometri judul punggung tidak valid.');
+ }
+ const topPt=lengthsPt.map(width=>centerTopPt-width/2);
+ const bottomPt=lengthsPt.map(width=>centerTopPt+width/2);
+ const safe=topPt.every(v=>v>=COLOR_SPINE_TITLE_SAFE_TOP_PT)&&
+            bottomPt.every(v=>v<=COLOR_SPINE_TITLE_SAFE_BOTTOM_PT);
+ return {centerTopPt:lengthsPt.map(()=>centerTopPt),topPt,bottomPt,safe,
+   topLimitPt:COLOR_SPINE_TITLE_SAFE_TOP_PT,
+   bottomLimitPt:COLOR_SPINE_TITLE_SAFE_BOTTOM_PT};
+}
+
 /** 3-line spine samples are the SPINE guide, never the FRONT master.
  * For color 10/11 mm the supplied 3-line samples use 6 pt, 12 mm uses
  * 7 pt, and 13–28 mm uses 9 pt. Two rows retain the preferred 8/9 pt.
@@ -310,7 +338,12 @@ function colorSpine(fonts,segs,mm,warnings){
  const reference=threeLineReferenceStatus(mm);
  const base=mm===10?8:9;
  const MAX_LINE_LEN=320;
- const CENTER_FROM_TOP=104*72/25.4;
+ // Vertically rotated title must use the TRUE center of the title zone.
+ // Measured on 19 three-row colored spine references (10–28 mm):
+ // the mean vertical centers are 294.93–295.05 pt from the top.
+ // CAUTION: renderLine(vertical) ALREADY subtracts half the text advance.
+ // Subtracting it again moved long titles into the top crop marks (V4.10 bug).
+ const CENTER_FROM_TOP=COLOR_SPINE_TITLE_CENTER_TOP_PT;
  const choices=[{maxRows:2,size:base}];
  choices.push({maxRows:3,size:Math.min(base,reference.sampleFontPt||base)});
  for(let size=base-1;size>=6;size--){
@@ -327,12 +360,16 @@ function colorSpine(fonts,segs,mm,warnings){
    const x=lines.map((_,i)=>middle+(count-1)*pitch/2-i*pitch);
    // Each line has a different printed length; individually center the
    // vertical span so none floats toward the bottom of the hard cover.
-   const fromTop=lines.map(line=>CENTER_FROM_TOP-measure(fonts,line,choice.size)/2);
-   if(fromTop.some(y=>y<30*72/25.4))continue;
-   if(lines.some((line,i)=>fromTop[i]+measure(fonts,line,choice.size)>180*72/25.4))continue;
+   const geometry=calibrateColorSpineTitleRows(lines.map(line=>measure(fonts,line,choice.size)),CENTER_FROM_TOP);
+   // The baseline passed to renderLine() is the CENTER, not the top edge.
+   // renderLine() centers each rotated run internally using its measured width.
+   if(!geometry.safe)continue;
+   const fromTop=geometry.centerTopPt;
    if(count===3)warnings.push('Judul punggung menggunakan 3 baris, mengikuti pedoman punggung PDF terbaru.');
    if(choice.size<base)warnings.push(`Font punggung ${base} pt → ${choice.size} pt agar tetap di antara dua garis kuning.`);
-   return {lines,x,fromTop,size:choice.size,middle,edges:[left,right],count};
+   return {lines,x,fromTop,size:choice.size,middle,edges:[left,right],count,
+     titleBoundsPt:{top:Math.min(...geometry.topPt),bottom:Math.max(...geometry.bottomPt)},
+     titleCenterTopPt:CENTER_FROM_TOP};
   }catch(error){if(!(error instanceof PDFPreflightError))throw error;}
  }
  fail(`Judul punggung ${mm} mm tidak muat dalam 2–3 baris pada ukuran minimum 6 pt. File diblokir agar tidak salah cetak.`);
@@ -425,7 +462,9 @@ async function generateColorPDF(data,mm,mode,customColor){
  const out=new Uint8Array(await doc.save({useObjectStreams:true}));
  const reread=await PDFDocument.load(out);
  if(reread.getPageCount()!==1||Math.abs(reread.getPage(0).getWidth()-mmPt(475))>.3||Math.abs(reread.getPage(0).getHeight()-mmPt(320))>.3)fail('PDF warna gagal validasi ukuran 475 × 320 mm.');
- return {bytes:out,warnings,details:{mode:type,mm,spine_font_pt:spine.size,spine_lines:spine.lines.length,reference_3row_page:refStatus.referencePage,reference_3row_verified:refStatus.referenceAvailable,guide_left:marks.left,guide_right:marks.right,paper_mm:COLOR_PRINT_MM,logo:'logo asli dari PDF warna'}};
+ return {bytes:out,warnings,details:{mode:type,mm,spine_font_pt:spine.size,spine_lines:spine.lines.length,reference_3row_page:refStatus.referencePage,reference_3row_verified:refStatus.referenceAvailable,
+    title_anchor_pt:spine.titleCenterTopPt,title_bounds_pt:spine.titleBoundsPt,
+    guide_left:marks.left,guide_right:marks.right,paper_mm:COLOR_PRINT_MM,logo:'logo asli dari PDF warna'}};
 }
 
 /** Main public API, backward-compatible with V3.8 */

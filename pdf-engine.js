@@ -1,5 +1,5 @@
 /**
- * ZAIN.NET PDF engine, static-browser GitHub Pages edition V4.15.
+ * ZAIN.NET PDF engine, static-browser GitHub Pages edition V4.16.
  * Each page begins with the already cleaned ORIGINAL PDF vector master.
  * No template lines, crop marks, or cover geometry are re-created here.
  * Important: Tinos is not the commercial Times New Roman face used in the
@@ -246,26 +246,53 @@ export function spineRowPreferences(base,minFont=6,thicknessMm=10){
  // No repeated choices; maintain order.
  return result.filter((c,i,a)=>a.findIndex(x=>x.rows===c.rows&&x.size===c.size)===i);
 }
+/** The Serli references have a different calibrated center at several
+ * thicknesses (e.g. 14-16 mm vs 17-18 mm). The values already exist in
+ * assets/layout.json, extracted from the user's original reference pages.
+ * NEVER add an arbitrary constant +6pt (the V4.15 regression).
+ * Coordinate y is measured from the TOP of the 483x330mm source PDF.
+ * The physical print master is rescaled to 480x330mm only after rendering.
+ */
+export const PLAIN_SPINE_TITLE_SAFE_TOP_PT=76;
+export const PLAIN_SPINE_TITLE_SAFE_BOTTOM_PT=513;
+export const PLAIN_SPINE_TITLE_MARGIN_PT=1.0;
+export function plainSpineTitleGeometry(lengthsPt,layout){
+ if(!layout||!Number.isFinite(layout.spine_title_center_y)||
+     !Number.isFinite(layout.left)||!Number.isFinite(layout.right)||layout.right<=layout.left){
+   throw new PDFPreflightError('Kalibrasi posisi punggung polos tidak valid.');
+ }
+ if(!Array.isArray(lengthsPt)||lengthsPt.length<1||lengthsPt.length>3||
+     lengthsPt.some(len=>!Number.isFinite(len)||len<=0)){
+   throw new PDFPreflightError('Panjang baris punggung polos tidak valid.');
+ }
+ const centerTopPt=layout.spine_title_center_y;
+ const topPt=lengthsPt.map(len=>centerTopPt-len/2);
+ const bottomPt=lengthsPt.map(len=>centerTopPt+len/2);
+ const safe=topPt.every(v=>v>=PLAIN_SPINE_TITLE_SAFE_TOP_PT+PLAIN_SPINE_TITLE_MARGIN_PT)&&
+   bottomPt.every(v=>v<=PLAIN_SPINE_TITLE_SAFE_BOTTOM_PT-PLAIN_SPINE_TITLE_MARGIN_PT);
+ return {centerTopPt,topPt,bottomPt,safe,
+   topLimitPt:PLAIN_SPINE_TITLE_SAFE_TOP_PT,
+   bottomLimitPt:PLAIN_SPINE_TITLE_SAFE_BOTTOM_PT};
+}
 export function chooseSpine(fonts,segs,mm,warnings,layout=LAYOUT?.[mm]){
  if(!layout)fail(`Data kalibrasi punggung ${mm} mm belum tersedia.`);
  const base=mm===10?8:9;
- // Plain cover now follows the same visual centering idea as the colored cover:
- // keep the title a little lower and strictly inside the safe title zone.
- const cy=(layout.spine_title_center_y||289)+6.0;
- const safeTop=60.0;
- const safeBottom=536.0;
- const maxLen=Math.min(460,2*(cy-safeTop)-2,2*(safeBottom-cy)-2);
+ const cy=layout.spine_title_center_y;
+ if(!Number.isFinite(cy))fail(`Posisi punggung polos ${mm} mm tidak ditemukan.`);
+ const maxLen=2*Math.min(cy-PLAIN_SPINE_TITLE_SAFE_TOP_PT,
+                              PLAIN_SPINE_TITLE_SAFE_BOTTOM_PT-cy)-2*PLAIN_SPINE_TITLE_MARGIN_PT;
  for(const {rows,size} of spineRowPreferences(base,6,mm)){
   try{
    const result=spineRows(fonts,segs,size,maxLen,rows,rows);
    const xs=spinePositions(size,mm,result.length,layout);
-   if(result.length===3)warnings.push(`Judul punggung ${mm} mm memakai 3 baris dengan ${size} pt agar teks tetap terbaca jelas; 2 baris pada 9 pt tidak muat.`);
-   if(size<base)warnings.push(`Font judul punggung otomatis diturunkan dari ${base} ke ${size} pt.`);
-   if(mm>=13)warnings.push(`Posisi judul punggung POLOS diselaraskan ke pusat visual seperti cover warna.`);
-   return {result,xs,size,cy};
+   const geometry=plainSpineTitleGeometry(result.map(line=>measure(fonts,line,size)),layout);
+   if(!geometry.safe)continue;
+   if(result.length===3)warnings.push(`Judul punggung POLOS ${mm} mm memakai 3 baris pada ${size} pt agar tetap terbaca jelas.`);
+   if(size<base)warnings.push(`Font judul punggung POLOS turun dari ${base} ke ${size} pt karena tidak muat pada ukuran lebih besar.`);
+   return {result,xs,size,cy:geometry.centerTopPt,titleBoundsPt:{top:Math.min(...geometry.topPt),bottom:Math.max(...geometry.bottomPt)}};
   }catch(e){if(!(e instanceof PDFPreflightError))throw e;}
  }
- fail(`Judul terlalu panjang untuk punggung ${mm} mm pada minimal 6 pt dan maksimal 3 baris. PDF diblokir supaya tidak salah cetak.`);
+ fail(`Judul tidak muat dalam zona aman punggung POLOS ${mm} mm (minimal 6 pt, maksimal 3 baris). Periksa judul sebelum dicetak.`);
 }
 function single(page,fonts,text,size,cx,y,maxWidth,label,warnings,minFont=size,rotated=false,ink=BLACK){
  text=String(text).trim();
@@ -306,7 +333,7 @@ async function generatePlainPDF(data,mm){
  if(reopened.getPageCount()!==1)fail('PDF hasil harus terdiri dari tepat satu halaman.');
  const p=reopened.getPage(0);
  if(Math.abs(p.getWidth()-pagePt.width)>.55||Math.abs(p.getHeight()-pagePt.height)>.55)fail('PDF hasil tidak berukuran 483 × 330 mm.');
- return {bytes:new Uint8Array(bytes),warnings,details:{mm,spine_font_pt:spine.size,spine_lines:spine.result.length,spine_title_center_y:spine.cy??conf.spine_title_center_y}};
+ return {bytes:new Uint8Array(bytes),warnings,details:{mm,spine_font_pt:spine.size,spine_lines:spine.result.length,spine_title_center_y:spine.cy??conf.spine_title_center_y,spine_title_bounds_pt:spine.titleBoundsPt}};
 }
 
 

@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import {spineRowPreferences,colorSpine,chooseSpine,spineRows} from '../pdf-engine.js';
+import {spineRowPreferences,colorSpine,chooseSpine,spineRows,plainSpineTitleGeometry,PLAIN_SPINE_TITLE_SAFE_TOP_PT,PLAIN_SPINE_TITLE_SAFE_BOTTOM_PT,colorTitleMaxLengthPt,calibrateColorSpineTitleRows} from '../pdf-engine.js';
 import {colorGuideGeometry} from '../guide-geometry.js';
 import {readFileSync} from 'node:fs';
 
@@ -54,16 +54,20 @@ for(let mm=10;mm<=28;mm++){
     let defaultTwoFits=false;
     const base=mm===10?8:9;
     try{
-     const segments=spineRows(fonts,seg(text),base,mode==='color'?320:
-       Math.min(460,2*(plainLayouts[mm].spine_title_center_y-54.5),2*(530-plainLayouts[mm].spine_title_center_y)),2,2);
+     const plainC=plainLayouts[mm].spine_title_center_y;
+     const currentMax=mode==='color'?colorTitleMaxLengthPt():
+       2*Math.min(plainC-PLAIN_SPINE_TITLE_SAFE_TOP_PT,PLAIN_SPINE_TITLE_SAFE_BOTTOM_PT-plainC)-2;
+     const segments=spineRows(fonts,seg(text),base,currentMax,2,2);
      if(segments.length===2){
       if(mode==='color'){
        const span=(2-1)*base*1.11+base*1.15;
        const bounds=segments.map(row=>font.widthOfTextAtSize(row.map(t=>t.text).join(''),base));
-       defaultTwoFits=span<=available-1.1 && bounds.every(w=>295-w/2>=30*72/25.4 && 295+w/2<=181*72/25.4);
+       defaultTwoFits=span<=available-1.1 && calibrateColorSpineTitleRows(bounds).safe;
       }else{
-       const span=base*1.13 + (0.892+0.216)*base;
-       defaultTwoFits=span<=plainLayouts[mm].right-plainLayouts[mm].left-.30;
+       const span=base*1.11 + (0.892+0.216)*base;
+       const bounds=segments.map(row=>font.widthOfTextAtSize(row.map(t=>t.text).join(''),base));
+       defaultTwoFits=span<=plainLayouts[mm].right-plainLayouts[mm].left-.30 &&
+        plainSpineTitleGeometry(bounds,plainLayouts[mm]).safe;
       }
      }
     }catch{}

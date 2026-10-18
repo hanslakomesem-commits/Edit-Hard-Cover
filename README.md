@@ -1,4 +1,16 @@
-# ZAIN.NET COVER V4.15 — FIX FONT PUNGGUNG WARNA
+# V4.16 — Kalibrasi punggung polos sesuai PDF referensi
+
+Pembaruan terhadap V4.15: menghapus offset tetap `+6.0 pt` dari judul punggung polos. Pusat judul polos sekarang langsung menggunakan nilai `spine_title_center_y` dari `assets/layout.json`, yang diambil dari PDF referensi asli pada ketebalan masing-masing. Baris diperiksa agar berada di zona aman judul antara **76–513 pt dari atas** sebelum pembuatan PDF. Pemilihan 2/3 baris dan prioritas font 9 pt pada punggung lebar tidak diubah. Seluruh kode/gambar/master **mode Warna** tidak dimodifikasi.
+
+**Batasan:** zona aman 76–513 pt merupakan pengaman konservatif berdasarkan contoh judul referensi, bukan spesifikasi mesin potong. Pembuktian akhir harus dengan PDF keluaran browser dan uji cetak skala 100%. Pada mode Polos master awal 483×330 mm diperkecil secara horizontal ke 480×330 mm seperti versi lama. Mode Warna 28 mm masih memiliki pembatasan dari master referensi.
+
+## Tes V4.16
+
+- `node tests/test_v416_plain_reference.mjs` — kalibrasi 19 ukuran, batas aman, font dan pemilihan baris
+- `python tests/test_v416_reference_geometry.py` — pemeriksaan koordinat dari PDF referensi Polos asli
+- Lanjutkan tes kompatibilitas di folder `tests/`.
+
+# ZAIN.NET COVER V4.16 — FIX FONT PUNGGUNG WARNA
 
 **Perubahan hanya pada perhitungan judul punggung WARNA (Merah/Maroon/Custom).**
 - Punggung 13–28 mm: 2×9 pt → 3×9 pt → 2×8 pt → 3×8 pt → ... sampai minimum 6 pt.

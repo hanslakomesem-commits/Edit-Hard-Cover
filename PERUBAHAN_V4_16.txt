@@ -1,0 +1,8 @@
+ZAIN.NET COVER V4.16 — KALIBRASI PUNGGUNG POLOS
+- Hapus offset perkiraan +6.0 pt di V4.15.
+- Pakai pusat judul spine_title_center_y hasil kalibrasi PDF Serli per ketebalan 10–28 mm.
+- Tambah pemeriksaan zona aman vertikal judul POLOS 76–513 pt.
+- Kontrol geometri tersedia untuk pengujian: plainSpineTitleGeometry.
+- Cover Warna, logo, master polos/warna dan garis potong: TIDAK diubah.
+- Tetap prioritaskan font 9 pt pada punggung lebar dan 2 baris jika pada font ukuran utama muat.
+- Ekspor browser/cetak nyata masih perlu validasi pengguna.

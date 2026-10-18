@@ -1,5 +1,5 @@
 /**
- * ZAIN.NET PDF engine, static-browser GitHub Pages edition V4.12.
+ * ZAIN.NET PDF engine, static-browser GitHub Pages edition V4.13.
  * Each page begins with the already cleaned ORIGINAL PDF vector master.
  * No template lines, crop marks, or cover geometry are re-created here.
  * Important: Tinos is not the commercial Times New Roman face used in the
@@ -206,25 +206,54 @@ function spinePositions(size,mm,count,layout=LAYOUT?.[mm]){
  const base=(left+right)/2-(0.892-.216)*size/2;
  return Array.from({length:count},(_,i)=>base+(count-1)*pitch/2-i*pitch);
 }
-/** A title is split into THREE lines only after all allowed TWO-line sizes
- * have failed. Font 10mm starts at 8 pt; other sizes start at 9 pt.
- * A one-word title can naturally remain one line.
+/**
+ * Visual-quality font selection. Never shrink a wide spine to 6 pt only
+ * to preserve two lines when three lines of legible 9 pt would fit.
+ *
+ * 10–12 mm: prioritas 2 baris sampai 6 pt karena punggung sempit.
+ * 13–22 mm: coba 2 baris 9 dan 8 pt, kemudian 3 baris 9 pt.
+ * 23–28 mm: utamakan keterbacaan 9 pt: coba 2 baris 9 pt, lalu
+ *           3 baris 9 pt SEBELUM mengecilkan ke 8/7/6 pt.
+ *
+ * Three lines are NEVER chosen if two lines fit at 9 pt. The trade-off
+ * for other widths is explicit and tested.
  */
-export function spineRowPreferences(base,minFont=6){
+export function spineRowPreferences(base,minFont=6,thicknessMm=10){
  const sizes=[];
  for(let s=base;s>=minFont;s--)sizes.push(s);
- return [...sizes.map(size=>({rows:2,size})),...sizes.map(size=>({rows:3,size}))];
+ if(thicknessMm<=12){
+  return [...sizes.map(size=>({rows:2,size})),...sizes.map(size=>({rows:3,size}))];
+ }
+ if(thicknessMm>=23){
+  return sizes.flatMap(size=>[{rows:2,size},{rows:3,size}]);
+ }
+ // Moderate widths: retain 2 lines down to 8 pt, then prefer 9pt 3-lines
+ // over reducing to 7 or 6pt just for the two-line target.
+ const result=[];
+ for(const size of sizes){
+  if(size===base)result.push({rows:2,size});
+  else if(size===base-1)result.push({rows:2,size});
+ }
+ result.push({rows:3,size:base});
+ for(const size of sizes.filter(n=>n<=base-2)){
+  result.push({rows:2,size});
+  const previous=size+1;
+  if(previous<base)result.push({rows:3,size:previous});
+ }
+ result.push({rows:3,size:minFont});
+ // No repeated choices; maintain order.
+ return result.filter((c,i,a)=>a.findIndex(x=>x.rows===c.rows&&x.size===c.size)===i);
 }
 export function chooseSpine(fonts,segs,mm,warnings,layout=LAYOUT?.[mm]){
  if(!layout)fail(`Data kalibrasi punggung ${mm} mm belum tersedia.`);
  const base=mm===10?8:9;
  const cy=layout.spine_title_center_y;
  const maxLen=Math.min(460,2*(cy-54.5),2*(530-cy));
- for(const {rows,size} of spineRowPreferences(base)){
+ for(const {rows,size} of spineRowPreferences(base,6,mm)){
   try{
    const result=spineRows(fonts,segs,size,maxLen,rows,rows);
    const xs=spinePositions(size,mm,result.length,layout);
-   if(result.length===3)warnings.push(`Judul punggung ${mm} mm menjadi 3 baris karena 2 baris tidak muat, bahkan pada 6 pt.`);
+   if(result.length===3)warnings.push(`Judul punggung ${mm} mm memakai 3 baris dengan ${size} pt agar teks tetap terbaca jelas; 2 baris pada 9 pt tidak muat.`);
    if(size<base)warnings.push(`Font judul punggung otomatis diturunkan dari ${base} ke ${size} pt.`);
    return {result,xs,size};
   }catch(e){if(!(e instanceof PDFPreflightError))throw e;}
@@ -338,8 +367,8 @@ export function calibrateColorSpineTitleRows(lengthsPt,centerTopPt=COLOR_SPINE_T
 }
 
 /** Color layout follows the fixed approved front master. The provided
- * 3-line samples are a FALLBACK reference, never the default row count.
- * Try 2 lines at 9/8, 8/7, 7/6, 6 pt BEFORE considering 3 lines.
+ * 3-line samples are only used when the 2-line DEFAULT FONT does not fit.
+ * For a wide spine, prefer a legible 3×9 pt over tiny 2×6/7 pt.
  * Horizontal center = inner yellow guides; vertical title center = 295 pt.
  */
 export function colorSpine(fonts,segs,mm,warnings){
@@ -353,9 +382,9 @@ export function colorSpine(fonts,segs,mm,warnings){
  // CAUTION: renderLine(vertical) ALREADY subtracts half the text advance.
  // Subtracting it again moved long titles into the top crop marks (V4.10 bug).
  const CENTER_FROM_TOP=COLOR_SPINE_TITLE_CENTER_TOP_PT;
- // Important: do NOT try three rows until two rows fail at every font size.
- // This matches the workshop rule: 3 lines only when 2 cannot fit at >=6 pt.
- for(const choice of spineRowPreferences(base)){
+ // Keep 9pt on wide (>=23mm) spines unless neither 2 nor 3 rows fit.
+ // Never choose three rows if two rows still fit at the default 9pt.
+ for(const choice of spineRowPreferences(base,6,mm)){
   try{
    const lines=spineRows(fonts,segs,choice.size,MAX_LINE_LEN,choice.rows,choice.rows);
    const count=lines.length;
@@ -369,7 +398,7 @@ export function colorSpine(fonts,segs,mm,warnings){
    // renderLine() centers each rotated run internally using its measured width.
    if(!geometry.safe)continue;
    const fromTop=geometry.centerTopPt;
-   if(count===3)warnings.push('Judul punggung menggunakan 3 baris karena 2 baris tidak muat meskipun font diturunkan hingga 6 pt.');
+   if(count===3)warnings.push(`Judul punggung warna ${mm} mm memakai 3 baris pada ${choice.size} pt demi menjaga keterbacaan; dua baris pada font awal tidak muat.`);
    if(choice.size<base)warnings.push(`Font punggung ${base} pt → ${choice.size} pt agar tetap di antara dua garis kuning.`);
    return {lines,x,fromTop,size:choice.size,middle,edges:[left,right],count,
      titleBoundsPt:{top:Math.min(...geometry.topPt),bottom:Math.max(...geometry.bottomPt)},

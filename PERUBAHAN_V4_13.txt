@@ -1,0 +1,2 @@
+ZAIN.NET V4.13
+Font punggung lebar 23–28 mm diutamakan 9 pt. Jika 2 baris 9 pt tidak cukup, coba 3 baris 9 pt sebelum memilih dua baris berfont 8/7/6 pt. Mode sedang 13–22 mm mempertahankan 2 baris minimal 8 pt lebih dahulu, lalu 3 baris 9 pt. Mode sempit 10–12 mm tetap mendahulukan 2 baris. Cover depan dan tata letak master tidak diubah.

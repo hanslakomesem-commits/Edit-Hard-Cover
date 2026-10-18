@@ -1,10 +1,10 @@
 import {readPDF,readWord,readPhoto,withTimeout,setOCRProgress} from './document-reader.js';
 import {resetOCR} from './ocr-fast.js';
-import {generatePDF,checkAssets,setUserFonts} from './pdf-engine.js';
+import {generatePDF,checkAssets,setUserFonts} from './pdf-engine.js?v=4.13';
 import {canonicalUniversity} from './classifier.js';
 
 'use strict';
-// V4.12: unggahan otomatis diproses + status yang tidak menggantung; semua input lokal tanpa API.
+// V4.13: unggahan otomatis diproses + status yang tidak menggantung; semua input lokal tanpa API.
 const $ = id => document.getElementById(id);
 const FIELDS=['nama','nim','prodi','fakultas','universitas','jenis_dokumen','bulan_tahun'];
 const REQUIRED=['judul',...FIELDS];
@@ -320,7 +320,7 @@ async function makeSelectedPDF({downloadAfter=false}={}){
   a.pdfBlob=new Blob([result.bytes],{type:'application/pdf'});
   updatePDFPreview(a);renderOrders();step(4);
   if(downloadAfter)triggerDownload(a.pdfBlob,`${String(orderNumber(a)).padStart(2,'0')}_${safeName(a.data.nama)}_${a.style.toUpperCase()}_${a.thickness}MM.pdf`);
-  notice(`PDF ${a.data.nama} — ${a.style.toUpperCase()} ${a.thickness} mm berhasil. Periksa preview dan cetak uji.`+(result.warnings?.length?'\n'+result.warnings.join('\n'):''),result.warnings?.length?'info':'success');
+  notice(`PDF ${a.data.nama} — ${a.style.toUpperCase()} ${a.thickness} mm berhasil. Judul punggung: ${result.details?.spine_lines||'?'} baris, font ${result.details?.spine_font_pt||'?'} pt. Periksa preview dan cetak uji.`+(result.warnings?.length?'\n'+result.warnings.join('\n'):''),result.warnings?.length?'info':'success');
  }catch(error){a.status='gagal';a.warnings=[String(error.message||error)];renderOrders();showWarnings(a);notice(`PDF gagal: ${error.message||error}`,'error');}
  finally{btnBusy(button,false);}
 }
@@ -432,7 +432,7 @@ $('downloadButton').addEventListener('click',()=>{
   notice('PDF telah disiapkan. Jika browser tidak langsung mengunduh, gunakan tombol hijau "Download" di bawah pratinjau.','success');
 });
 async function loadStatus(){
- $('connection').textContent='GitHub Pages V4.12 • Otomatis baca setelah upload • Tanpa token';
+ $('connection').textContent='GitHub Pages V4.13 • Otomatis baca setelah upload • Tanpa token';
  $('serverDot').classList.add('online');
  notice('Mode lokal: Word dan PDF teks dibaca di browser tanpa OCR lokal. Foto dan PDF scan memakai OCR Tesseract lokal (model bahasa mungkin perlu diunduh).','info');
  // JANGAN menunggu template saat memuat UI; tidak membuat tombol membaca macet.

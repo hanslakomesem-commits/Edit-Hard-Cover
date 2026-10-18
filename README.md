@@ -1,3 +1,18 @@
+# ZAIN.NET COVER V4.13 — PRIORITAS FONT 9 PT PADA PUNGGUNG LEBAR
+
+**Perubahan khusus:** ketika punggung lebar (23–28 mm), 9 pt menjadi target keterbacaan.
+- 23–28 mm: 2 baris × 9 pt → 3 baris × 9 pt → 2/3 baris × 8, 7, 6 pt bila harus.
+- 13–22 mm: 2 × 9 pt → 2 × 8 pt → 3 × 9 pt → font lebih kecil hanya bila diperlukan.
+- 10–12 mm: 2 baris diutamakan sampai minimum 6 pt, kemudian 3 baris jika diperlukan.
+- 3 baris **tidak pernah dipakai bila 2 baris sudah muat pada 9 pt**. Perubahan ke 3 baris 9 pt pada punggung lebar adalah kompromi yang disengaja untuk mencegah huruf terlalu kecil.
+- Font tidak ditingkatkan melebihi 9 pt, dan tidak diturunkan di bawah 6 pt. Semua teks masih harus lolos uji batas punggung, posisi atas/bawah dan titik tengah master.
+- Cover depan Polos, Merah, Maroon, Custom, logo, warna tinta, master dan dukungan Foto/PDF/Word tetap seperti V4.12.
+- Mode warna 28 mm tetap dibatasi oleh pengaman tanda potong yang telah diketahui.
+
+**Tes:** `node tests/test_v413_font_priority.mjs` dan tes regresi terpilih. Pengujian PDF output dari browser dan proof cetak masih wajib sebelum produksi.
+
+---
+
 # ZAIN.NET COVER V4.12 — DUA BARIS DIUTAMAKAN
 
 Aturan baru untuk **Polos maupun Warna**: gunakan judul punggung **dua baris lebih dahulu**. Coba font default (10 mm: 8 pt; 11–28 mm: 9 pt), lalu kecilkan bertahap hingga **6 pt**. **Hanya jika dua baris tetap tidak muat pada 6 pt**, gunakan tiga baris dan cari font terbesar yang aman. Judul satu kata boleh satu baris. Tidak boleh memotong judul atau keluar dua garis kuning.

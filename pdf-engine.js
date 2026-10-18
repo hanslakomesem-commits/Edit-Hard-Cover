@@ -1,5 +1,5 @@
 /**
- * ZAIN.NET PDF engine, static-browser GitHub Pages edition V4.13.
+ * ZAIN.NET PDF engine, static-browser GitHub Pages edition V4.14.
  * Each page begins with the already cleaned ORIGINAL PDF vector master.
  * No template lines, crop marks, or cover geometry are re-created here.
  * Important: Tinos is not the commercial Times New Roman face used in the
@@ -366,46 +366,63 @@ export function calibrateColorSpineTitleRows(lengthsPt,centerTopPt=COLOR_SPINE_T
    bottomLimitPt:COLOR_SPINE_TITLE_SAFE_BOTTOM_PT};
 }
 
-/** Color layout follows the fixed approved front master. The provided
- * 3-line samples are only used when the 2-line DEFAULT FONT does not fit.
- * For a wide spine, prefer a legible 3×9 pt over tiny 2×6/7 pt.
- * Horizontal center = inner yellow guides; vertical title center = 295 pt.
+/**
+ * V4.14: a SEPARATE font preference policy for colored covers.
+ * The front cover and the plain-cover path do not use this function.
+ *
+ * 10–12mm: attempt 2 lines with shrinking fonts, then 3 lines as a fallback.
+ * 13–28mm: attempt 2 lines at 9pt, and if they cannot fit, attempt
+ * 3 lines at 9pt BEFORE reducing font size. Use 8/7/6pt only if both
+ * 9pt layouts fail their actual physical and vertical-space checks.
+ */
+export function colorSpinePreferences(thicknessMm,base=thicknessMm===10?8:9,minFont=6){
+ const sizes=Array.from({length:base-minFont+1},(_,i)=>base-i);
+ if(thicknessMm<=12)return [
+  ...sizes.map(size=>({rows:2,size})),
+  ...sizes.map(size=>({rows:3,size}))
+ ];
+ return sizes.flatMap(size=>[{rows:2,size},{rows:3,size}]);
+}
+/**
+ * Calculate the usable LENGTH of a colored spine-title row from the real
+ * printable title zone. An old hard-coded 320pt limit caused needless
+ * down-sizing to 7pt/6pt even when the title was safely inside the zone.
+ * The top and bottom safety checks remain authoritative for every line.
+ */
+export function colorTitleMaxLengthPt(safety=2){
+ const center=COLOR_SPINE_TITLE_CENTER_TOP_PT;
+ return 2*Math.min(center-COLOR_SPINE_TITLE_SAFE_TOP_PT,
+                   COLOR_SPINE_TITLE_SAFE_BOTTOM_PT-center)-safety;
+}
+/** Color title layout: front design is NEVER modified here.
+ * Punggung stays centered between its two INNER yellow fold guides.
+ * Printed title center = 295pt from the top of the 475×320mm master.
  */
 export function colorSpine(fonts,segs,mm,warnings){
  const {right,left,center:middle}=colorGuideGeometry(mm);
- const reference=threeLineReferenceStatus(mm);
  const base=mm===10?8:9;
- const MAX_LINE_LEN=320;
- // Vertically rotated title must use the TRUE center of the title zone.
- // Measured on 19 three-row colored spine references (10–28 mm):
- // the mean vertical centers are 294.93–295.05 pt from the top.
- // CAUTION: renderLine(vertical) ALREADY subtracts half the text advance.
- // Subtracting it again moved long titles into the top crop marks (V4.10 bug).
- const CENTER_FROM_TOP=COLOR_SPINE_TITLE_CENTER_TOP_PT;
- // Keep 9pt on wide (>=23mm) spines unless neither 2 nor 3 rows fit.
- // Never choose three rows if two rows still fit at the default 9pt.
- for(const choice of spineRowPreferences(base,6,mm)){
+ const maxLineLength=colorTitleMaxLengthPt();
+ const centerTop=COLOR_SPINE_TITLE_CENTER_TOP_PT;
+ let lastError='';
+ for(const choice of colorSpinePreferences(mm,base,6)){
   try{
-   const lines=spineRows(fonts,segs,choice.size,MAX_LINE_LEN,choice.rows,choice.rows);
-   const count=lines.length;
-   if(!withinSpine(choice.size,count,right-left,1.1))continue;
+   const lines=spineRows(fonts,segs,choice.size,maxLineLength,choice.rows,choice.rows);
+   if(!withinSpine(choice.size,lines.length,right-left,1.1))continue;
    const pitch=choice.size*1.11;
-   const x=lines.map((_,i)=>middle+(count-1)*pitch/2-i*pitch);
-   // Each line has a different printed length; individually center the
-   // vertical span so none floats toward the bottom of the hard cover.
-   const geometry=calibrateColorSpineTitleRows(lines.map(line=>measure(fonts,line,choice.size)),CENTER_FROM_TOP);
-   // The baseline passed to renderLine() is the CENTER, not the top edge.
-   // renderLine() centers each rotated run internally using its measured width.
+   const x=lines.map((_,i)=>middle+(lines.length-1)*pitch/2-i*pitch);
+   const geometry=calibrateColorSpineTitleRows(
+      lines.map(line=>measure(fonts,line,choice.size)),centerTop);
    if(!geometry.safe)continue;
-   const fromTop=geometry.centerTopPt;
-   if(count===3)warnings.push(`Judul punggung warna ${mm} mm memakai 3 baris pada ${choice.size} pt demi menjaga keterbacaan; dua baris pada font awal tidak muat.`);
-   if(choice.size<base)warnings.push(`Font punggung ${base} pt → ${choice.size} pt agar tetap di antara dua garis kuning.`);
-   return {lines,x,fromTop,size:choice.size,middle,edges:[left,right],count,
+   if(lines.length===3)warnings.push(`Judul punggung WARNA ${mm} mm memakai 3 baris pada ${choice.size} pt; 2 baris pada ukuran tersebut tidak cukup.`);
+   if(choice.size<base)warnings.push(`Judul punggung WARNA turun dari ${base} pt ke ${choice.size} pt karena tidak muat pada font yang lebih besar.`);
+   return {lines,x,fromTop:geometry.centerTopPt,size:choice.size,middle,
+     edges:[left,right],count:lines.length,
      titleBoundsPt:{top:Math.min(...geometry.topPt),bottom:Math.max(...geometry.bottomPt)},
-     titleCenterTopPt:CENTER_FROM_TOP};
-  }catch(error){if(!(error instanceof PDFPreflightError))throw error;}
+     titleCenterTopPt:centerTop,
+     maxLineLengthPt:maxLineLength};
+  }catch(error){if(!(error instanceof PDFPreflightError))throw error;lastError=error.message;}
  }
- fail(`Judul punggung ${mm} mm tidak muat dalam 2–3 baris pada ukuran minimum 6 pt. File diblokir agar tidak salah cetak.`);
+ fail(`Judul punggung warna ${mm} mm tidak muat 2–3 baris pada 9/8/7/6 pt dalam batas garis kuning dan zona cetak. ${lastError} File tidak dibuat.`);
 }
 /** Original yellow crop ticks are replaced after covering only the top/bottom
  * strips of the CLEAN original master. Every LEFT tick, including the far

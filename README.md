@@ -1,3 +1,20 @@
+# ZAIN.NET COVER V4.14 — FIX FONT PUNGGUNG WARNA
+
+**Perubahan hanya pada perhitungan judul punggung WARNA (Merah/Maroon/Custom).**
+- Punggung 13–28 mm: 2×9 pt → 3×9 pt → 2×8 pt → 3×8 pt → ... sampai minimum 6 pt.
+- Punggung 10–12 mm: 2 baris dengan font adaptif dahulu; baru 3 baris jika perlu.
+- Batas panjang judul menggunakan zona cetak referensi sebenarnya; aturan lama memakai angka tetap 320 pt dan dapat mengecilkan huruf tanpa perlu.
+- Tetap center antara dua garis kuning dan dalam zona vertikal yang aman.
+- Ukuran font/baris terpilih ditampilkan jelas setelah PDF dibuat.
+- Cover depan polos maupun warna, logo, data OCR/PDF/DOCX, batch, dan template tidak diubah.
+- **Cover warna 28 mm tetap diblokir** karena trim mark keluar dari halaman pada master yang diberikan.
+
+**Tes:** `node tests/test_v414_color_font.mjs` dan tes regresi lainnya.
+
+**Batas pengujian:** perhitungan huruf dapat diperiksa secara lokal; PDF final di browser dengan font yang sesungguhnya serta hasil cetak harus tetap diuji, jangan menganggap gambar pratinjau sebagai bukti 100% presisi.
+
+---
+
 # ZAIN.NET COVER V4.13 — PRIORITAS FONT 9 PT PADA PUNGGUNG LEBAR
 
 **Perubahan khusus:** ketika punggung lebar (23–28 mm), 9 pt menjadi target keterbacaan.

@@ -1,0 +1,12 @@
+ZAIN.NET COVER V4.14 — PERBAIKAN KHUSUS COVER WARNA
+
+1. Punggung WARNA kini mempunyai kebijakan font tersendiri; tidak mengubah kebijakan Polos.
+2. Ukuran 13–28 mm mencoba 2 baris × 9pt, kemudian 3 baris × 9pt, sebelum 8/7/6pt.
+3. Ukuran 10–12mm mempertahankan prioritas 2 baris.
+4. Batas panjang judul warna berasal dari zona aman vertikal yang diukur pada master (tidak lagi hardcoded 320pt), sehingga tidak mengecilkan font tanpa alasan.
+5. Tetap validasi batas kiri/kanan garis kuning, batas atas/bawah judul, dan posisi pusat 295pt.
+6. Hasil aktual font/baris kini tampil di bawah pilihan ketebalan setelah PDF dibuat.
+7. Master depan Merah/Maroon, logo, Polos, dan upload otomatis Foto/PDF/Word tidak diubah.
+8. Warna 28mm masih diblokir karena tanda potong kiri keluar bidang.
+
+Catatan: tetap uji keluaran asli di Chrome dan cetak fisik skala 100%.

@@ -1,10 +1,10 @@
 import {readPDF,readWord,readPhoto,withTimeout,setOCRProgress} from './document-reader.js';
 import {resetOCR} from './ocr-fast.js';
-import {generatePDF,checkAssets,setUserFonts} from './pdf-engine.js?v=4.13';
+import {generatePDF,checkAssets,setUserFonts} from './pdf-engine.js?v=4.14';
 import {canonicalUniversity} from './classifier.js';
 
 'use strict';
-// V4.13: unggahan otomatis diproses + status yang tidak menggantung; semua input lokal tanpa API.
+// V4.14: unggahan otomatis diproses + status yang tidak menggantung; semua input lokal tanpa API.
 const $ = id => document.getElementById(id);
 const FIELDS=['nama','nim','prodi','fakultas','universitas','jenis_dokumen','bulan_tahun'];
 const REQUIRED=['judul',...FIELDS];
@@ -195,7 +195,7 @@ function selectOrder(id,paint=true){
   $('activeOrderHeader').textContent=`Pesanan ${String(orderNumber(o)).padStart(2,'0')} · ${o.file?.name||'Input manual'}`;
   $('approveOrder').textContent=o.verified?'✓ Sudah diperiksa (klik untuk ulang)':'✓ Tandai data sudah diperiksa';
 }
-function invalidateOrder(o){releaseDownload('batch');o.pdfBlob=null;o.verified=false;if(o.status!=='membaca')o.status=(o.file&&!o.data.judul?'baru':'periksa');}
+function invalidateOrder(o){$('spineFontResult').textContent='Data diubah; buat PDF lagi untuk memeriksa ukuran font punggung.';releaseDownload('batch');o.pdfBlob=null;o.verified=false;if(o.status!=='membaca')o.status=(o.file&&!o.data.judul?'baru':'periksa');}
 function markDirty(){
   if(painting)return;const o=active();if(!o)return;
   o.data=currentData();o.revision++;invalidateOrder(o);clearPDFPreview();
@@ -318,6 +318,8 @@ async function makeSelectedPDF({downloadAfter=false}={}){
  try{
   const result=await withTimeout(generatePDF(a.data,a.thickness,a.style,a.custom_color),90000,'Pembuatan PDF lokal');
   a.pdfBlob=new Blob([result.bytes],{type:'application/pdf'});
+  $('spineFontResult').textContent=`Hasil aktual: ${a.style.toUpperCase()} ${a.thickness} mm • ${result.details?.spine_lines??'?'} baris • font judul punggung ${result.details?.spine_font_pt??'?'} pt`;
+
   updatePDFPreview(a);renderOrders();step(4);
   if(downloadAfter)triggerDownload(a.pdfBlob,`${String(orderNumber(a)).padStart(2,'0')}_${safeName(a.data.nama)}_${a.style.toUpperCase()}_${a.thickness}MM.pdf`);
   notice(`PDF ${a.data.nama} — ${a.style.toUpperCase()} ${a.thickness} mm berhasil. Judul punggung: ${result.details?.spine_lines||'?'} baris, font ${result.details?.spine_font_pt||'?'} pt. Periksa preview dan cetak uji.`+(result.warnings?.length?'\n'+result.warnings.join('\n'):''),result.warnings?.length?'info':'success');
@@ -432,7 +434,7 @@ $('downloadButton').addEventListener('click',()=>{
   notice('PDF telah disiapkan. Jika browser tidak langsung mengunduh, gunakan tombol hijau "Download" di bawah pratinjau.','success');
 });
 async function loadStatus(){
- $('connection').textContent='GitHub Pages V4.13 • Otomatis baca setelah upload • Tanpa token';
+ $('connection').textContent='GitHub Pages V4.14 • Otomatis baca setelah upload • Tanpa token';
  $('serverDot').classList.add('online');
  notice('Mode lokal: Word dan PDF teks dibaca di browser tanpa OCR lokal. Foto dan PDF scan memakai OCR Tesseract lokal (model bahasa mungkin perlu diunduh).','info');
  // JANGAN menunggu template saat memuat UI; tidak membuat tombol membaca macet.

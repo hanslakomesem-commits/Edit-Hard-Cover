@@ -1,5 +1,5 @@
 /**
- * ZAIN.NET PDF engine, static-browser GitHub Pages edition V4.14.
+ * ZAIN.NET PDF engine, static-browser GitHub Pages edition V4.15.
  * Each page begins with the already cleaned ORIGINAL PDF vector master.
  * No template lines, crop marks, or cover geometry are re-created here.
  * Important: Tinos is not the commercial Times New Roman face used in the
@@ -200,7 +200,9 @@ export function spineRows(fonts,segs,size,maxLen,maxRows,minRows=1){
 }
 function spinePositions(size,mm,count,layout=LAYOUT?.[mm]){
  const c=layout,left=c.left,right=c.right;
- const pitch=size*1.13;
+ // Match the more stable colored-cover calibration a bit closer so the
+ // plain spine rows stay visually centered between the two fold guides.
+ const pitch=size*1.11;
  const span=(count-1)*pitch+(0.892-(-0.216))*size;
  if(span>right-left-.30+0.001)fail('Baris punggung akan melewati garis batas fisik.');
  const base=(left+right)/2-(0.892-.216)*size/2;
@@ -247,15 +249,20 @@ export function spineRowPreferences(base,minFont=6,thicknessMm=10){
 export function chooseSpine(fonts,segs,mm,warnings,layout=LAYOUT?.[mm]){
  if(!layout)fail(`Data kalibrasi punggung ${mm} mm belum tersedia.`);
  const base=mm===10?8:9;
- const cy=layout.spine_title_center_y;
- const maxLen=Math.min(460,2*(cy-54.5),2*(530-cy));
+ // Plain cover now follows the same visual centering idea as the colored cover:
+ // keep the title a little lower and strictly inside the safe title zone.
+ const cy=(layout.spine_title_center_y||289)+6.0;
+ const safeTop=60.0;
+ const safeBottom=536.0;
+ const maxLen=Math.min(460,2*(cy-safeTop)-2,2*(safeBottom-cy)-2);
  for(const {rows,size} of spineRowPreferences(base,6,mm)){
   try{
    const result=spineRows(fonts,segs,size,maxLen,rows,rows);
    const xs=spinePositions(size,mm,result.length,layout);
    if(result.length===3)warnings.push(`Judul punggung ${mm} mm memakai 3 baris dengan ${size} pt agar teks tetap terbaca jelas; 2 baris pada 9 pt tidak muat.`);
    if(size<base)warnings.push(`Font judul punggung otomatis diturunkan dari ${base} ke ${size} pt.`);
-   return {result,xs,size};
+   if(mm>=13)warnings.push(`Posisi judul punggung POLOS diselaraskan ke pusat visual seperti cover warna.`);
+   return {result,xs,size,cy};
   }catch(e){if(!(e instanceof PDFPreflightError))throw e;}
  }
  fail(`Judul terlalu panjang untuk punggung ${mm} mm pada minimal 6 pt dan maksimal 3 baris. PDF diblokir supaya tidak salah cetak.`);
@@ -289,7 +296,7 @@ async function generatePlainPDF(data,mm){
  single(page,fonts,upper(canonicalUniversity(data.universitas)),12,conf.front_cx,conf.front_universitas_y,395,'Universitas',warnings,9);
  single(page,fonts,upper(data.bulan_tahun),12,conf.front_cx,conf.front_year_y,395,'Tanggal',warnings,9.5);
  const spine=chooseSpine(fonts,segs,mm,warnings);
- for(let i=0;i<spine.result.length;i++)renderLine(page,fonts,spine.result[i],spine.size,spine.xs[i],conf.spine_title_center_y,true);
+ for(let i=0;i<spine.result.length;i++)renderLine(page,fonts,spine.result[i],spine.size,spine.xs[i],spine.cy??conf.spine_title_center_y,true);
  single(page,fonts,upper(data.jenis_dokumen),conf.spine_type_pt,conf.spine_type_x,conf.spine_type_y,135,'Jenis dokumen punggung',warnings,6,true);
  single(page,fonts,upper(data.nama),conf.spine_name_pt,conf.spine_name_x,conf.spine_name_y,175,'Nama punggung',warnings,6,true);
  single(page,fonts,upper(data.bulan_tahun),conf.spine_year_pt,conf.spine_year_x,conf.spine_year_y,115,'Tanggal punggung',warnings,6,true);
@@ -299,7 +306,7 @@ async function generatePlainPDF(data,mm){
  if(reopened.getPageCount()!==1)fail('PDF hasil harus terdiri dari tepat satu halaman.');
  const p=reopened.getPage(0);
  if(Math.abs(p.getWidth()-pagePt.width)>.55||Math.abs(p.getHeight()-pagePt.height)>.55)fail('PDF hasil tidak berukuran 483 × 330 mm.');
- return {bytes:new Uint8Array(bytes),warnings,details:{mm,spine_font_pt:spine.size,spine_lines:spine.result.length}};
+ return {bytes:new Uint8Array(bytes),warnings,details:{mm,spine_font_pt:spine.size,spine_lines:spine.result.length,spine_title_center_y:spine.cy??conf.spine_title_center_y}};
 }
 
 

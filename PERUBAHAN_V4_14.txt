@@ -1,4 +1,4 @@
-ZAIN.NET COVER V4.14 — PERBAIKAN KHUSUS COVER WARNA
+ZAIN.NET COVER V4.15 — PERBAIKAN KHUSUS COVER WARNA
 
 1. Punggung WARNA kini mempunyai kebijakan font tersendiri; tidak mengubah kebijakan Polos.
 2. Ukuran 13–28 mm mencoba 2 baris × 9pt, kemudian 3 baris × 9pt, sebelum 8/7/6pt.

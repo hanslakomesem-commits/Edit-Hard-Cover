@@ -1,4 +1,4 @@
-# ZAIN.NET COVER V4.14 — FIX FONT PUNGGUNG WARNA
+# ZAIN.NET COVER V4.15 — FIX FONT PUNGGUNG WARNA
 
 **Perubahan hanya pada perhitungan judul punggung WARNA (Merah/Maroon/Custom).**
 - Punggung 13–28 mm: 2×9 pt → 3×9 pt → 2×8 pt → 3×8 pt → ... sampai minimum 6 pt.

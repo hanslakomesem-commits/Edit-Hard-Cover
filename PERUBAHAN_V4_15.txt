@@ -1,0 +1,5 @@
+ZAIN.NET COVER V4.15 — PERBAIKAN MODE POLOS
+- Presisi judul punggung polos diselaraskan dengan logika cover warna.
+- Anchor judul polos diturunkan sekitar 6 pt agar posisi lebih pas secara visual.
+- Pitch antarbaris punggung polos disamakan lebih dekat dengan mode warna.
+- Mode warna tidak diubah.

@@ -1,4 +1,4 @@
-/** ZAIN.NET COVER V4.21 — read the COMPLETE original ABSTRAK section.
+/** ZAIN.NET COVER V4.22 — read the COMPLETE original ABSTRAK section.
  * Cover metadata still uses first-page extraction in document-reader.js.
  * This separate reader scans the thesis until the heading ABSTRAK is found
  * and then stops at Kata Kunci / ABSTRACT / next section, not at a page cap.
@@ -11,6 +11,31 @@ const stopHeading=/^(?:KATA\s*KUNCI|KEY\s*WORDS?|ABSTRACT|ABSTRAK|KATA\s+PENGANT
 const isHeading=s=>abstractHeading.test(cleanParagraph(s));
 const isStop=s=>stopHeading.test(cleanParagraph(s));
 const metadata=/^(?:Nama|NIM|NPM|Judul|Pembimbing(?:\s+[I1]+)?|Program\s+Studi|Fakultas|Universitas|Tahun|Dosen|Jurusan)\s*[:：]/iu;
+/** DOCX abstracts often start with a thesis citation of the form
+ * "Adi Mulyono ... Skripsi ... Universitas ... pembimbing ...".
+ * This is not abstract prose and must not appear on the back cover.
+ */
+export function isAbstractMetadata(s){
+ const t=cleanParagraph(s);
+ if(metadata.test(t))return true;
+ if(/^(?:ABSTRAK|ABSTRACT|KATA\s*KUNCI|KEYWORDS?)\b/iu.test(t))return true;
+ if(/^[\p{L}\s.'-]{5,90}\s*,?\s*\d{8,14}\b/u.test(t) && t.length<300)return true;
+ if(/\b(?:skripsi|tesis)\b/iu.test(t) && /\b(?:universitas|fakultas|program\s+studi)\b/iu.test(t) &&
+    /\b(?:pembimbing|promotor)\b/iu.test(t))return true;
+ if(/^[^.!?]{3,100},?\s+\d{8,14}\s*[,.;]/u.test(t) && /\b(?:skripsi|tesis|universitas)\b/iu.test(t))return true;
+ if(/\b(?:NIM|NPM)\s*[.:]?\s*\d{7,}\b/iu.test(t)&&
+    /\b(?:skripsi|tesis|pembimbing|universitas|fakultas|studi)\b/iu.test(t))return true;
+ if(/\b(?:skripsi|tesis)\b/iu.test(t)&& /\b(?:universitas|pembimbing)\b/iu.test(t)&&
+    /\b(?:19|20)\d{2}\b/iu.test(t))return true;
+ return false;
+}
+export function validateAbstractParagraphs(items){
+ const ps=(items||[]).map(cleanParagraph).filter(Boolean).filter(p=>!isAbstractMetadata(p));
+ if(!ps.length)throw Error('Bagian ABSTRAK ditemukan tetapi hanya metadata skripsi, bukan isi penelitian. Jangan gunakan identitas sebagai sampul belakang; koreksi paragraf manual atau unggah naskah lain.');
+ if(ps.some(p=>/^(?:BAB\s+[IVXLCDM]+|DAFTAR\s+ISI|KATA\s+PENGANTAR)\b/iu.test(p)))throw Error('Pembatas ABSTRAK belum pasti; teks BAB lain terdeteksi. Periksa manual.');
+ return ps;
+}
+
 export function parseAbstractParagraphs(blocks,{allowWithoutHeading=false}={}){
  const lines=(blocks||[]).map(cleanParagraph).filter(Boolean);
  const idx=lines.findIndex(isHeading);
@@ -18,7 +43,7 @@ export function parseAbstractParagraphs(blocks,{allowWithoutHeading=false}={}){
  const out=[];
  for(const item of idx>=0?lines.slice(idx+1):lines){
   if(isStop(item))break;
-  if(metadata.test(item))continue;
+  if(isAbstractMetadata(item))continue;
   if(item.length<24&&!/[.!?。]$/u.test(item))continue;
   out.push(item);
   if(out.length>=60)break;
@@ -37,7 +62,7 @@ export function docxAbstractParagraphs(xml){
   if(!para)continue;
   if(!found){if(isHeading(para))found=true;continue;}
   if(isStop(para)){finished=true;break;}
-  if(metadata.test(para))continue;
+  if(isAbstractMetadata(para))continue;
   if(para.length<24&&!/[.!?。]$/u.test(para))continue;
   paragraphs.push(para);
   if(paragraphs.length>60)break;
@@ -83,7 +108,8 @@ export async function readAbstractFromFile(file,{onProgress}={}){
   const xml=await withTimeout(entry.async('string'),45000,'Memuat teks DOCX');
   const paragraphs=docxAbstractParagraphs(xml);
   if(!paragraphs.length)throw Error('Bagian ABSTRAK lengkap tidak ditemukan sebagai paragraf di DOCX. Periksa judul heading atau salin abstrak manual.');
-  return {paragraphs,source:`DOCX asli: ${file.name}`,warnings:paragraphs.length===1?['Hanya satu paragraf terdeteksi. Cocokkan batas paragraf dengan naskah asli.']:[]};
+  const valid=validateAbstractParagraphs(paragraphs);
+  return {paragraphs:valid,source:`DOCX asli: ${file.name}`,warnings:valid.length===1?['Hanya satu paragraf terdeteksi. Cocokkan batas paragraf dengan naskah asli.']:[]};
  }
  if(/\.pdf$/iu.test(file.name||'')||file.type==='application/pdf'){
   if(!globalThis.pdfjsLib)throw Error('PDF.js belum dimuat. Periksa akses pustaka browser.');
@@ -103,7 +129,7 @@ export async function readAbstractFromFile(file,{onProgress}={}){
     for(let j=start;j<groups.length;j++){
      const item=groups[j];
      if(isStop(item.text)){done=true;break;}
-     if(metadata.test(item.text))continue;
+     if(isAbstractMetadata(item.text))continue;
      active.push(item);
     }
     const pagePars=groupPdfParagraphs(active);
@@ -115,6 +141,7 @@ export async function readAbstractFromFile(file,{onProgress}={}){
    }
    if(!found)throw Error(`Heading ABSTRAK tidak ditemukan pada ${pdf.numPages} halaman PDF. Jika hasil scan tanpa lapisan teks, salin abstrak manual.`);
    if(!paragraphs.length)throw Error('ABSTRAK ditemukan tetapi teksnya kosong atau berupa gambar scan.');
+   paragraphs=validateAbstractParagraphs(paragraphs);
    const warnings=[];
    if(!done)warnings.push('Penanda akhir abstrak/Kata Kunci tidak ditemukan. Periksa agar tidak ada paragraf BAB lain yang ikut tersalin.');
    if(paragraphs.length===1)warnings.push('PDF hanya menghasilkan satu paragraf; periksa apakah paragraf aslinya terpisah.');

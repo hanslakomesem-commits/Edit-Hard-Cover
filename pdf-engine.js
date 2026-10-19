@@ -1,5 +1,5 @@
 /**
- * ZAIN.NET PDF engine, static-browser GitHub Pages edition V4.21.
+ * ZAIN.NET PDF engine, static-browser GitHub Pages edition V4.22.
  * Each page begins with the already cleaned ORIGINAL PDF vector master.
  * No template lines, crop marks, or cover geometry are re-created here.
  * Important: Tinos is not the commercial Times New Roman face used in the
@@ -8,6 +8,7 @@
 import {colorGuideGeometry, SOURCE_SPINE, mmPoint} from './guide-geometry.js';
 import {threeLineReferenceStatus, withinSpine} from './color-spine-profile.js';
 import {getAutomaticUnicodeFonts,getAutomaticUnicodeRegular} from './font-unicode.js';
+import {getDummyArialFontBytes} from './font-arial-compatible.js';
 import {DUMMY_SIZES,DUMMY_PAGE,dummySpineGeometry,chooseDummyBackText} from './dummybook-layout.js';
 import {IPS_SIZES,IPS_REFERENCE,ipsSpineGeometry} from './soft-ips-layout.js';
 import {canonicalUniversity} from './classifier.js';
@@ -34,7 +35,7 @@ async function ensureAssets(){
  if(LAYOUT&&MASTER&&COLOR_MASTERS&&COLOR_TRANSPARENT&&UNIRA_MASTER&&UNIRA_LOGO)return;
  if(!PDFDocument)throw Error('Pustaka pdf-lib gagal dimuat. Cek internet untuk memuat pustaka statis CDN, kemudian refresh.');
  const [lo,ma,co,tr,unira,uniraLogo]=await Promise.all([
-  loadAsset('./assets/layout.json','json'),loadAsset('./assets/masters.pdf'),loadAsset('./assets/warna_clean.pdf'),loadAsset('./assets/warna_transparent_marks_logo.pdf'),loadAsset('./assets/unira_clean.pdf'),loadAsset('./assets/unira_logo.png')]);
+  loadAsset('./assets/layout.json','json'),loadAsset('./assets/masters.pdf'),loadAsset('./assets/warna_clean.pdf'),loadAsset('./assets/warna_transparent_marks_logo.pdf'),loadAsset('./assets/unira_clean.pdf'),loadAsset('./assets/unira_logo_custom.png?v=4.22')]);
  LAYOUT=lo.templates;MASTER=ma;COLOR_MASTERS=co;COLOR_TRANSPARENT=tr;UNIRA_MASTER=unira;UNIRA_LOGO=uniraLogo;
 }
 export async function checkAssets(){await ensureAssets();return {thicknesses:ALL};}
@@ -557,6 +558,12 @@ async function generateColorPDF(data,mm,mode,customColor){
 }
 
 /** UNIRA/Universitas Madura cover, measured from the uploaded 484x330mm reference.\n * Coordinates are in PDF points, origin at the upper-left for all text.\n * The supplied sample is a 10mm spine; all LEFT crop guides move by the\n * width delta while the RIGHT front cover and its title remain unchanged.\n * At 28mm, the leftmost horizontal corner is shortened if it crosses x=0.\n */
+/** Original UNIRA PDF image rect: x685.215–697.172, y772.634–784.927 (top origin).
+ * Original year text box: y787.9–796.4. User requested both slightly LOWER
+ * than the prior generated output, so use a small explicit +3pt correction;
+ * front cover text and all fold marks remain unchanged.
+ */
+export const UNIRA_SPINE_MEDIA=Object.freeze({logoTop:772.6344,logoWidth:11.9572,logoHeight:12.2925,yearBaseline:796.4,dropPt:3.0});
 export const UNIRA_REFERENCE=Object.freeze({
  pageWidthPt:mmPt(484),pageHeightPt:mmPt(330),baseMm:10,
  leftGuides:[62.65,367.96,649.41,677.37],
@@ -654,17 +661,18 @@ async function generateUniraPDF(data,mm){
  const pitch=mm<=12?6.2:Math.min(9,mmPt(mm)/3.1);
  single(page,fonts,upper(data.nama),metaSize,g.center+pitch/2,673,180,'Nama punggung UNIRA',warnings,6,true,BLACK);
  single(page,fonts,`NPM. ${norm(data.nim)}`,metaSize,g.center-pitch/2,673,175,'NPM punggung UNIRA',warnings,6,true,BLACK);
- // UNIRA logo restored from the original indexed image AND its transparency mask.
- // For reliable Adobe Reader rendering it is pre-composited on WHITE (the actual
- // UNIRA master paper color) before being embedded as an ordinary RGB PNG.
- // This prevents an opaque black square when the mask is lost.
+ // User-supplied replacement UNIVERSITY MADURA crest with transparency.
+ // Embed PNG alpha natively; do not composite to black or white backgrounds.
+ // Spine media stay fixed vertically across 10–28 mm; only X tracks center.
  const emblem=await doc.embedPng(UNIRA_LOGO);
- page.drawImage(emblem,{x:g.center-5.98,y:page.getHeight()-784.93,width:11.96,height:12.3});
- single(page,fonts,year,8.5,g.center,796,90,'Tahun punggung UNIRA',warnings,6,false,BLACK);
+ const im=UNIRA_SPINE_MEDIA;
+ page.drawImage(emblem,{x:g.center-im.logoWidth/2,
+   y:page.getHeight()-(im.logoTop+im.dropPt+im.logoHeight),width:im.logoWidth,height:im.logoHeight});
+ single(page,fonts,year,8.5,g.center,im.yearBaseline+im.dropPt,90,'Tahun punggung UNIRA',warnings,6,false,BLACK);
  const out=new Uint8Array(await doc.save({useObjectStreams:true}));
  const check=await PDFDocument.load(out);
  if(check.getPageCount()!==1||Math.abs(check.getPage(0).getWidth()-mmPt(484))>.35||Math.abs(check.getPage(0).getHeight()-mmPt(330))>.35)fail('PDF UNIRA gagal verifikasi ukuran.');
- return {bytes:out,warnings,details:{mode:'unira',mm,paper_mm:UNIRA_PRINT_MM,spine_font_pt:spine.size,spine_lines:spine.lines.length,guide_left:g.left,guide_right:g.right,logo:'lambang referensi UNIRA, mask transparansi dipulihkan (RGB putih)'}};
+ return {bytes:out,warnings,details:{mode:'unira',mm,paper_mm:UNIRA_PRINT_MM,spine_font_pt:spine.size,spine_lines:spine.lines.length,guide_left:g.left,guide_right:g.right,logo:'logo UNIRA transparan baru dari pengguna',logo_year_drop_pt:UNIRA_SPINE_MEDIA.dropPt}};
 }
 
 
@@ -673,6 +681,22 @@ async function generateUniraPDF(data,mm){
  * page, preserving the original photos, logo, pink background and fold marks.
  * Original student text and old abstract are removed from the clean master.
  */
+
+async function getDummyFonts(pdf,warnings){
+ const kit=globalThis.fontkit||globalThis.Fontkit;
+ if(!kit)fail('Fontkit gagal dimuat, tidak bisa menanam font Arial pada Dummybook.');
+ pdf.registerFontkit(kit);
+ let bytes;try{bytes=await getDummyArialFontBytes();}catch(e){fail(e.message||String(e));}
+ try{
+  const [bold,italic,regular]=await Promise.all([
+    pdf.embedFont(bytes.bold,{subset:true}),
+    pdf.embedFont(bytes.italic,{subset:true}),
+    pdf.embedFont(bytes.regular,{subset:true})]);
+  const asFace=font=>({font,face:{hasGlyphForCodePoint:cp=>font.getCharacterSet().includes(cp)}});
+  warnings.push('Dummybook: font '+bytes.label+'. Bila harus Arial asli, unggah font Arial Regular dan Bold yang berlisensi dari komputer.');
+  return {regular,bold:[asFace(bold)],italic:[asFace(italic)],name:bytes.label};
+ }catch(e){fail('Font Arial/Arimo tidak dapat dimasukkan ke PDF: '+String(e.message||e));}
+}
 export function dummyTitleSpine(fonts,segs,mm,warnings){
  const g=dummySpineGeometry(mm),centerTop=DUMMY_PAGE.spineTitleCenterPt;
  const top=DUMMY_PAGE.spineTitleTopPt,bottom=DUMMY_PAGE.spineTitleBottomPt;
@@ -712,7 +736,7 @@ async function generateDummyPDF(data,mm){
  const g=dummySpineGeometry(mm);
  const [page]=await doc.copyPages(src,[g.page]);doc.addPage(page);
  if(Math.abs(page.getWidth()-DUMMY_PAGE.widthPt)>.6||Math.abs(page.getHeight()-DUMMY_PAGE.heightPt)>.6)fail('Master Dummybook bukan 420×297 mm.');
- const fonts=await getFonts(doc,warnings);
+ const fonts=await getDummyFonts(doc,warnings);
  const spine=dummyTitleSpine(fonts,segs,mm,warnings);
  // Front cover: measured from the right half of the new reference.
  let front=null;
@@ -738,8 +762,7 @@ async function generateDummyPDF(data,mm){
  single(page,fonts,`NIM. ${norm(data.nim)}`,metaSize,g.center-step/2,170,95,'NIM punggung Dummybook',warnings,3.5,true,BLACK);
  single(page,fonts,upper(data.bulan_tahun),metaSize,g.center,730,75,'Tahun punggung Dummybook',warnings,3.5,true,BLACK);
  // Exact final paragraphs, never summarized / invented / sliced mid-paragraph.
- const fontBytes=await getAutomaticUnicodeRegular();
- const regular=await doc.embedFont(fontBytes,{subset:true});
+ const regular=fonts.regular;
  const characters=new Set(regular.getCharacterSet());
  const widthFn=(s,size)=>{
   for(const ch of s)if(!characters.has(ch.codePointAt(0)))fail(`Karakter abstrak '${ch}' tidak ada pada font Unicode. Pilih font yang sesuai.`);
@@ -762,7 +785,7 @@ async function generateDummyPDF(data,mm){
  if(checked.getPageCount()!==1)fail('Dummybook terbaru wajib 1 lembar 420×297 mm.');
  return {bytes,warnings,details:{mode:'dummybook',mm,paper_mm:DUMMY_PRINT_MM,pages:1,
   spine_font_pt:spine.size,spine_lines:spine.lines.length,back_paragraph_count:layout.paragraphCount,
-  back_lines:layout.totalLines,back_font_pt:layout.size,source_reference_page:g.page+1}};
+  back_lines:layout.totalLines,back_font_pt:layout.size,dummy_font:fonts.name,source_reference_page:g.page+1}};
 }
 
 /** V4.20 Soft Cover IPS, 330 × 210 mm, landscape.

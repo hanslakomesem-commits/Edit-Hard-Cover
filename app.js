@@ -1,13 +1,15 @@
 import {readPDF,readWord,readPhoto,withTimeout,setOCRProgress} from './document-reader.js';
 import {resetOCR} from './ocr-fast.js';
-import {generatePDF,checkAssets,setUserFonts} from './pdf-engine.js?v=4.21';
+import {generatePDF,checkAssets,setUserFonts} from './pdf-engine.js?v=4.22';
 import {canonicalUniversity} from './classifier.js';
-import {readAbstractFromFile} from './abstract-reader.js';
+import {readAbstractFromFile,isAbstractMetadata} from './abstract-reader.js';
+import {chooseDummyBackText,DUMMY_PAGE} from './dummybook-layout.js';
+import {setDummyArialFonts} from './font-arial-compatible.js';
 import {DUMMY_SIZES} from './dummybook-layout.js';
 import {IPS_SIZES} from './soft-ips-layout.js';
 
 'use strict';
-// V4.21: unggahan otomatis diproses + status yang tidak menggantung; semua input lokal tanpa API.
+// V4.22: unggahan otomatis diproses + status yang tidak menggantung; semua input lokal tanpa API.
 const $ = id => document.getElementById(id);
 const FIELDS=['nama','nim','prodi','fakultas','universitas','jenis_dokumen','bulan_tahun'];
 const REQUIRED=['judul',...FIELDS];
@@ -206,7 +208,19 @@ function invalidateOrder(o){$('spineFontResult').textContent='Data diubah; buat 
 function markDirty(){
   if(painting)return;const o=active();if(!o)return;
   o.data=currentData();o.revision++;invalidateOrder(o);clearPDFPreview();
-  $('approveOrder').textContent='✓ Tandai data sudah diperiksa';renderOrders();
+  $('approveOrder').textContent='✓ Tandai data sudah diperiksa';renderOrders();updateDummyParagraphPreview();
+}
+function updateDummyParagraphPreview(){
+ const el=$('dummyParagraphPreview');if(!el)return;
+ const o=active();if(!o||o.style!=='dummybook'){el.textContent='';return;}
+ const paragraphs=String(o.data.abstract_text||'').split(/\n\s*\n/u).map(x=>x.replace(/\s+/gu,' ').trim()).filter(Boolean).filter(p=>!isAbstractMetadata(p));
+ if(!paragraphs.length){el.textContent='Belum ada PARAGRAF ISI ABSTRAK yang valid. Informasi nama, NIM, judul, dan pembimbing tidak boleh digunakan sebagai isi belakang.';return;}
+ try{
+  const canvas=document.createElement('canvas'),context=canvas.getContext('2d');
+  // Approximate preview only. Actual PDF rechecks with embedded font metrics.
+  const fit=chooseDummyBackText(paragraphs,(txt,size)=>{context.font=`${size}px Arial, sans-serif`;return context.measureText(txt).width;});
+  el.textContent=`PRATINJAU ${fit.paragraphCount} PARAGRAF TERAKHIR (hasil PDF dihitung ulang dengan font yang ditanam):\n\n${fit.paragraphs.join('\n\n')}`;
+ }catch(e){el.textContent='Paragraf akhir belum muat atau pemisahan meragukan: '+(e.message||e);}
 }
 function renderCoverStyle(){
  const o=active();
@@ -214,6 +228,7 @@ function renderCoverStyle(){
  $('studentIdLabel').innerHTML=o?.style==='unira'?'NPM <i>*</i>':'NIM <i>*</i>';
  $('dummyAbstractPanel').classList.toggle('hidden',o?.style!=='dummybook');
  $('dummyAbstractStatus').textContent=o?.abstractStatus||'Tempel abstrak asli; pisahkan antarparagraf dengan satu baris kosong. Otomatis: 2 paragraf terakhir, atau 1/3 jika perlu.';
+ updateDummyParagraphPreview();
  const show=o?.style==='custom';$('customColorRow').classList.toggle('hidden',!show);$('customColorPicker').value=o?.custom_color||'#1458A8';$('customColorCode').textContent=o?.custom_color||'#1458A8';
 }
 function setStyle(id,style){
@@ -253,10 +268,10 @@ async function populateAbstract(order,file,{replace=false}={}){
    if(activeId===order.id)renderCoverStyle();return;
   }
   order.data.abstract_text=result.paragraphs.join('\n\n');
-  order.abstractStatus=`Ditemukan ${result.paragraphs.length} paragraf dari ${result.source}. ${result.warnings?.join(' ')||''} Periksa pemisahan paragraf dan isinya.`;
+  order.abstractStatus=`Ditemukan ${result.paragraphs.length} paragraf ISI ABSTRAK dari ${result.source}. Generator hanya memilih paragraf TERAKHIR. ${result.warnings?.join(' ')||''} Periksa kotak pratinjau akhir.`;
   invalidateOrder(order);
   if(activeId===order.id){paintData(order.data);renderCoverStyle();showWarnings(order);}
-  notice(`Abstrak ditemukan: ${result.paragraphs.length} paragraf. Silakan periksa sebelum membuat Dummybook.`, 'success');
+  notice(`Abstrak: ${result.paragraphs.length} paragraf isi ditemukan. Periksa PRATINJAU PARAGRAF TERAKHIR sebelum mencetak.`, 'success');
  }catch(e){
   order.abstractStatus='Tidak terbaca otomatis: '+(e?.message||e)+'. Tempel paragraf abstrak manual pada kotak teks.';
   if(activeId===order.id)renderCoverStyle();
@@ -442,7 +457,7 @@ for(const evt of ['dragleave','drop'])$('dropzone').addEventListener(evt,event=>
 $('clearPhoto').addEventListener('click',()=>{const a=active();if(a)removeOrder(a.id);else notice('Tidak ada pesanan yang dipilih.');});
 $('ocrButton').addEventListener('click',readSelected);$('ocrAllButton').addEventListener('click',()=>readAll({automatic:false}));
 $('titleEditor').addEventListener('input',markDirty);
-$('abstractText').addEventListener('input',markDirty);
+$('abstractText').addEventListener('input',()=>{markDirty();updateDummyParagraphPreview();});
 $('titleEditor').addEventListener('paste',event=>{event.preventDefault();document.execCommand('insertText',false,(event.clipboardData||window.clipboardData).getData('text/plain'));});
 document.querySelectorAll('#dataForm input').forEach(input=>input.addEventListener('input',markDirty));
 document.querySelector('[name="universitas"]').addEventListener('blur',event=>{
@@ -477,7 +492,7 @@ $('downloadButton').addEventListener('click',()=>{
   notice('PDF telah disiapkan. Jika browser tidak langsung mengunduh, gunakan tombol hijau "Download" di bawah pratinjau.','success');
 });
 async function loadStatus(){
- $('connection').textContent='GitHub Pages V4.21 • Dummybook spread A3 5–10 mm • Tanpa token';
+ $('connection').textContent='GitHub Pages V4.22 • Dummybook spread A3 5–10 mm • Tanpa token';
  $('serverDot').classList.add('online');
  notice('Mode lokal: Word dan PDF teks dibaca di browser tanpa OCR lokal. Foto dan PDF scan memakai OCR Tesseract lokal (model bahasa mungkin perlu diunduh).','info');
  // JANGAN menunggu template saat memuat UI; tidak membuat tombol membaca macet.
@@ -495,5 +510,15 @@ async function updateFonts(){
  }catch(error){$('fontStatus').textContent='Font gagal dibaca: '+error.message;}
 }
 fontBold.addEventListener('change',updateFonts);fontItalic.addEventListener('change',updateFonts);
+const arialRegular=$('dummyArialRegularInput'),arialBold=$('dummyArialBoldInput');
+async function updateDummyArial(){
+ try{
+  const [reg,bold]=await Promise.all([arialRegular.files[0]?.arrayBuffer(),arialBold.files[0]?.arrayBuffer()]);
+  if(!!reg!==!!bold){$('dummyArialStatus').textContent='Unggah Arial Regular dan Arial Bold sekaligus; font otomatis tetap berlaku.';setDummyArialFonts(null,null);return;}
+  setDummyArialFonts(reg?new Uint8Array(reg):null,bold?new Uint8Array(bold):null);
+  $('dummyArialStatus').textContent=reg?'Arial asli dari komputer siap dipakai untuk Dummybook.':'Otomatis memakai Arimo (metrik kompatibel Arial); font Arial tidak ikut dibagikan.';
+ }catch(e){$('dummyArialStatus').textContent='Gagal membaca font: '+(e.message||e);}
+}
+if(arialRegular&&arialBold){arialRegular.addEventListener('change',updateDummyArial);arialBold.addEventListener('change',updateDummyArial);}
 paintData(newData());renderCoverStyle();loadStatus();
 globalThis.__zainnetAppBooted=true;

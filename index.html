@@ -4,12 +4,12 @@
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 <meta name="theme-color" content="#0f467e" />
-<title>ZAIN.NET Cover V4.21 — GitHub Pages Tanpa API</title>
-<link rel="stylesheet" href="./style.css?v=4.21"/>
+<title>ZAIN.NET Cover V4.22 — GitHub Pages Tanpa API</title>
+<link rel="stylesheet" href="./style.css?v=4.22"/>
 </head>
 <body>
 <header class="topbar">
- <div class="brand"><div class="logo">Z<span>•</span></div><div><strong>ZAIN.NET <span>COVER</span></strong><small>GitHub Pages • V4.21 • Tanpa API</small></div></div>
+ <div class="brand"><div class="logo">Z<span>•</span></div><div><strong>ZAIN.NET <span>COVER</span></strong><small>GitHub Pages • V4.22 • Tanpa API</small></div></div>
  <div class="header-right"><span class="dot" id="serverDot"></span><span id="connection">Menyiapkan mode lokal...</span></div>
 </header>
 <main class="container">
@@ -60,6 +60,7 @@
    </div>
    <label class="field" for="abstractText">Paragraf-paragraf ABSTRAK asli (boleh edit manual)</label>
    <textarea id="abstractText" rows="9" spellcheck="false" placeholder="Tempel abstrak dari sumber asli. Pisahkan masing-masing paragraf dengan satu baris kosong. Aplikasi memilih 1, 2, atau 3 paragraf paling akhir secara otomatis."></textarea>
+   <div class="batch-note" style="margin-top:10px"><strong>Paragraf akhir yang akan dicetak:</strong><pre id="dummyParagraphPreview" style="white-space:pre-wrap;overflow-wrap:anywhere;max-height:250px;overflow:auto;font:13px Arial,sans-serif"></pre><small>Pratinjau memakai perkiraan metrik browser; PDF menghitung ulang dengan font tertanam. Jika hanya identitas mahasiswa yang terbaca, aplikasi akan meminta perbaikan.</small></div>
    <p id="dummyAbstractStatus" class="micro-note" role="status" aria-live="polite">Belum ada abstrak.</p>
    <p class="micro-note"><b>Penting:</b> PDF scan tanpa teks dan dokumen yang tidak memiliki pemisah paragraf perlu dikoreksi manual. Periksa semua paragraf dan posisi teks sebelum mencetak 100%.</p>
   </section>
@@ -80,7 +81,7 @@
    <button class="cover-style" type="button" data-cover-style="softips"><span class="swatch swatch-softips"></span><strong>Soft Cover IPS</strong><small>330 × 210 mm • 5–10 mm</small></button>
   </div>
   <label class="custom-color-row hidden" id="customColorRow">Warna custom: <input type="color" id="customColorPicker" value="#1458A8" aria-label="Pilih warna custom" /><span id="customColorCode">#1458A8</span></label>
-  <p class="template-msg">Mode <b>UNIRA (Universitas Madura)</b> dengan logo yang dipulihkan dari PDF referensi mengikuti PDF baru: judul depan bagian atas, NPM, PRODI, FAKULTAS, UNIVERSITAS MADURA, PAMEKASAN, tahun; punggung dengan logo kecil dan garis lipatan adaptif 10–28 mm. Mode polos <b>tanpa logo</b>, memakai tata letak Serli. Pada V4.21 posisi judul punggung polos diselaraskan agar presisinya mengikuti pusat visual cover warna. Mode warna <b>dengan logo asli</b> dan huruf <b>kuning</b>, mengikuti tata letak file PDF warna, bukan tata letak polos. Ketebalan 10–28 mm dipilih terpisah per orang; Dummybook memakai satu lembar 420 × 297 mm (belakang–punggung–depan) dengan master asli per ukuran 5–10 mm. <b>Soft Cover IPS</b> memakai master 330 × 210 mm, warna putih, logo UIN Madura asli, identitas hitam, dan lipatan 5–10 mm (hanya 5 mm terukur dari referensi).</p>
+  <p class="template-msg">Mode <b>UNIRA (Universitas Madura)</b> dengan logo transparan baru yang Anda kirim mengikuti PDF baru: judul depan bagian atas, NPM, PRODI, FAKULTAS, UNIVERSITAS MADURA, PAMEKASAN, tahun; punggung dengan logo kecil dan garis lipatan adaptif 10–28 mm. Mode polos <b>tanpa logo</b>, memakai tata letak Serli. Pada V4.22 posisi judul punggung polos diselaraskan agar presisinya mengikuti pusat visual cover warna. Mode warna <b>dengan logo asli</b> dan huruf <b>kuning</b>, mengikuti tata letak file PDF warna, bukan tata letak polos. Ketebalan 10–28 mm dipilih terpisah per orang; Dummybook memakai satu lembar 420 × 297 mm (belakang–punggung–depan) dengan master asli per ukuran 5–10 mm. <b>Soft Cover IPS</b> memakai master 330 × 210 mm, warna putih, logo UIN Madura asli, identitas hitam, dan lipatan 5–10 mm (hanya 5 mm terukur dari referensi).</p>
  </section>
  <section class="card size-panel">
   <div class="section-head"><span class="section-icon">04</span><div><h2>Ketebalan pesanan terpilih</h2><p>Judul punggung dicoba 2 baris pada 9 pt. Untuk punggung lebar (23–28 mm), 3 baris 9 pt lebih diutamakan daripada 2 baris kecil 7/6 pt. Font turun hanya jika diperlukan. Referensi 3 baris lengkap 10–28 mm; cover depan tetap dari file warna yang sudah benar.</p></div></div>
@@ -94,10 +95,11 @@
   <div id="singleDownloadArea" class="download-ready hidden" role="status"><strong>PDF selesai dibuat</strong><a id="singleDownloadLink" class="download-real-link" download>↓ Ketuk di sini untuk menyimpan PDF</a><small>Tautan manual ini tetap tersedia apabila browser memblokir unduhan otomatis.</small></div>
   <div class="preview-outer"><div id="previewEmpty"><span>▣</span><strong>Pratinjau akan muncul di sini</strong><p>Isi data, pilih ketebalan, lalu tekan “Buat & Lihat PDF”.</p></div><iframe id="pdfPreview" class="hidden" title="Preview PDF Hard Cover" loading="lazy"></iframe></div>
   <div class="micro-note"><a href="./assets/contoh_serli_10mm.pdf" target="_blank" rel="noopener">Lihat PDF contoh Serli 10 mm</a> &nbsp;·&nbsp; <a href="./assets/contoh_serli_27mm.pdf" target="_blank" rel="noopener">Lihat PDF contoh Serli 27 mm</a> &nbsp;·&nbsp; <a href="./assets/CONTOH_COVER_UNIRA_REFERENSI.pdf" target="_blank" rel="noopener">Lihat contoh asli UNIRA</a> &nbsp;·&nbsp; <a href="./assets/DUMMYBOOK_REFERENSI_TERBARU_420X297.pdf" target="_blank" rel="noopener">Lihat referensi Dummybook baru 420 × 297 mm</a> &nbsp;·&nbsp; <a href="./assets/SOFT_COVER_IPS_REFERENSI_6_HALAMAN.pdf" target="_blank" rel="noopener">Lihat referensi Soft Cover IPS (6 halaman)</a></div>
-  <div class="safety"><strong>Periksa setiap pesanan sebelum cetak.</strong> Font sumber adalah Times New Roman Bold. Aplikasi menggunakan font Unicode otomatis Tinos Bold/Bold Italic; bentuk huruf belum tentu identik dengan Times New Roman asli. Tetap periksa pada printer dan skala 100%.</div>
+  <div class="safety"><strong>Periksa setiap pesanan sebelum cetak.</strong> Font sumber adalah Times New Roman Bold. Template akademik selain Dummybook memakai Tinos Bold/Bold Italic. Dummybook memakai Arimo (metrik Arial) atau Arial asli yang diunggah pengguna. Tetap periksa pada printer dan skala 100%.</div>
  </section>
- <footer>© ZAIN.NET • COVER V4.21 GitHub Pages • Tanpa API/Token • Foto OCR lokal, PDF &amp; Word halaman awal • Periksa PDF sebelum cetak</footer>
-<section class="card" style="margin-top:16px"><h2>Font Unicode otomatis (V4.21)</h2><p>Aplikasi otomatis mengambil font Unicode Tinos Bold dan Bold Italic dari sumber terbuka saat PDF pertama dibuat. Mendukung petik melengkung “ ” dan banyak karakter transliterasi Arab-Latin. Tidak memakai token AI. Perlu internet ketika font belum masuk cache browser. Font milik sendiri boleh diunggah jika Anda ingin font lain.</p><label>Font tebal <input type="file" id="fontBoldInput" accept=".ttf,.otf"/></label> <label>Font tebal miring <input type="file" id="fontItalicInput" accept=".ttf,.otf"/></label><p id="fontStatus" class="micro-note">Otomatis memakai font Unicode saat membuat PDF. Unggah font sendiri hanya jika diperlukan.</p></section>
+ <footer>© ZAIN.NET • COVER V4.22 GitHub Pages • Tanpa API/Token • Foto OCR lokal, PDF &amp; Word halaman awal • Periksa PDF sebelum cetak</footer>
+<section class="card" style="margin-top:16px"><h2>Font Unicode otomatis untuk template selain Dummybook (V4.22)</h2><p>Aplikasi otomatis mengambil font Unicode Tinos Bold dan Bold Italic dari sumber terbuka saat PDF pertama dibuat. Mendukung petik melengkung “ ” dan banyak karakter transliterasi Arab-Latin. Tidak memakai token AI. Perlu internet ketika font belum masuk cache browser. Font milik sendiri boleh diunggah jika Anda ingin font lain.</p><label>Font tebal <input type="file" id="fontBoldInput" accept=".ttf,.otf"/></label> <label>Font tebal miring <input type="file" id="fontItalicInput" accept=".ttf,.otf"/></label><p id="fontStatus" class="micro-note">Otomatis memakai font Unicode saat membuat PDF. Unggah font sendiri hanya jika diperlukan.</p></section>
+<section class="card"><h2>Font Dummybook — Arial</h2><p>Dummybook menggunakan Arimo (metrik sangat dekat Arial) secara otomatis. Jika harus <b>Arial asli</b>, unggah berkas font Arial Regular dan Arial Bold milik sendiri dari komputer. Kedua font ditanam ke PDF, tanpa mengirim file font ke server.</p><label>Arial Regular <input id="dummyArialRegularInput" type="file" accept=".ttf,.otf"/></label><label>Arial Bold <input id="dummyArialBoldInput" type="file" accept=".ttf,.otf"/></label><p id="dummyArialStatus" class="micro-note">Otomatis Arimo, kompatibel metrik Arial; tidak menyertakan file font.</p></section>
 </main>
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script defer src="./vendor/jszip.min.js"></script>
@@ -118,6 +120,6 @@
     if(notice){notice.className='notice error';notice.textContent='Kesalahan proses: '+(event.reason?.message||String(event.reason));}
   });
 </script>
-<script type="module" src="./app.js?v=4.21"></script>
+<script type="module" src="./app.js?v=4.22"></script>
 </body>
 </html>

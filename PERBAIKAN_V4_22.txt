@@ -1,0 +1,6 @@
+ZAIN.NET COVER V4.22
+1. Logo UNIRA transparan diganti dengan logo unggahan pengguna; posisi tahun dan logo punggung diturunkan 3 pt sesuai masukan.
+2. Dummybook memakai Arial jika pengguna menyediakan Arial Regular/Bold asli. Font default Arimo kompatibel metrik Arial diunduh saat runtime; font Tinos tidak dipakai di Dummybook.
+3. Parser DOCX/PDF menolak paragraf identitas skripsi agar tidak masuk sampul belakang. Memilih paragraf akhir dan menampilkan pratinjau terpilih.
+4. Format 420x297 mm dan 5–10 mm tidak diubah; template lain tetap.
+5. Uji browser dan cetak fisik masih diperlukan.

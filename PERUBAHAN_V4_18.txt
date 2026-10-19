@@ -1,0 +1,16 @@
+ZAIN.NET COVER V4.18 — PERBAIKAN LOGO UNIRA
+
+PENYEBAB:
+PDF sumber menyimpan logo dalam gambar Indexed dengan /SMask terpisah.
+Gambar yang diekstrak tanpa mask terlihat sebagai kotak hitam saat di-embed.
+
+PERBAIKAN:
+- Rekonstruksi logo dari image + grayscale transparency soft mask asli.
+- Flatten ke putih (sesuai latar UNIRA) agar compatible dengan Adobe Reader lama.
+- assets/unira_logo.png sekarang RGB, 33x34 px dengan latar putih, bukan hitam.
+- assets/unira_logo_transparan.png untuk audit PNG asli dengan mask yang benar.
+- Script web V4.18 dan parameter cache diperbarui.
+- Koordinat gambar/tulisan, ketebalan 10-28mm, master Polos dan Warna TIDAK diubah.
+
+BATASAN:
+E2E ekspor browser dan hasil print belum diverifikasi pada komputer Windows 7 pengguna.

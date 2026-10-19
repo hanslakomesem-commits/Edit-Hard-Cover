@@ -1,3 +1,9 @@
+# ZAIN.NET COVER V4.18 — FIX LOGO HITAM UNIRA
+
+**Perubahan dari V4.17:** Perbaikan logo kecil punggung UNIRA yang sebelumnya terlihat sebagai kotak hitam. Gambar asli pada PDF memakai Indexed/LZW dengan soft mask grayscale terpisah. Saat diekstrak sebelumnya, mask hilang. V4.18 memakai gambar dengan mask asli diterapkan dan di-flatten pada putih sesuai background UNIRA untuk kompatibilitas Adobe Reader Windows 7. Nama file dan dimensi aset tetap `assets/unira_logo.png`, 33×34 piksel. Aset RGBA hasil rekonstruksi turut disertakan sebagai `assets/unira_logo_transparan.png` untuk audit. **Posisi cover, ukuran, geometri, dan algoritme Polos/Warna tidak diubah.**
+
+**Pengujian:** uji RGB piksel, pemeriksaan master/ref dan struktur source, simulasi penyisipan gambar ke PDF via PyMuPDF. Pengujian export browser end-to-end serta fisik cetak perlu dilakukan pengguna.
+
 # V4.17 — Kalibrasi punggung polos sesuai PDF referensi
 
 Pembaruan terhadap V4.15: menghapus offset tetap `+6.0 pt` dari judul punggung polos. Pusat judul polos sekarang langsung menggunakan nilai `spine_title_center_y` dari `assets/layout.json`, yang diambil dari PDF referensi asli pada ketebalan masing-masing. Baris diperiksa agar berada di zona aman judul antara **76–513 pt dari atas** sebelum pembuatan PDF. Pemilihan 2/3 baris dan prioritas font 9 pt pada punggung lebar tidak diubah. Seluruh kode/gambar/master **mode Warna** tidak dimodifikasi.

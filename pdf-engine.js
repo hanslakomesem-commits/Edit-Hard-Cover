@@ -1,5 +1,5 @@
 /**
- * ZAIN.NET PDF engine, static-browser GitHub Pages edition V4.17.
+ * ZAIN.NET PDF engine, static-browser GitHub Pages edition V4.18.
  * Each page begins with the already cleaned ORIGINAL PDF vector master.
  * No template lines, crop marks, or cover geometry are re-created here.
  * Important: Tinos is not the commercial Times New Roman face used in the
@@ -650,14 +650,17 @@ async function generateUniraPDF(data,mm){
  const pitch=mm<=12?6.2:Math.min(9,mmPt(mm)/3.1);
  single(page,fonts,upper(data.nama),metaSize,g.center+pitch/2,673,180,'Nama punggung UNIRA',warnings,6,true,BLACK);
  single(page,fonts,`NPM. ${norm(data.nim)}`,metaSize,g.center-pitch/2,673,175,'NPM punggung UNIRA',warnings,6,true,BLACK);
- // Place the ORIGINAL vector-reference emblem at the center of the changing spine.
+ // UNIRA logo restored from the original indexed image AND its transparency mask.
+ // For reliable Adobe Reader rendering it is pre-composited on WHITE (the actual
+ // UNIRA master paper color) before being embedded as an ordinary RGB PNG.
+ // This prevents an opaque black square when the mask is lost.
  const emblem=await doc.embedPng(UNIRA_LOGO);
  page.drawImage(emblem,{x:g.center-5.98,y:page.getHeight()-784.93,width:11.96,height:12.3});
  single(page,fonts,year,8.5,g.center,796,90,'Tahun punggung UNIRA',warnings,6,false,BLACK);
  const out=new Uint8Array(await doc.save({useObjectStreams:true}));
  const check=await PDFDocument.load(out);
  if(check.getPageCount()!==1||Math.abs(check.getPage(0).getWidth()-mmPt(484))>.35||Math.abs(check.getPage(0).getHeight()-mmPt(330))>.35)fail('PDF UNIRA gagal verifikasi ukuran.');
- return {bytes:out,warnings,details:{mode:'unira',mm,paper_mm:UNIRA_PRINT_MM,spine_font_pt:spine.size,spine_lines:spine.lines.length,guide_left:g.left,guide_right:g.right,logo:'asli dari referensi UNIRA'}};
+ return {bytes:out,warnings,details:{mode:'unira',mm,paper_mm:UNIRA_PRINT_MM,spine_font_pt:spine.size,spine_lines:spine.lines.length,guide_left:g.left,guide_right:g.right,logo:'lambang referensi UNIRA, mask transparansi dipulihkan (RGB putih)'}};
 }
 
 /** Main public API, backward-compatible with V3.8 */

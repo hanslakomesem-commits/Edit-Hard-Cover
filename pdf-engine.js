@@ -1,5 +1,5 @@
 /**
- * ZAIN.NET PDF engine, static-browser GitHub Pages edition V4.22.
+ * ZAIN.NET PDF engine, static-browser GitHub Pages edition V4.23.
  * Each page begins with the already cleaned ORIGINAL PDF vector master.
  * No template lines, crop marks, or cover geometry are re-created here.
  * Important: Tinos is not the commercial Times New Roman face used in the
@@ -11,6 +11,7 @@ import {getAutomaticUnicodeFonts,getAutomaticUnicodeRegular} from './font-unicod
 import {getDummyArialFontBytes} from './font-arial-compatible.js';
 import {DUMMY_SIZES,DUMMY_PAGE,dummySpineGeometry,chooseDummyBackText} from './dummybook-layout.js';
 import {IPS_SIZES,IPS_REFERENCE,ipsSpineGeometry} from './soft-ips-layout.js';
+import {CD_PAGE_MM,CD_PAGE_PT,CD_LAYOUT,assertCDData,computeCDTitle} from './cover-cd-layout.js';
 import {canonicalUniversity} from './classifier.js';
 const {PDFDocument, StandardFonts, degrees, rgb}=globalThis.PDFLib||{};
 const ALL=Array.from({length:19},(_,i)=>i+10);
@@ -21,6 +22,7 @@ const COLOR_PRINT_MM={width:475,height:320};
 const UNIRA_PRINT_MM={width:484,height:330};
 const DUMMY_PRINT_MM={width:420,height:297};
 const IPS_PRINT_MM={width:330,height:210};
+const CD_PRINT_MM={width:CD_PAGE_MM,height:CD_PAGE_MM};
 const mmPt=(v)=>v*72/25.4;
 const YELLOW=rgb?.(1,0.9487449527,0);
 const BLACK=rgb?.(0,0,0);
@@ -357,8 +359,8 @@ async function resizePlainToPrint(bytes) {
 }
 
 const COLOR_TYPES=['merah','maroon','custom'];
-export const coverTypes=['polos',...COLOR_TYPES,'unira','dummybook','softips'];
-export const printSizes={polos:PLAIN_PRINT_MM,merah:COLOR_PRINT_MM,maroon:COLOR_PRINT_MM,custom:COLOR_PRINT_MM,unira:UNIRA_PRINT_MM,dummybook:DUMMY_PRINT_MM,softips:IPS_PRINT_MM};
+export const coverTypes=['polos',...COLOR_TYPES,'unira','dummybook','softips','covercd'];
+export const printSizes={polos:PLAIN_PRINT_MM,merah:COLOR_PRINT_MM,maroon:COLOR_PRINT_MM,custom:COLOR_PRINT_MM,unira:UNIRA_PRINT_MM,dummybook:DUMMY_PRINT_MM,softips:IPS_PRINT_MM,covercd:CD_PRINT_MM};
 export function validateCoverMode(mode,customColor) {
  const type=String(mode||'polos').toLowerCase();
  if(!coverTypes.includes(type))fail('Pilihan jenis cover tidak dikenal.');
@@ -891,10 +893,50 @@ async function generateSoftIPSPDF(data,mm){
  return {bytes,warnings,details:{mode:'softips',mm,paper_mm:IPS_PRINT_MM,pages:1,spine_font_pt:spine.size,spine_lines:spine.lines.length,guide_left:g.left,guide_right:g.right}};
 }
 
+
+/** A single square CD cover based on the user's five-page Word reference.
+ * Two original UIN Madura logos are preserved as a separate image asset.
+ * A Cover CD has NO spine or hard-cover fold guides.
+ */
+async function generateCoverCDPDF(data){
+ assertCDData(data);
+ const warnings=[];
+ const doc=await PDFDocument.create();
+ const page=doc.addPage([CD_PAGE_PT,CD_PAGE_PT]);
+ const fonts=await getFonts(doc,warnings);
+ const logoBytes=await loadAsset('./assets/cover_cd_uin_logo.png');
+ const logo=await doc.embedPng(logoBytes);
+ const l=CD_LAYOUT;
+ const bold=fonts.bold[0].font;
+ function line(txt,size,top,maxWidth,minimum=7){
+  const value=upper(txt);if(!value)return;
+  let adjusted=size;
+  while(adjusted>=minimum && bold.widthOfTextAtSize(value,adjusted)>maxWidth)adjusted-=.25;
+  if(adjusted<minimum)fail('Teks Cover CD terlalu panjang: '+value.slice(0,75));
+  page.drawText(value,{x:l.centerX-bold.widthOfTextAtSize(value,adjusted)/2,y:page.getHeight()-top-adjusted*.84,size:adjusted,font:bold,color:BLACK});
+  if(adjusted<size)warnings.push('Cover CD: teks '+value.slice(0,25)+' disesuaikan menjadi '+adjusted+' pt.');
+ }
+ line(data.nama,9,l.nameTop,l.maxTextWidth,7);
+ line('NIM: '+data.nim,9,l.nimTop,l.maxTextWidth,7);
+ if(norm(data.prodi))line(data.prodi,9,l.studyTop,l.maxTextWidth,7);
+ if(norm(data.bulan_tahun))line(data.bulan_tahun,9,l.dateTop,l.maxTextWidth,7);
+ for(const box of [l.leftLogo,l.rightLogo]){
+  page.drawImage(logo,{x:box.left,y:page.getHeight()-box.top-box.height,width:box.width,height:box.height});
+ }
+ const title=computeCDTitle(data.judul,(str,size)=>bold.widthOfTextAtSize(str,size));
+ if(title.size<l.titleSize)warnings.push('Cover CD: font judul disesuaikan menjadi '+title.size+' pt agar tetap di bawah kedua logo.');
+ title.lines.forEach((txt,i)=>line(txt,title.size,title.top+i*title.pitch,l.titleMaxWidth,title.size));
+ const bytes=new Uint8Array(await doc.save({useObjectStreams:true}));
+ const verify=await PDFDocument.load(bytes);
+ if(verify.getPageCount()!==1||Math.abs(verify.getPage(0).getWidth()-CD_PAGE_PT)>.25||Math.abs(verify.getPage(0).getHeight()-CD_PAGE_PT)>.25)fail('Hasil Cover CD gagal pemeriksaan 137 × 137 mm.');
+ return {bytes,warnings,details:{mode:'covercd',mm:null,paper_mm:CD_PRINT_MM,pages:1,title_lines:title.lines.length,title_font_pt:title.size,logo_count:2}};
+}
+
 /** Main public API, backward-compatible with V3.8 */
 export async function generatePDF(data,mm,mode='polos',customColor=null){
  await ensureAssets();
  const c=validateCoverMode(mode,customColor);
+ if(c.type==='covercd')return generateCoverCDPDF(data);
  if(c.type==='dummybook')return generateDummyPDF(data,mm);
  if(c.type==='softips')return generateSoftIPSPDF(data,mm);
  if(c.type==='unira')return generateUniraPDF(data,mm);

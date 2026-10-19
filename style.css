@@ -54,3 +54,6 @@
 
 /* V4.20 Soft Cover IPS (white UIN template with black print) */
 .swatch-softips{background:linear-gradient(90deg,#fff 0 35%,#161616 35% 38%,#fff 38% 100%);border:1px solid #cbd5e1;}
+
+/* Cover CD: label media square, without a hard-cover spine */
+.swatch-cd{background:linear-gradient(90deg,#087e5e 0 36%,#fff 36% 64%,#d2a34b 64% 100%)!important;border:1px solid #c9d3db;border-radius:50%!important;}

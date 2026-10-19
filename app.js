@@ -1,15 +1,15 @@
 import {readPDF,readWord,readPhoto,withTimeout,setOCRProgress} from './document-reader.js';
 import {resetOCR} from './ocr-fast.js';
-import {generatePDF,checkAssets,setUserFonts} from './pdf-engine.js?v=4.16';
+import {generatePDF,checkAssets,setUserFonts} from './pdf-engine.js?v=4.17';
 import {canonicalUniversity} from './classifier.js';
 
 'use strict';
-// V4.16: unggahan otomatis diproses + status yang tidak menggantung; semua input lokal tanpa API.
+// V4.17: unggahan otomatis diproses + status yang tidak menggantung; semua input lokal tanpa API.
 const $ = id => document.getElementById(id);
 const FIELDS=['nama','nim','prodi','fakultas','universitas','jenis_dokumen','bulan_tahun'];
 const REQUIRED=['judul',...FIELDS];
-const COVER_TYPES=['polos','merah','maroon','custom'];
-const unsafeProduction=o=>o&&o.style!=='polos'&&o.thickness===28;
+const COVER_TYPES=['polos','merah','maroon','custom','unira'];
+const unsafeProduction=o=>o&&['merah','maroon','custom'].includes(o.style)&&o.thickness===28;
 const isPdf=f=>!!f&&(/\.pdf$/iu.test(f.name)||f.type==='application/pdf');
 const isWord=f=>!!f&&/\.docx$/iu.test(f.name);
 const isPhoto=f=>!!f&&(['image/jpeg','image/png','image/webp'].includes(f.type)||/\.(jpg|jpeg|png|webp)$/iu.test(f.name));
@@ -115,15 +115,15 @@ function renderOrders(){
     const desc=document.createElement('span');desc.className='order-description';
     const title=document.createElement('strong');title.textContent=o.data.nama?.trim()||o.file?.name||'PESANAN MANUAL';
     const [label,kind]=statusLabel(o);const sub=document.createElement('small');
-    sub.className='order-badge '+kind;sub.textContent=`${label} · ${o.style.toUpperCase()} · ${o.data.nim||'NIM belum terbaca'}`;
+    sub.className='order-badge '+kind;sub.textContent=`${label} · ${o.style.toUpperCase()} · ${o.data.nim||(o.style==='unira'?'NPM belum terbaca':'NIM belum terbaca')}`;
     desc.append(title,sub);open.append(num,desc);open.addEventListener('click',()=>selectOrder(o.id));
     const select=document.createElement('select');select.className='order-select';select.setAttribute('aria-label',`Ketebalan pesanan ${orderNumber(o)}`);
     const blank=document.createElement('option');blank.value='';blank.textContent='Pilih mm';select.append(blank);
-    for(const mm of availableMM){const opt=document.createElement('option');opt.value=String(mm);opt.textContent=`${mm} mm`;if(o.style!=='polos'&&mm===28){opt.disabled=true;opt.textContent='28 mm (warna: perlu master)';}select.append(opt);}
+    for(const mm of availableMM){const opt=document.createElement('option');opt.value=String(mm);opt.textContent=`${mm} mm`;if(['merah','maroon','custom'].includes(o.style)&&mm===28){opt.disabled=true;opt.textContent='28 mm (warna: perlu master)';}select.append(opt);}
     select.value=o.thickness===null?'':String(o.thickness);
     select.addEventListener('change',()=>setThickness(o.id,select.value?Number(select.value):null));
     const styleChoice=document.createElement('select');styleChoice.className='order-style';styleChoice.setAttribute('aria-label',`Jenis cover pesanan ${orderNumber(o)}`);
-    for(const [v,label] of [['polos','Polos'],['merah','Merah'],['maroon','Maroon'],['custom','Custom']]){const opt=document.createElement('option');opt.value=v;opt.textContent=label;styleChoice.append(opt);}
+    for(const [v,label] of [['polos','Polos'],['merah','Merah'],['maroon','Maroon'],['custom','Custom'],['unira','UNIRA']]){const opt=document.createElement('option');opt.value=v;opt.textContent=label;styleChoice.append(opt);}
     styleChoice.value=o.style;styleChoice.addEventListener('change',()=>setStyle(o.id,styleChoice.value));
     const remove=document.createElement('button');remove.type='button';remove.className='order-remove';remove.textContent='✕';remove.title=`Hapus pesanan ${orderNumber(o)}`;remove.addEventListener('click',()=>removeOrder(o.id));
     row.append(open,styleChoice,select,remove);target.append(row);
@@ -134,8 +134,8 @@ function renderThickness(){
   const target=$('thicknessOptions');target.replaceChildren();const a=active();
   for(const mm of availableMM){
     const btn=document.createElement('button');btn.type='button';btn.className='size-button'+(a?.thickness===mm?' selected':'');
-    btn.innerHTML=`<b>${mm}</b><span>mm</span><small>${a?.style!=='polos'&&mm===28?'Perlu master':'Tersedia'}</small>`;
-    btn.disabled=!a||(a.style!=='polos'&&mm===28);btn.addEventListener('click',()=>setThickness(a.id,mm));target.append(btn);
+    btn.innerHTML=`<b>${mm}</b><span>mm</span><small>${['merah','maroon','custom'].includes(a?.style)&&mm===28?'Perlu master':'Tersedia'}</small>`;
+    btn.disabled=!a||(['merah','maroon','custom'].includes(a.style)&&mm===28);btn.addEventListener('click',()=>setThickness(a.id,mm));target.append(btn);
   }
   $('selectedSize').textContent=a?.thickness ? `${String(a.style||'polos').toUpperCase()} · ${a.thickness} mm` : 'Belum dipilih';
 }
@@ -204,20 +204,21 @@ function markDirty(){
 function renderCoverStyle(){
  const o=active();
  document.querySelectorAll('[data-cover-style]').forEach(b=>{b.classList.toggle('selected',b.dataset.coverStyle===(o?.style||'polos'));b.disabled=!o;});
+ $('studentIdLabel').innerHTML=o?.style==='unira'?'NPM <i>*</i>':'NIM <i>*</i>';
  const show=o?.style==='custom';$('customColorRow').classList.toggle('hidden',!show);$('customColorPicker').value=o?.custom_color||'#1458A8';$('customColorCode').textContent=o?.custom_color||'#1458A8';
 }
 function setStyle(id,style){
  const o=orders.find(x=>x.id===id);if(!o||!COVER_TYPES.includes(style))return;
  if(o.id===activeId)o.data=currentData();
  o.style=style;invalidateOrder(o);
- const reset28=o.thickness===28&&style!=='polos';if(reset28)o.thickness=null;
+ const reset28=o.thickness===28&&['merah','maroon','custom'].includes(style);if(reset28)o.thickness=null;
  if(o.id===activeId){renderCoverStyle();renderThickness();clearPDFPreview();}
- renderOrders();notice(`Pesanan ${orderNumber(o)}: cover ${style.toUpperCase()} (${style==='polos'?'480 × 330':'475 × 320'} mm).`+(reset28?' Ukuran 28 mm direset karena batas potong master warna masih keluar halaman.':'') ,'info');
+ renderOrders();notice(`Pesanan ${orderNumber(o)}: cover ${style.toUpperCase()} (${style==='polos'?'480 × 330':style==='unira'?'484 × 330':'475 × 320'} mm).`+(reset28?' Ukuran 28 mm direset karena batas potong master warna masih keluar halaman.':'') ,'info');
 }
 function setThickness(id,mm){
   const o=orders.find(x=>x.id===id);if(!o)return;
   if(mm!==null&&!availableMM.includes(mm))return notice('Template ketebalan tidak tersedia.','error');
-  if(mm===28&&o.style!=='polos')return notice('Warna 28 mm diblokir: garis potong belakang kiri keluar kertas. Pilih ukuran lain atau perbarui master warna.','error');
+  if(mm===28&&['merah','maroon','custom'].includes(o.style))return notice('Warna 28 mm diblokir: garis potong belakang kiri keluar kertas. Pilih ukuran lain atau perbarui master warna.','error');
   o.thickness=mm;invalidateOrder(o);
   if(o.id===activeId){clearPDFPreview();renderThickness();$('approveOrder').textContent='✓ Tandai data sudah diperiksa';}
   renderOrders();step(3);
@@ -434,7 +435,7 @@ $('downloadButton').addEventListener('click',()=>{
   notice('PDF telah disiapkan. Jika browser tidak langsung mengunduh, gunakan tombol hijau "Download" di bawah pratinjau.','success');
 });
 async function loadStatus(){
- $('connection').textContent='GitHub Pages V4.16 • Otomatis baca setelah upload • Tanpa token';
+ $('connection').textContent='GitHub Pages V4.17 • Otomatis baca setelah upload • Tanpa token';
  $('serverDot').classList.add('online');
  notice('Mode lokal: Word dan PDF teks dibaca di browser tanpa OCR lokal. Foto dan PDF scan memakai OCR Tesseract lokal (model bahasa mungkin perlu diunduh).','info');
  // JANGAN menunggu template saat memuat UI; tidak membuat tombol membaca macet.

@@ -1,5 +1,5 @@
 /**
- * ZAIN.NET PDF engine, static-browser GitHub Pages edition V4.16.
+ * ZAIN.NET PDF engine, static-browser GitHub Pages edition V4.17.
  * Each page begins with the already cleaned ORIGINAL PDF vector master.
  * No template lines, crop marks, or cover geometry are re-created here.
  * Important: Tinos is not the commercial Times New Roman face used in the
@@ -11,10 +11,11 @@ import {getAutomaticUnicodeFonts} from './font-unicode.js';
 import {canonicalUniversity} from './classifier.js';
 const {PDFDocument, StandardFonts, degrees, rgb}=globalThis.PDFLib||{};
 const ALL=Array.from({length:19},(_,i)=>i+10);
-let LAYOUT=null,MASTER=null,COLOR_MASTERS=null,COLOR_TRANSPARENT=null;
+let LAYOUT=null,MASTER=null,COLOR_MASTERS=null,COLOR_TRANSPARENT=null,UNIRA_MASTER=null,UNIRA_LOGO=null;
 const pagePt={width:483*72/25.4,height:330*72/25.4};
 const PLAIN_PRINT_MM={width:480,height:330};
 const COLOR_PRINT_MM={width:475,height:320};
+const UNIRA_PRINT_MM={width:484,height:330};
 const mmPt=(v)=>v*72/25.4;
 const YELLOW=rgb?.(1,0.9487449527,0);
 const BLACK=rgb?.(0,0,0);
@@ -26,11 +27,11 @@ async function loadAsset(url,kind='bytes'){
  finally{clearTimeout(id);}
 }
 async function ensureAssets(){
- if(LAYOUT&&MASTER&&COLOR_MASTERS&&COLOR_TRANSPARENT)return;
+ if(LAYOUT&&MASTER&&COLOR_MASTERS&&COLOR_TRANSPARENT&&UNIRA_MASTER&&UNIRA_LOGO)return;
  if(!PDFDocument)throw Error('Pustaka pdf-lib gagal dimuat. Cek internet untuk memuat pustaka statis CDN, kemudian refresh.');
- const [lo,ma,co,tr]=await Promise.all([
-  loadAsset('./assets/layout.json','json'),loadAsset('./assets/masters.pdf'),loadAsset('./assets/warna_clean.pdf'),loadAsset('./assets/warna_transparent_marks_logo.pdf')]);
- LAYOUT=lo.templates;MASTER=ma;COLOR_MASTERS=co;COLOR_TRANSPARENT=tr;
+ const [lo,ma,co,tr,unira,uniraLogo]=await Promise.all([
+  loadAsset('./assets/layout.json','json'),loadAsset('./assets/masters.pdf'),loadAsset('./assets/warna_clean.pdf'),loadAsset('./assets/warna_transparent_marks_logo.pdf'),loadAsset('./assets/unira_clean.pdf'),loadAsset('./assets/unira_logo.png')]);
+ LAYOUT=lo.templates;MASTER=ma;COLOR_MASTERS=co;COLOR_TRANSPARENT=tr;UNIRA_MASTER=unira;UNIRA_LOGO=uniraLogo;
 }
 export async function checkAssets(){await ensureAssets();return {thicknesses:ALL};}
 const NEAR=0.18;
@@ -351,8 +352,8 @@ async function resizePlainToPrint(bytes) {
 }
 
 const COLOR_TYPES=['merah','maroon','custom'];
-export const coverTypes=['polos',...COLOR_TYPES];
-export const printSizes={polos:PLAIN_PRINT_MM,merah:COLOR_PRINT_MM,maroon:COLOR_PRINT_MM,custom:COLOR_PRINT_MM};
+export const coverTypes=['polos',...COLOR_TYPES,'unira'];
+export const printSizes={polos:PLAIN_PRINT_MM,merah:COLOR_PRINT_MM,maroon:COLOR_PRINT_MM,custom:COLOR_PRINT_MM,unira:UNIRA_PRINT_MM};
 export function validateCoverMode(mode,customColor) {
  const type=String(mode||'polos').toLowerCase();
  if(!coverTypes.includes(type))fail('Pilihan jenis cover tidak dikenal.');
@@ -551,10 +552,119 @@ async function generateColorPDF(data,mm,mode,customColor){
     guide_left:marks.left,guide_right:marks.right,paper_mm:COLOR_PRINT_MM,logo:'logo asli dari PDF warna'}};
 }
 
+/** UNIRA/Universitas Madura cover, measured from the uploaded 484x330mm reference.\n * Coordinates are in PDF points, origin at the upper-left for all text.\n * The supplied sample is a 10mm spine; all LEFT crop guides move by the\n * width delta while the RIGHT front cover and its title remain unchanged.\n * At 28mm, the leftmost horizontal corner is shortened if it crosses x=0.\n */
+export const UNIRA_REFERENCE=Object.freeze({
+ pageWidthPt:mmPt(484),pageHeightPt:mmPt(330),baseMm:10,
+ leftGuides:[62.65,367.96,649.41,677.37],
+ rightGuides:[705.62,733.64,999.18,1321.41],
+ frontCenterX:1013.63,
+ spineTitleCenterTopPt:374.0,
+ spineSafeTopPt:187.0,
+ spineSafeBottomPt:531.0
+});
+export function uniraSpineGeometry(mm){
+ mm=Number(mm);
+ if(!ALL.includes(mm))throw new PDFPreflightError('UNIRA: ketebalan hanya 10–28 mm.');
+ const u=UNIRA_REFERENCE,delta=mmPt(mm-u.baseMm);
+ const leftGuides=u.leftGuides.map(v=>v-delta),rightGuides=[...u.rightGuides];
+ const left=leftGuides.at(-1),right=rightGuides[0],center=(left+right)/2;
+ const observedMm=(right-left)/mmPt(1);
+ if(Math.abs(observedMm-mm)>.7)throw new PDFPreflightError('Geometri punggung UNIRA tidak sesuai ketebalan pesanan.');
+ if(leftGuides[0]<0||rightGuides.at(-1)>u.pageWidthPt)
+  throw new PDFPreflightError('Penanda potong UNIRA keluar batas halaman.');
+ return {mm,delta,leftGuides,rightGuides,left,right,center,observedMm};
+}
+function drawUniraCropGuides(page,mm,warnings){
+ const g=uniraSpineGeometry(mm),h=page.getHeight(),w=page.getWidth();
+ // Cover only the original trim strips; preserve the small UNIRA emblem.
+ page.drawRectangle({x:0,y:h-53,width:w,height:53,color:rgb(1,1,1)});
+ page.drawRectangle({x:0,y:0,width:w,height:53,color:rgb(1,1,1)});
+ const line=(x,top)=>page.drawLine({start:{x,y:top?h-47:0},end:{x,y:top?h-14.6:32.4},thickness:.7,color:BLACK});
+ for(const x of [...g.leftGuides,...g.rightGuides]){line(x,true);line(x,false);}
+ // Original 10mm UNIRA PDF includes L-shaped corner ticks.
+ for(const top of [true,false]){
+  const y=top?h-47:47;
+  const first=g.leftGuides[0],last=g.rightGuides.at(-1);
+  const start=Math.max(0,first-44.1),end=Math.min(w,last+37.7);
+  page.drawLine({start:{x:start,y},end:{x:first,y},thickness:.7,color:BLACK});
+  page.drawLine({start:{x:last,y},end:{x:end,y},thickness:.7,color:BLACK});
+ }
+ if(g.leftGuides[0]-44.1<0)warnings.push('UNIRA: garis sudut kiri diperpendek agar tidak melewati halaman pada '+mm+' mm. Periksa proof sebelum cetak.');
+ return g;
+}
+export function chooseUniraSpine(fonts,segs,mm,warnings){
+ const geom=uniraSpineGeometry(mm),u=UNIRA_REFERENCE;
+ const base=mm<=12?8:9;
+ const maxLen=2*Math.min(u.spineTitleCenterTopPt-u.spineSafeTopPt,u.spineSafeBottomPt-u.spineTitleCenterTopPt)-4;
+ for(const {rows,size} of colorSpinePreferences(mm,base,6)){
+  try{
+   const lines=spineRows(fonts,segs,size,maxLen,rows,rows);
+   if(!withinSpine(size,lines.length,geom.right-geom.left,1.2))continue;
+   const pitch=size*1.11;
+   const xs=lines.map((_,i)=>geom.center+(lines.length-1)*pitch/2-i*pitch);
+   const lens=lines.map(line=>measure(fonts,line,size));
+   if(lens.some(len=>u.spineTitleCenterTopPt-len/2<u.spineSafeTopPt+1||u.spineTitleCenterTopPt+len/2>u.spineSafeBottomPt-1))continue;
+   if(lines.length===3)warnings.push(`UNIRA ${mm} mm: judul memakai 3 baris ${size} pt karena tidak muat 2 baris pada font prioritas.`);
+   if(size<base)warnings.push(`UNIRA ${mm} mm: font judul berkurang menjadi ${size} pt agar tetap di zona aman.`);
+   return {lines,xs,size,centerTop:u.spineTitleCenterTopPt,geometry:geom};
+  }catch(err){if(!(err instanceof PDFPreflightError))throw err;}
+ }
+ fail(`UNIRA ${mm} mm: judul tidak muat dalam batas punggung dan zona aman meski memakai 3 baris 6 pt.`);
+}
+async function generateUniraPDF(data,mm){
+ mm=Number(mm);const segs=validate(data,mm),warnings=[];
+ const doc=await PDFDocument.create();const src=await PDFDocument.load(UNIRA_MASTER);
+ if(src.getPageCount()!==1)fail('Master UNIRA tidak berisi tepat satu halaman.');
+ const [page]=await doc.copyPages(src,[0]);doc.addPage(page);
+ const u=UNIRA_REFERENCE;
+ if(Math.abs(page.getWidth()-u.pageWidthPt)>.35||Math.abs(page.getHeight()-u.pageHeightPt)>.35)fail('Ukuran master UNIRA bukan 484×330 mm.');
+ const g=drawUniraCropGuides(page,mm,warnings);
+ const fonts=await getFonts(doc,warnings);
+ // Front coordinates calibrated from CONTOH COVER UNIRA.pdf; never move front.
+ const cx=u.frontCenterX;
+ let front=null;
+ for(let sz=12;sz>=9.8-1e-6;sz=Math.round((sz-.2)*10)/10){
+  const lines=greedyLines(fonts,segs,sz,375);
+  if(lines.length<=5){front={lines,size:sz};break;}
+ }
+ if(!front)fail('Judul depan UNIRA terlalu panjang untuk zona judul. Periksa judul.');
+ for(let i=0;i<front.lines.length;i++)renderLine(page,fonts,front.lines[i],front.size,cx,134.4+13.29*i,false,BLACK);
+ single(page,fonts,upper(data.jenis_dokumen),15.9,cx,265,240,'Jenis dokumen UNIRA',warnings,11,false,BLACK);
+ single(page,fonts,'Oleh :',12,cx,570,170,'Label Oleh UNIRA',warnings,12,false,BLACK);
+ single(page,fonts,upper(data.nama),12,cx,583.3,330,'Nama UNIRA',warnings,8,false,BLACK);
+ single(page,fonts,`NPM. ${norm(data.nim)}`,12,cx,596.6,330,'NPM UNIRA',warnings,8,false,BLACK);
+ single(page,fonts,`PRODI ${upper(data.prodi)}`,12,cx,781.3,390,'Prodi UNIRA',warnings,9,false,BLACK);
+ single(page,fonts,`FAKULTAS ${upper(data.fakultas)}`,12,cx,794.6,390,'Fakultas UNIRA',warnings,9,false,BLACK);
+ const institution=upper(canonicalUniversity(data.universitas));
+ if(institution!=='UNIVERSITAS MADURA')warnings.push('Mode UNIRA dipilih tetapi nama universitas bukan UNIVERSITAS MADURA. Periksa sebelum cetak.');
+ single(page,fonts,institution,12,cx,807.8,390,'Universitas UNIRA',warnings,9,false,BLACK);
+ single(page,fonts,'PAMEKASAN',12,cx,821.1,390,'Kota UNIRA',warnings,12,false,BLACK);
+ const yearMatch=norm(data.bulan_tahun).match(/\b\d{4}\b/u),year=yearMatch?.[0]||norm(data.bulan_tahun);
+ single(page,fonts,year,12,cx,834.4,150,'Tahun UNIRA',warnings,9,false,BLACK);
+ // In the UNIRA reference, the spine type is at the top, title in the middle,
+ // name+NPM underneath, and the small original logo immediately above YEAR.
+ const spine=chooseUniraSpine(fonts,segs,mm,warnings);
+ for(let i=0;i<spine.lines.length;i++)renderLine(page,fonts,spine.lines[i],spine.size,spine.xs[i],spine.centerTop,true,BLACK);
+ single(page,fonts,upper(data.jenis_dokumen),8,g.center,116.4,140,'Jenis dokumen punggung UNIRA',warnings,6,true,BLACK);
+ const metaSize=mm<=12?6.9:9;
+ const pitch=mm<=12?6.2:Math.min(9,mmPt(mm)/3.1);
+ single(page,fonts,upper(data.nama),metaSize,g.center+pitch/2,673,180,'Nama punggung UNIRA',warnings,6,true,BLACK);
+ single(page,fonts,`NPM. ${norm(data.nim)}`,metaSize,g.center-pitch/2,673,175,'NPM punggung UNIRA',warnings,6,true,BLACK);
+ // Place the ORIGINAL vector-reference emblem at the center of the changing spine.
+ const emblem=await doc.embedPng(UNIRA_LOGO);
+ page.drawImage(emblem,{x:g.center-5.98,y:page.getHeight()-784.93,width:11.96,height:12.3});
+ single(page,fonts,year,8.5,g.center,796,90,'Tahun punggung UNIRA',warnings,6,false,BLACK);
+ const out=new Uint8Array(await doc.save({useObjectStreams:true}));
+ const check=await PDFDocument.load(out);
+ if(check.getPageCount()!==1||Math.abs(check.getPage(0).getWidth()-mmPt(484))>.35||Math.abs(check.getPage(0).getHeight()-mmPt(330))>.35)fail('PDF UNIRA gagal verifikasi ukuran.');
+ return {bytes:out,warnings,details:{mode:'unira',mm,paper_mm:UNIRA_PRINT_MM,spine_font_pt:spine.size,spine_lines:spine.lines.length,guide_left:g.left,guide_right:g.right,logo:'asli dari referensi UNIRA'}};
+}
+
 /** Main public API, backward-compatible with V3.8 */
 export async function generatePDF(data,mm,mode='polos',customColor=null){
  await ensureAssets();
  const c=validateCoverMode(mode,customColor);
+ if(c.type==='unira')return generateUniraPDF(data,mm);
  if(c.type!=='polos')return generateColorPDF(data,mm,c.type,c.color);
  const plain=await generatePlainPDF(data,mm);
  const out=await resizePlainToPrint(plain.bytes);

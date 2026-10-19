@@ -35,3 +35,6 @@
 .download-real-link:hover{background:#056d4c}
 .download-ready small{font-size:11px;color:#386b55}
 .dropzone{cursor:pointer}
+
+/* V4.17 additional UNIRA template option */
+.swatch-unira{background:#fff;border:2px solid #212121;box-shadow:inset 0 0 0 3px white}

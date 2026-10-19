@@ -14,8 +14,8 @@ export function categorize(lines, hints=[]){
  const findIndex=(re)=>upper.findIndex(s=>re.test(s));
  const getAfter=(index,re)=>{if(index<0)return '';const str=txt[index].replace(re,'').trim().replace(/^[:.\-–\s]+/u,'');return str||txt[index+1]||'';};
  const kindIndex=findIndex(TYPES);const kind=kindIndex>=0?txt[kindIndex]:'';
- const nimIndex=findIndex(/\bN\s*\.?\s*I\s*\.?\s*M\s*\.?\s*[:.\s-]*\d{6,20}/iu);
- let nim='';if(nimIndex>=0)nim=(upper[nimIndex].match(/\bN\s*\.?\s*I\s*\.?\s*M\s*\.?\s*[:.\s-]*(\d{6,20})/iu)||[])[1]||'';
+ const nimIndex=findIndex(/\bN\s*\.?\s*(?:I|P)\s*\.?\s*M\s*\.?\s*[:.\s-]*\d{6,20}/iu);
+ let nim='';if(nimIndex>=0)nim=(upper[nimIndex].match(/\bN\s*\.?\s*(?:I|P)\s*\.?\s*M\s*\.?\s*[:.\s-]*(\d{6,20})/iu)||[])[1]||'';
  if(!nim){
   const label=upper.findIndex(t=>/^(?:N\s*\.?\s*I\s*\.?\s*M\s*\.?|NO\.?\s*INDUK)(?:\s*[:.]\s*)?$/iu.test(t));
   if(label>=0)nim=(upper[label+1]||'').match(/^\d{6,20}$/u)?.[0]||'';
@@ -34,6 +34,10 @@ export function categorize(lines, hints=[]){
  const universitas = canonicalUniversity(spelledOut || (universitasIndex>=0?txt[universitasIndex]:''));
  let date='';for(let i=upper.length-1;i>=0;i--){if(new RegExp(`^(?:${MONTHS})\\s+\\d{4}$|^\\d{4}$`,'iu').test(upper[i])){date=txt[i];break;}}
  let titleCandidates=txt.slice(0,kindIndex>=0?kindIndex:Math.min(5,txt.length));
+ if(!titleCandidates.length && kindIndex===0){
+  const nextKind=upper.findIndex((t,i)=>i>0&&TYPES.test(t));
+  if(nextKind>1)titleCandidates=txt.slice(1,nextKind);
+ }
  titleCandidates=titleCandidates.filter(s=> !/^UNIVERSITAS|^UIN |^KEMENTERIAN |^OLEH\b/iu.test(s));
  const judul=compact(titleCandidates.join(' '));
  const missing=[['judul',judul],['nama',nama],['nim',nim],['prodi',prodi],['fakultas',fakultas],['universitas',universitas],['jenis_dokumen',kind],['bulan_tahun',date]].filter(([,v])=>!v).map(([k])=>k);

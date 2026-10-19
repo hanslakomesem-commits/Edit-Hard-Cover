@@ -1,0 +1,9 @@
+ZAIN.NET COVER V4.17 — TAMBAH TEMPLATE UNIRA
+- Menambah pilihan UNIRA terpisah dari Polos, Merah, Maroon, dan Custom.
+- Master vektor baru berasal dari CONTOH COVER UNIRA.pdf halaman tunggal ukuran 484 × 330 mm.
+- Posisi cover depan tetap seperti contoh; semua crop mark belakang bergeser sesuai ketebalan 10–28 mm.
+- Punggung UNIRA: jenis dokumen, judul 2/3 baris, nama + NPM, logo kecil dan tahun.
+- Label nomor induk berubah menjadi NPM pada pilihan UNIRA. Parser mendukung NPM.
+- Logo berasal dari referensi asli, dipindahkan ke pusat punggung mengikuti perubahan ukuran.
+- Mode Polos/Warna sebelumnya tetap dan ukuran Warna 28mm masih diblokir.
+- File ini perlu pemeriksaan hasil cetak skala 100% sebelum produksi.

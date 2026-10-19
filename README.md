@@ -1,16 +1,16 @@
-# V4.16 — Kalibrasi punggung polos sesuai PDF referensi
+# V4.17 — Kalibrasi punggung polos sesuai PDF referensi
 
 Pembaruan terhadap V4.15: menghapus offset tetap `+6.0 pt` dari judul punggung polos. Pusat judul polos sekarang langsung menggunakan nilai `spine_title_center_y` dari `assets/layout.json`, yang diambil dari PDF referensi asli pada ketebalan masing-masing. Baris diperiksa agar berada di zona aman judul antara **76–513 pt dari atas** sebelum pembuatan PDF. Pemilihan 2/3 baris dan prioritas font 9 pt pada punggung lebar tidak diubah. Seluruh kode/gambar/master **mode Warna** tidak dimodifikasi.
 
 **Batasan:** zona aman 76–513 pt merupakan pengaman konservatif berdasarkan contoh judul referensi, bukan spesifikasi mesin potong. Pembuktian akhir harus dengan PDF keluaran browser dan uji cetak skala 100%. Pada mode Polos master awal 483×330 mm diperkecil secara horizontal ke 480×330 mm seperti versi lama. Mode Warna 28 mm masih memiliki pembatasan dari master referensi.
 
-## Tes V4.16
+## Tes V4.17
 
 - `node tests/test_v416_plain_reference.mjs` — kalibrasi 19 ukuran, batas aman, font dan pemilihan baris
 - `python tests/test_v416_reference_geometry.py` — pemeriksaan koordinat dari PDF referensi Polos asli
 - Lanjutkan tes kompatibilitas di folder `tests/`.
 
-# ZAIN.NET COVER V4.16 — FIX FONT PUNGGUNG WARNA
+# ZAIN.NET COVER V4.17 — FIX FONT PUNGGUNG WARNA
 
 **Perubahan hanya pada perhitungan judul punggung WARNA (Merah/Maroon/Custom).**
 - Punggung 13–28 mm: 2×9 pt → 3×9 pt → 2×8 pt → 3×8 pt → ... sampai minimum 6 pt.
@@ -209,3 +209,13 @@ Versi ini menanggulangi pesan `Karakter “ (U+201C) tidak didukung Times bawaan
 ## V4.7 — Pemeriksaan template warna tiga baris
 
 File baru `REFERENSI_WARNA_3_BARIS_17_HALAMAN.pdf` ditambahkan **sebagai referensi**, bukan sebagai master siap pakai tanpa validasi. Lihat `AUDIT_WARNA_3_BARIS.md` dan `AUDIT_3_BARIS_17_HALAMAN.csv` sebelum cetak. **File referensi tidak menyediakan 25 dan 26 mm**. Terdapat tanda potong di luar halaman dalam sejumlah ukuran. Engine mempertahankan layout depan warna dari `PILIHAN WARNA.pdf` dan menata judul di antara dua garis tengah serta memberi peringatan bila sudut kiri dipendekkan. Mode warna 28 mm tetap diblokir sampai master fisik aman. Ini mencegah hasil salah cetak, bukan kekurangan OCR. Perubahan mode warna ini tidak mengubah pembaca foto, PDF, Word, batch, font Unicode, atau master polos.
+
+
+## V4.17 — Pilihan UNIRA (Universitas Madura)
+- Master baru diambil langsung dari `CONTOH COVER UNIRA.pdf`, 484 × 330 mm, bukan master Polos/UIN.
+- Warna putih, tinta hitam, logo kecil asli UNIRA di bawah punggung.
+- Pembatas lipat pada semua ketebalan 10–28 mm diubah dengan menggeser semua tanda sisi belakang, sisi cover depan tetap.
+- Judul depan, SKRIPSI, Oleh, nama, NPM, PRODI, FAKULTAS, UNIVERSITAS MADURA, PAMEKASAN, tahun mengikuti referensi asli.
+- Pilih UNIRA di tiap pesanan atau pada daftar batch, NIM di formulir tampil sebagai NPM ketika UNIRA dipilih.
+- Detail batas koordinat ada pada source `pdf-engine.js` konstanta `UNIRA_REFERENCE`.
+- Uji cetak 100% tetap wajib; file contoh hanya menyediakan acuan 10 mm, sedangkan 11–28 mm adalah adaptasi geometri.

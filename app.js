@@ -1,14 +1,18 @@
 import {readPDF,readWord,readPhoto,withTimeout,setOCRProgress} from './document-reader.js';
 import {resetOCR} from './ocr-fast.js';
-import {generatePDF,checkAssets,setUserFonts} from './pdf-engine.js?v=4.18';
+import {generatePDF,checkAssets,setUserFonts} from './pdf-engine.js?v=4.19';
 import {canonicalUniversity} from './classifier.js';
+import {readAbstractFromFile} from './abstract-reader.js';
+import {DUMMY_SIZES} from './dummybook-layout.js';
 
 'use strict';
-// V4.18: unggahan otomatis diproses + status yang tidak menggantung; semua input lokal tanpa API.
+// V4.19: unggahan otomatis diproses + status yang tidak menggantung; semua input lokal tanpa API.
 const $ = id => document.getElementById(id);
 const FIELDS=['nama','nim','prodi','fakultas','universitas','jenis_dokumen','bulan_tahun'];
 const REQUIRED=['judul',...FIELDS];
-const COVER_TYPES=['polos','merah','maroon','custom','unira'];
+const COVER_TYPES=['polos','merah','maroon','custom','unira','dummybook'];
+const sizesForStyle=style=>style==='dummybook'?DUMMY_SIZES:availableMM;
+const validThickness=o=>sizesForStyle(o?.style).includes(Number(o?.thickness))&&o.thickness!==null;
 const unsafeProduction=o=>o&&['merah','maroon','custom'].includes(o.style)&&o.thickness===28;
 const isPdf=f=>!!f&&(/\.pdf$/iu.test(f.name)||f.type==='application/pdf');
 const isWord=f=>!!f&&/\.docx$/iu.test(f.name);
@@ -39,7 +43,7 @@ function offerDownload(blob,name,which){
  return link;
 }
 function active(){return orders.find(o=>o.id===activeId)||null;}
-function newData(){return {judul:'',title_segments:[],nama:'',nim:'',prodi:'',fakultas:'',universitas:'',jenis_dokumen:'',bulan_tahun:''};}
+function newData(){return {judul:'',title_segments:[],nama:'',nim:'',prodi:'',fakultas:'',universitas:'',jenis_dokumen:'',bulan_tahun:'',abstract_text:''};}
 function notice(message,type='info'){
  const n=$('notice');n.textContent=message;n.className='notice '+type;
  const near=$('batchFeedback');
@@ -119,11 +123,11 @@ function renderOrders(){
     desc.append(title,sub);open.append(num,desc);open.addEventListener('click',()=>selectOrder(o.id));
     const select=document.createElement('select');select.className='order-select';select.setAttribute('aria-label',`Ketebalan pesanan ${orderNumber(o)}`);
     const blank=document.createElement('option');blank.value='';blank.textContent='Pilih mm';select.append(blank);
-    for(const mm of availableMM){const opt=document.createElement('option');opt.value=String(mm);opt.textContent=`${mm} mm`;if(['merah','maroon','custom'].includes(o.style)&&mm===28){opt.disabled=true;opt.textContent='28 mm (warna: perlu master)';}select.append(opt);}
+    for(const mm of sizesForStyle(o.style)){const opt=document.createElement('option');opt.value=String(mm);opt.textContent=`${mm} mm`;if(['merah','maroon','custom'].includes(o.style)&&mm===28){opt.disabled=true;opt.textContent='28 mm (warna: perlu master)';}select.append(opt);}
     select.value=o.thickness===null?'':String(o.thickness);
     select.addEventListener('change',()=>setThickness(o.id,select.value?Number(select.value):null));
     const styleChoice=document.createElement('select');styleChoice.className='order-style';styleChoice.setAttribute('aria-label',`Jenis cover pesanan ${orderNumber(o)}`);
-    for(const [v,label] of [['polos','Polos'],['merah','Merah'],['maroon','Maroon'],['custom','Custom'],['unira','UNIRA']]){const opt=document.createElement('option');opt.value=v;opt.textContent=label;styleChoice.append(opt);}
+    for(const [v,label] of [['polos','Polos'],['merah','Merah'],['maroon','Maroon'],['custom','Custom'],['unira','UNIRA'],['dummybook','Dummybook']]){const opt=document.createElement('option');opt.value=v;opt.textContent=label;styleChoice.append(opt);}
     styleChoice.value=o.style;styleChoice.addEventListener('change',()=>setStyle(o.id,styleChoice.value));
     const remove=document.createElement('button');remove.type='button';remove.className='order-remove';remove.textContent='✕';remove.title=`Hapus pesanan ${orderNumber(o)}`;remove.addEventListener('click',()=>removeOrder(o.id));
     row.append(open,styleChoice,select,remove);target.append(row);
@@ -132,7 +136,7 @@ function renderOrders(){
 }
 function renderThickness(){
   const target=$('thicknessOptions');target.replaceChildren();const a=active();
-  for(const mm of availableMM){
+  for(const mm of sizesForStyle(a?.style)){
     const btn=document.createElement('button');btn.type='button';btn.className='size-button'+(a?.thickness===mm?' selected':'');
     btn.innerHTML=`<b>${mm}</b><span>mm</span><small>${['merah','maroon','custom'].includes(a?.style)&&mm===28?'Perlu master':'Tersedia'}</small>`;
     btn.disabled=!a||(['merah','maroon','custom'].includes(a.style)&&mm===28);btn.addEventListener('click',()=>setThickness(a.id,mm));target.append(btn);
@@ -152,6 +156,7 @@ function paintData(obj){
   if(Array.isArray(segments)&&segments.length&&segments.map(s=>s.text||'').join('')===(obj?.judul||'')){
     editor.innerHTML=segments.map(s=>`${s.italic?'<em>':''}${escapeHTML(s.text||'')}${s.italic?'</em>':''}`).join('');
   } else editor.textContent=obj?.judul||'';
+  $('abstractText').value=String(obj?.abstract_text||'');
   painting=false;
 }
 function extractSegments(){
@@ -173,6 +178,7 @@ function extractSegments(){
 function currentData(){
   const title_segments=extractSegments();const result={judul:title_segments.map(s=>s.text).join(''),title_segments};
   for(const field of FIELDS)result[field]=document.querySelector(`[name="${field}"]`).value.trim();
+  result.abstract_text=$('abstractText').value.trim();
   result.universitas=canonicalUniversity(result.universitas);
   result.tahun=(result.bulan_tahun.match(/\b\d{4}\b/u)||[])[0]||'';return result;
 }
@@ -205,23 +211,55 @@ function renderCoverStyle(){
  const o=active();
  document.querySelectorAll('[data-cover-style]').forEach(b=>{b.classList.toggle('selected',b.dataset.coverStyle===(o?.style||'polos'));b.disabled=!o;});
  $('studentIdLabel').innerHTML=o?.style==='unira'?'NPM <i>*</i>':'NIM <i>*</i>';
+ $('dummyAbstractPanel').classList.toggle('hidden',o?.style!=='dummybook');
+ $('dummyAbstractStatus').textContent=o?.abstractStatus||'Tempel abstrak asli; pisahkan antarparagraf dengan satu baris kosong. Otomatis: 2 paragraf terakhir, atau 1/3 jika perlu.';
  const show=o?.style==='custom';$('customColorRow').classList.toggle('hidden',!show);$('customColorPicker').value=o?.custom_color||'#1458A8';$('customColorCode').textContent=o?.custom_color||'#1458A8';
 }
 function setStyle(id,style){
  const o=orders.find(x=>x.id===id);if(!o||!COVER_TYPES.includes(style))return;
  if(o.id===activeId)o.data=currentData();
- o.style=style;invalidateOrder(o);
- const reset28=o.thickness===28&&['merah','maroon','custom'].includes(style);if(reset28)o.thickness=null;
+ const previous=o.style;o.style=style;invalidateOrder(o);
+ let reset=false;
+ if(o.thickness!==null&&!validThickness(o)){o.thickness=null;reset=true;}
+ if(unsafeProduction(o)){o.thickness=null;reset=true;}
  if(o.id===activeId){renderCoverStyle();renderThickness();clearPDFPreview();}
- renderOrders();notice(`Pesanan ${orderNumber(o)}: cover ${style.toUpperCase()} (${style==='polos'?'480 × 330':style==='unira'?'484 × 330':'475 × 320'} mm).`+(reset28?' Ukuran 28 mm direset karena batas potong master warna masih keluar halaman.':'') ,'info');
+ renderOrders();
+ notice(`Pesanan ${orderNumber(o)}: cover ${style.toUpperCase()} (${style==='dummybook'?'A4 210 × 297':style==='polos'?'480 × 330':style==='unira'?'484 × 330':'475 × 320'} mm).`+(reset?' Ukuran punggung lama direset; pilih ukuran yang berlaku.':''),'info');
+ if(style==='dummybook'&&!o.data.abstract_text && o.file&&(isPdf(o.file)||isWord(o.file)))void populateAbstract(o,o.file);
 }
 function setThickness(id,mm){
-  const o=orders.find(x=>x.id===id);if(!o)return;
-  if(mm!==null&&!availableMM.includes(mm))return notice('Template ketebalan tidak tersedia.','error');
-  if(mm===28&&['merah','maroon','custom'].includes(o.style))return notice('Warna 28 mm diblokir: garis potong belakang kiri keluar kertas. Pilih ukuran lain atau perbarui master warna.','error');
-  o.thickness=mm;invalidateOrder(o);
-  if(o.id===activeId){clearPDFPreview();renderThickness();$('approveOrder').textContent='✓ Tandai data sudah diperiksa';}
-  renderOrders();step(3);
+ const o=orders.find(x=>x.id===id);if(!o)return;
+ if(mm!==null&&!sizesForStyle(o.style).includes(mm))return notice(`Ukuran punggung ${mm} mm tidak tersedia untuk ${o.style}.`,'error');
+ if(mm===28&&['merah','maroon','custom'].includes(o.style))return notice('Warna 28 mm diblokir: garis potong belakang kiri keluar kertas.','error');
+ o.thickness=mm;invalidateOrder(o);
+ if(o.id===activeId){clearPDFPreview();renderThickness();$('approveOrder').textContent='✓ Tandai data sudah diperiksa';}
+ renderOrders();step(3);
+}
+async function populateAbstract(order,file,{replace=false}={}){
+ if(!file)return;
+ const canReplace=replace && (!order.data.abstract_text?.trim()||confirm('Ganti seluruh isi abstrak yang sedang ada dengan hasil pembacaan file baru? Jika gagal, teks lama tetap dipertahankan.'));
+ if(replace&&!canReplace)return;
+ const rev=order.revision;
+ order.abstractStatus='Sedang mencari paragraf ABSTRAK dari '+file.name+' ...';
+ if(activeId===order.id)renderCoverStyle();
+ try{
+  const result=await withTimeout(readAbstractFromFile(file,{onProgress:s=>{
+    if(activeId===order.id){$('dummyAbstractStatus').textContent=s;}
+  }}),70000,'Pencarian abstrak');
+  if(!orders.includes(order)||order.style!=='dummybook')return;
+  if(order.revision!==rev || (!canReplace && order.data.abstract_text?.trim())){
+   order.abstractStatus=`Abstrak ditemukan (${result.paragraphs.length} paragraf), tetapi edit manual dipertahankan. Gunakan tombol baca ulang untuk mencoba mengganti teks.`;
+   if(activeId===order.id)renderCoverStyle();return;
+  }
+  order.data.abstract_text=result.paragraphs.join('\n\n');
+  order.abstractStatus=`Ditemukan ${result.paragraphs.length} paragraf dari ${result.source}. Periksa pemisahan paragraf dan isinya.`;
+  invalidateOrder(order);
+  if(activeId===order.id){paintData(order.data);renderCoverStyle();showWarnings(order);}
+  notice(`Abstrak ditemukan: ${result.paragraphs.length} paragraf. Silakan periksa sebelum membuat Dummybook.`, 'success');
+ }catch(e){
+  order.abstractStatus='Tidak terbaca otomatis: '+(e?.message||e)+'. Tempel paragraf abstrak manual pada kotak teks.';
+  if(activeId===order.id)renderCoverStyle();
+ }
 }
 function removeOrder(id){
   const o=orders.find(x=>x.id===id);if(!o)return;
@@ -233,7 +271,7 @@ function removeOrder(id){
   if(activeId===id)selectOrder(orders[0]?.id||null);
   else renderOrders();
 }
-function validData(data){return REQUIRED.filter(f=>!String(data?.[f]??'').trim());}
+function validData(data,style='polos'){return [...REQUIRED,...(style==='dummybook'?['abstract_text']:[])].filter(f=>!String(data?.[f]??'').trim());}
 async function ocrOne(order){
   if(!order.file){order.status='periksa';order.warnings=['Pesanan manual. Isi data pada editor.'];renderOrders();return false;}
   const revision=order.revision;order.status='membaca';order.warnings=[];renderOrders();
@@ -252,7 +290,7 @@ async function ocrOne(order){
     const options={ detail:$('ocrAccuracy')?.value==='detail', onProgress:setStage };
     const ocr=await withTimeout(method(order.file,options),timeout,`Pembacaan ${kind}`);
     if(revision!==order.revision){order.warnings=['Data berubah saat proses berlangsung; koreksi Anda dipertahankan.'];order.status='periksa';}
-    else {order.data={...newData(),...ocr,universitas:canonicalUniversity(ocr.universitas)};order.warnings=Array.isArray(ocr.warnings)?ocr.warnings:[];order.status='periksa';order.verified=false;order.pdfBlob=null;}
+    else {order.data={...newData(),...ocr,universitas:canonicalUniversity(ocr.universitas),abstract_text:order.data.abstract_text||ocr.abstract_text||''};order.warnings=Array.isArray(ocr.warnings)?ocr.warnings:[];order.status='periksa';order.verified=false;order.pdfBlob=null;}
     if(activeId===order.id){paintData(order.data);showWarnings(order);clearPDFPreview();}
     renderOrders();
     if(!order.data?.judul && !order.data?.nama && !order.data?.nim){
@@ -301,9 +339,9 @@ async function readAll({automatic=false}={}){
 }
 function approveActive(){
   const a=active();if(!a)return notice('Pilih pesanan terlebih dahulu.','error');
-  a.data=currentData();const missing=validData(a.data);
+  a.data=currentData();const missing=validData(a.data,a.style);
   if(missing.length)return notice(`Pesanan ${orderNumber(a)} belum lengkap: ${missing.join(', ')}.`,'error');
-  if(!availableMM.includes(a.thickness))return notice(`Pilih ukuran punggung untuk pesanan ${orderNumber(a)} terlebih dahulu.`,'error');
+  if(!validThickness(a))return notice(`Pilih ukuran punggung untuk pesanan ${orderNumber(a)} terlebih dahulu.`,'error');
   if(unsafeProduction(a))return notice('Warna 28 mm memerlukan master baru yang tidak memotong tanda belakang.','error');
   a.verified=true;a.status='disetujui';renderOrders();
   $('approveOrder').textContent='✓ Sudah diperiksa (klik untuk ulang)';
@@ -311,15 +349,15 @@ function approveActive(){
 }
 async function makeSelectedPDF({downloadAfter=false}={}){
  const a=active();if(!a)return notice('Pilih pesanan terlebih dahulu.','error');
- a.data=currentData();const missing=validData(a.data);
+ a.data=currentData();const missing=validData(a.data,a.style);
  if(missing.length)return notice(`Lengkapi: ${missing.join(', ')}.`,'error');
- if(!availableMM.includes(a.thickness))return notice('Pilih ketebalan punggung terlebih dahulu.','error');
+ if(!validThickness(a))return notice('Pilih ketebalan punggung terlebih dahulu.','error');
  if(unsafeProduction(a))return notice('Warna 28 mm belum aman; garis potong terpotong.','error');
  const button=$('generateButton');btnBusy(button,true,'Membuat PDF...');
  try{
   const result=await withTimeout(generatePDF(a.data,a.thickness,a.style,a.custom_color),90000,'Pembuatan PDF lokal');
   a.pdfBlob=new Blob([result.bytes],{type:'application/pdf'});
-  $('spineFontResult').textContent=`Hasil aktual: ${a.style.toUpperCase()} ${a.thickness} mm • ${result.details?.spine_lines??'?'} baris • font judul punggung ${result.details?.spine_font_pt??'?'} pt`;
+  $('spineFontResult').textContent=`Hasil aktual: ${a.style.toUpperCase()} ${a.thickness} mm • ${result.details?.spine_lines??'?'} baris • font punggung ${result.details?.spine_font_pt??'?'} pt`+(a.style==='dummybook'?` • ${result.details?.back_paragraph_count} paragraf abstrak • 2 halaman A4`:``);
 
   updatePDFPreview(a);renderOrders();step(4);
   if(downloadAfter)triggerDownload(a.pdfBlob,`${String(orderNumber(a)).padStart(2,'0')}_${safeName(a.data.nama)}_${a.style.toUpperCase()}_${a.thickness}MM.pdf`);
@@ -338,10 +376,10 @@ async function makeOrderZIP(){
  // Never silently treat the green Download Batch button as an inert control.
  // Show actionable validation and explicit verification for every ready order.
  if(!orders.length)return notice('Tambahkan berkas atau pesanan manual terlebih dahulu.','error');
- const incomplete=orders.filter(o=>validData(o.data).length || !availableMM.includes(o.thickness) || unsafeProduction(o));
+ const incomplete=orders.filter(o=>validData(o.data,o.style).length || !validThickness(o) || unsafeProduction(o));
  const eligible=orders.filter(o=>!incomplete.includes(o));
  if(incomplete.length){
-  const details=incomplete.slice(0,4).map(o=>`Pesanan ${orderNumber(o)} (${o.data.nama||o.file?.name||'belum terbaca'}): ${[...validData(o.data),...(!availableMM.includes(o.thickness)?['pilih ketebalan']:[]),...(unsafeProduction(o)?['warna 28 mm belum aman']:[])].join(', ')}`).join('\n');
+  const details=incomplete.slice(0,4).map(o=>`Pesanan ${orderNumber(o)} (${o.data.nama||o.file?.name||'belum terbaca'}): ${[...validData(o.data,o.style),...(!validThickness(o)?['pilih ketebalan']:[]),...(unsafeProduction(o)?['warna 28 mm belum aman']:[])].join(', ')}`).join('\n');
   if(!eligible.length){
    notice(`Belum bisa ekspor batch: semua pesanan belum lengkap. Perbaiki:\n${details}${incomplete.length>4?'\n...':''}`,'error');
    selectOrder(incomplete[0].id);return;
@@ -377,7 +415,7 @@ async function makeOrderZIP(){
   if(!generated.length)throw Error('Tidak ada PDF yang berhasil. '+failures.join('; ').slice(0,500));
   if(output==='combined'||output==='both'){
    const joined=await globalThis.PDFLib.PDFDocument.create();
-   for(const item of generated){const part=await globalThis.PDFLib.PDFDocument.load(item.bytes);const page=await joined.copyPages(part,[0]);joined.addPage(page[0]);}
+   for(const item of generated){const part=await globalThis.PDFLib.PDFDocument.load(item.bytes);const idx=Array.from({length:part.getPageCount()},(_,j)=>j);const pages=await joined.copyPages(part,idx);for(const page of pages)joined.addPage(page);}
    const combined=new Uint8Array(await joined.save());
    if(output==='combined'){const filename=`ZAINNET_GABUNG_${generated.length}_COVER.pdf`;const blob=new Blob([combined],{type:'application/pdf'});offerDownload(blob,filename,'batch');triggerDownload(blob,filename);}
    else archive.file(`ZAINNET_GABUNG_${generated.length}_COVER.pdf`,combined);
@@ -396,11 +434,14 @@ $('universalInput').addEventListener('change',event=>{addOrders(event.target.fil
 $('cameraInput').addEventListener('change',event=>{addOrders(event.target.files);event.target.value='';});
 $('cameraButton').addEventListener('click',()=>$('cameraInput').click());
 $('manualButton').addEventListener('click',addManual);
+$('dummyAbstractFile').addEventListener('change',e=>{const a=active();const f=e.target.files?.[0];if(a&&f&&a.style==='dummybook')void populateAbstract(a,f,{replace:true});e.target.value='';});
+$('dummyReadAbstract').addEventListener('click',()=>{const a=active();if(a?.style==='dummybook'&&a.file&&(isPdf(a.file)||isWord(a.file)))void populateAbstract(a,a.file,{replace:true});else notice('Untuk ekstraksi otomatis, gunakan PDF atau DOCX berisi ABSTRAK. Foto perlu disalin manual.','info');});
 for(const evt of ['dragenter','dragover'])$('dropzone').addEventListener(evt,event=>{event.preventDefault();$('dropzone').classList.add('dragover');});
 for(const evt of ['dragleave','drop'])$('dropzone').addEventListener(evt,event=>{event.preventDefault();$('dropzone').classList.remove('dragover');if(evt==='drop')addOrders(event.dataTransfer.files);});
 $('clearPhoto').addEventListener('click',()=>{const a=active();if(a)removeOrder(a.id);else notice('Tidak ada pesanan yang dipilih.');});
 $('ocrButton').addEventListener('click',readSelected);$('ocrAllButton').addEventListener('click',()=>readAll({automatic:false}));
 $('titleEditor').addEventListener('input',markDirty);
+$('abstractText').addEventListener('input',markDirty);
 $('titleEditor').addEventListener('paste',event=>{event.preventDefault();document.execCommand('insertText',false,(event.clipboardData||window.clipboardData).getData('text/plain'));});
 document.querySelectorAll('#dataForm input').forEach(input=>input.addEventListener('input',markDirty));
 document.querySelector('[name="universitas"]').addEventListener('blur',event=>{
@@ -435,7 +476,7 @@ $('downloadButton').addEventListener('click',()=>{
   notice('PDF telah disiapkan. Jika browser tidak langsung mengunduh, gunakan tombol hijau "Download" di bawah pratinjau.','success');
 });
 async function loadStatus(){
- $('connection').textContent='GitHub Pages V4.18 • Otomatis baca setelah upload • Tanpa token';
+ $('connection').textContent='GitHub Pages V4.19 • Dummybook 5–10 mm • Tanpa token';
  $('serverDot').classList.add('online');
  notice('Mode lokal: Word dan PDF teks dibaca di browser tanpa OCR lokal. Foto dan PDF scan memakai OCR Tesseract lokal (model bahasa mungkin perlu diunduh).','info');
  // JANGAN menunggu template saat memuat UI; tidak membuat tombol membaca macet.

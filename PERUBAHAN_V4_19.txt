@@ -1,0 +1,26 @@
+ZAIN.NET COVER V4.19 — DUMMYBOOK 5–10 MM + ABSTRAK ADAPTIF
+====================================================
+1. Jenis cover baru: Dummybook, terpisah dari Polos/Warna/UNIRA.
+2. Sumber desain dummy.pdf: dua halaman A4 210x297 mm.
+3. Halaman 1 mempertahankan warna pink, logo, foto kampus, dan bentuk grafis.
+   Judul, nama, NIM, prodi, fakultas, universitas, dan tanggal terisi dari data.
+4. Punggung adaptif 5, 6, 7, 8, 9, 10 mm; utama 2 baris; 3 jika tak muat.
+   Untuk punggung 5mm font dapat mengecil sampai 4,5 pt demi batas fisik.
+5. Halaman 2 berisi paragraf terakhir ABSTRAK asli, BUKAN teks tetap
+   dari dummy.pdf (yang berasal dari contoh sumber).
+6. Algoritme menilai panjang 2 paragraf terakhir, beralih ke 1 bila
+   terlalu panjang, atau 3 bila 2 terlalu pendek dan 3 masih muat.
+   Tidak memotong, menulis ulang, atau mengarang paragraf.
+7. Unggah file PDF/DOCX untuk menemukan ABSTRAK; pencarian PDF hingga
+   25 halaman pertama saja. Bila scan/tidak terdeteksi, tempel manual.
+8. PDF gabungan sekarang menyalin seluruh halaman tiap pesanan:
+   Dummybook berisi dua halaman; cover lain tetap satu halaman.
+9. Mode Polos, Merah, Maroon, Custom, UNIRA tidak diubah.
+
+BATASAN
+- Satu PDF referensi tidak menetapkan semua ketebalan. Panduan 5–10 mm
+  diturunkan secara geometris dari master A4; uji cetak wajib.
+- DOCX tidak selalu memiliki informasi halaman asli; cek hasil.
+- PDF scan bagian ABSTRAK tidak dibaca otomatis oleh pencari paragraf.
+- Ekspor akhir langsung dalam Chrome/Adobe Reader belum lulus uji end-to-end
+  dalam lingkungan ini karena akses browser lokal diblokir.

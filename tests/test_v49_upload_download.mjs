@@ -45,5 +45,5 @@ assert.ok(html.includes('id="singleDownloadLink"')&&html.includes('id="batchDown
 assert.ok(!html.includes('id="downloadButton" disabled'));
 console.log('PASS: UI features one upload picker and visible download button');
 const pdfEngine=fs.readFileSync(new URL('../pdf-engine.js',import.meta.url),'utf8');
-assert.equal((pdfEngine.match(/upper\(canonicalUniversity\(data\.universitas\)\)/g)||[]).length,3);
-console.log('PASS: both plain/color PDF draw full university name');
+assert.equal((pdfEngine.match(/upper\(canonicalUniversity\(data\.universitas\)\)/g)||[]).length,4);
+console.log('PASS: all plain/color/unira/dummy PDF draw full university name');

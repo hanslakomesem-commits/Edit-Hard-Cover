@@ -225,3 +225,24 @@ File baru `REFERENSI_WARNA_3_BARIS_17_HALAMAN.pdf` ditambahkan **sebagai referen
 - Pilih UNIRA di tiap pesanan atau pada daftar batch, NIM di formulir tampil sebagai NPM ketika UNIRA dipilih.
 - Detail batas koordinat ada pada source `pdf-engine.js` konstanta `UNIRA_REFERENCE`.
 - Uji cetak 100% tetap wajib; file contoh hanya menyediakan acuan 10 mm, sedangkan 11–28 mm adalah adaptasi geometri.
+
+---
+
+## V4.19 — Dummybook 5–10 mm dengan abstrak halaman belakang
+
+**File sumber:** `assets/DUMMYBOOK_REFERENSI_2_HALAMAN.pdf` (salinan `dummy.pdf` dari pengguna).
+**Master kosong:** `assets/dummybook_clean_2pages.pdf` (2 halaman A4; gambar/logo/palet pink asli, tanpa teks contoh).
+
+1. Upload cover atau isi data mahasiswa; pilih jenis **Dummybook**.
+2. Pilih ketebalan **5–10 mm** (hanya pada Dummybook; jenis lain tetap 10–28 mm).
+3. Tempel seluruh paragraf abstrak dalam kotak **Abstrak untuk halaman belakang**, dipisahkan satu baris kosong. Atau unggah PDF/DOCX yang memiliki bagian **ABSTRAK** dan tunggu ekstraksinya. Bila memakai berkas cover yang sama, pilih **Cari ABSTRAK dari berkas cover**. Karena pembacaan cover biasanya hanya halaman pertama, abstrak memerlukan penelusuran terpisah.
+4. Periksa kebenaran paragraf. OCR/scan abstrak tidak otomatis dibaca; teks harus disalin manual. Aplikasi tidak pernah mengarang teks.
+5. Tekan **Buat & Lihat PDF**, periksa **kedua halaman**, ukuran A4, dan garis punggung sebelum cetak.
+
+**Pemilihan isi belakang:** dua paragraf terakhir adalah default. Jika tidak muat, dipakai satu paragraf terakhir utuh. Bila dua paragraf terlalu sedikit, tiga paragraf terakhir dipakai asalkan tetap muat pada kotak teks. Ukuran font halaman belakang menyesuaikan 10.5 hingga 8.5 pt. Jika paragraf terlalu panjang, ekspor diblokir dan meminta koreksi, tidak memotongnya.
+
+**Pengaturan punggung:** batas kiri di sisi pink pada 17 pt dari tepi A4, batas kanan disesuaikan dengan ketebalan 5–10 mm. Foto/logo/cover depan tidak digeser. Teks punggung memilih 2 baris lebih dahulu, 3 hanya jika 2 baris tidak muat; ukuran font terkecil untuk punggung 5 mm bisa 4,5 pt. Posisi yang dihasilkan dari satu referensi masih perlu proof/cetak.
+
+**Gabung PDF:** saat mode batch gabungan, semua halaman setiap PDF disalin sesuai urutan. Pesanan Dummybook menyumbang dua halaman; mode lain tetap satu halaman seperti sebelumnya.
+
+**Pengujian:** pemeriksaan source, pemetaan 5–10 mm, pilihan paragraf, ekstraksi DOCX/PDF simulasi, dan validitas master A4 lulus. Browser Chrome end-to-end, pratinjau ekspor PDF fisik, serta printer belum diverifikasi pada versi ini (lingkungan browser pengujian memblokir akses HTTP lokal). Koneksi jaringan masih diperlukan pertama kali untuk PDF.js/pdf-lib/fontkit dan font Unicode.

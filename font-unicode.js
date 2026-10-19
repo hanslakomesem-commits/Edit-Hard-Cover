@@ -15,6 +15,11 @@ const FONT_SOURCES = Object.freeze({
   'https://raw.githubusercontent.com/google/fonts/main/ofl/tinos/Tinos-Bold.ttf',
   'https://cdn.jsdelivr.net/gh/googlefonts/tinos@main/fonts/ttf/Tinos-Bold.ttf'
  ],
+ regular:[
+  'https://cdn.jsdelivr.net/gh/google/fonts@main/apache/tinos/Tinos-Regular.ttf',
+  'https://raw.githubusercontent.com/google/fonts/main/apache/tinos/Tinos-Regular.ttf',
+  'https://cdn.jsdelivr.net/gh/google/fonts@main/ofl/tinos/Tinos-Regular.ttf'
+ ],
  italic:[
   'https://cdn.jsdelivr.net/gh/google/fonts@main/apache/tinos/Tinos-BoldItalic.ttf',
   'https://raw.githubusercontent.com/google/fonts/main/apache/tinos/Tinos-BoldItalic.ttf',
@@ -57,3 +62,5 @@ export async function getAutomaticUnicodeFonts(notify){
 }
 export function unicodeFontIsReady(){return promises.has('bold')&&promises.has('italic');}
 export const __test={isFont,sourceCount:style=>FONT_SOURCES[style].length};
+
+export async function getAutomaticUnicodeRegular(notify){return single('regular',notify);}

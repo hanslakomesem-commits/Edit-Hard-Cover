@@ -1,0 +1,44 @@
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+import {IPS_SIZES,IPS_REFERENCE,ipsSpineGeometry} from '../soft-ips-layout.js';
+globalThis.PDFLib={PDFDocument:{},StandardFonts:{},degrees:n=>n,rgb:(r,g,b)=>({r,g,b})};
+const {ipsSpine,coverTypes,printSizes,validateCoverMode}=await import('../pdf-engine.js');
+const mmpt=72/25.4;
+const widths=[];
+let passes=0;
+assert.equal(IPS_SIZES.length,6);passes++;
+assert(coverTypes.includes('softips'));passes++;
+assert.equal(printSizes.softips.width,330);passes++;
+assert.equal(printSizes.softips.height,210);passes++;
+assert.equal(validateCoverMode('softips').type,'softips');passes++;
+const face={hasGlyphForCodePoint:()=>true};
+const mock={widthOfTextAtSize:(s,size)=>Array.from(s).length*size*.49};
+const fonts={bold:[{font:mock,face}],italic:[{font:mock,face}]};
+const title='PERAN GURU SOSIOLOGI DALAM MENANAMKAN NILAI KARAKTER DISIPLIN PADA SISWA KELAS XII MA MAMBAUL ULUM BIRA TIMUR SOKOBANAH SAMPANG';
+for(const mm of IPS_SIZES){
+ const g=ipsSpineGeometry(mm);widths.push(g.widthPt);
+ assert.ok(Math.abs(g.widthPt-mm*mmpt)<1e-5);passes++;
+ assert.ok(Math.abs(g.right-IPS_REFERENCE.foldRightPt)<1e-7);passes++;
+ assert.ok(g.leftTicksPt.every((x,i)=>Math.abs(x-IPS_REFERENCE.leftTicksPt[i]+g.shift)<1e-7));passes++;
+ assert.ok(g.leftTicksPt.every(x=>x>12));passes++;
+ const r=ipsSpine(fonts,[{text:title,italic:false}],mm,[]);
+ assert(r.lines.length===2||r.lines.length===3);passes++;
+ assert(r.xs.every(x=>x>=g.left&&x<=g.right));passes++;
+ assert(r.lines.every(line=>{
+   const len=line.map(s=>mock.widthOfTextAtSize(s.text,r.size)).reduce((a,b)=>a+b,0);
+   return r.centerTop-len/2>=IPS_REFERENCE.titleSafeTopPt && r.centerTop+len/2<=IPS_REFERENCE.titleSafeBottomPt;
+ }));passes++;
+ assert((r.lines.length-1)*r.size*1.08+r.size*1.11<g.widthPt-.95);passes++;
+}
+assert.throws(()=>ipsSpineGeometry(4),/5–10/);passes++;
+assert.throws(()=>ipsSpineGeometry(11),/5–10/);passes++;
+const html=readFileSync(new URL('../index.html',import.meta.url),'utf8');
+const app=readFileSync(new URL('../app.js',import.meta.url),'utf8');
+const src=readFileSync(new URL('../pdf-engine.js',import.meta.url),'utf8');
+assert.match(html,/data-cover-style="softips"/);passes++;
+assert.match(app,/\['softips','Soft Cover IPS'\]/);passes++;
+assert.match(src,/generateSoftIPSPDF\(data,mm\)/);passes++;
+assert.match(html,/V4\.20/);passes++;
+assert.match(src,/const IPS_PRINT_MM=\{width:330,height:210\}/);passes++;
+assert(!src.includes('SOFI YULLAH'));passes++;
+console.log(`PASS V4.20 Soft Cover IPS: ${passes} assertions; ${widths.length} widths 5–10mm; front fixed, left ticks translated, logo reference preserved`);

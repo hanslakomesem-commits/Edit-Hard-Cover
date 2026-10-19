@@ -1,0 +1,8 @@
+ZAIN.NET COVER V4.20 — SOFT COVER IPS
+
+- Pilihan cover Soft Cover IPS ditambahkan.
+- Master asli PDF 330 × 210 mm dengan gambar/logo vektor dipertahankan; teks contoh dibersihkan.
+- Punggung 5–10 mm, dua kolom dahulu, tiga bila tidak muat.
+- Garis lipatan kanan dan cover depan tetap, semua tanda kiri disesuaikan seragam.
+- Ukuran selain 5 mm hasil interpolasi; wajib cetak uji.
+- Fitur upload, DOCX/PDF/foto, Dummybook, UNIRA, warna dan polos tidak diubah.

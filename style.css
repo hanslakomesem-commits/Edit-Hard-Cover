@@ -51,3 +51,6 @@
 #abstractText{display:block;resize:vertical;width:100%;box-sizing:border-box;min-height:150px;border:1px solid #d6a6c3;border-radius:12px;padding:12px;color:#302536;background:#fff;font:14px/1.6 system-ui,sans-serif}
 #abstractText:focus{outline:2px solid #dc5ea4;outline-offset:2px}
 @media(max-width:620px){.dummy-abstract-panel{padding:12px}.dummy-abstract-actions{display:block}.dummy-abstract-actions .btn{width:100%;margin-top:10px}}
+
+/* V4.20 Soft Cover IPS (white UIN template with black print) */
+.swatch-softips{background:linear-gradient(90deg,#fff 0 35%,#161616 35% 38%,#fff 38% 100%);border:1px solid #cbd5e1;}

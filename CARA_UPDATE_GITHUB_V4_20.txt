@@ -1,0 +1,8 @@
+1. Ekstrak file ZIP V4.20.
+2. Masuk ke repository GitHub Pages Edit-Hard-Cover.
+3. Add file > Upload files, unggah seluruh ISI folder (bukan folder ZIPnya).
+4. Pastikan folder assets ikut terunggah, terutama assets/soft_ips_clean.pdf.
+5. Commit changes; tunggu GitHub Pages selesai memperbarui.
+6. Buka kembali website dan Ctrl+F5, pastikan V4.20.
+7. Pilih Soft Cover IPS > ketebalan 5 mm > isi data > Buat & Lihat PDF.
+8. Periksa hasil, terutama logo, garis lipatan, nama/NIM sebelum cetak.

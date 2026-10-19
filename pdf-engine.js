@@ -1,5 +1,5 @@
 /**
- * ZAIN.NET PDF engine, static-browser GitHub Pages edition V4.19.
+ * ZAIN.NET PDF engine, static-browser GitHub Pages edition V4.20.
  * Each page begins with the already cleaned ORIGINAL PDF vector master.
  * No template lines, crop marks, or cover geometry are re-created here.
  * Important: Tinos is not the commercial Times New Roman face used in the
@@ -9,15 +9,17 @@ import {colorGuideGeometry, SOURCE_SPINE, mmPoint} from './guide-geometry.js';
 import {threeLineReferenceStatus, withinSpine} from './color-spine-profile.js';
 import {getAutomaticUnicodeFonts,getAutomaticUnicodeRegular} from './font-unicode.js';
 import {DUMMY_SIZES,DUMMY_PAGE,dummySpineGeometry,chooseDummyBackText} from './dummybook-layout.js';
+import {IPS_SIZES,IPS_REFERENCE,ipsSpineGeometry} from './soft-ips-layout.js';
 import {canonicalUniversity} from './classifier.js';
 const {PDFDocument, StandardFonts, degrees, rgb}=globalThis.PDFLib||{};
 const ALL=Array.from({length:19},(_,i)=>i+10);
-let LAYOUT=null,MASTER=null,COLOR_MASTERS=null,COLOR_TRANSPARENT=null,UNIRA_MASTER=null,UNIRA_LOGO=null,DUMMY_MASTER=null;
+let LAYOUT=null,MASTER=null,COLOR_MASTERS=null,COLOR_TRANSPARENT=null,UNIRA_MASTER=null,UNIRA_LOGO=null,DUMMY_MASTER=null,IPS_MASTER=null;
 const pagePt={width:483*72/25.4,height:330*72/25.4};
 const PLAIN_PRINT_MM={width:480,height:330};
 const COLOR_PRINT_MM={width:475,height:320};
 const UNIRA_PRINT_MM={width:484,height:330};
 const DUMMY_PRINT_MM={width:210,height:297};
+const IPS_PRINT_MM={width:330,height:210};
 const mmPt=(v)=>v*72/25.4;
 const YELLOW=rgb?.(1,0.9487449527,0);
 const BLACK=rgb?.(0,0,0);
@@ -354,8 +356,8 @@ async function resizePlainToPrint(bytes) {
 }
 
 const COLOR_TYPES=['merah','maroon','custom'];
-export const coverTypes=['polos',...COLOR_TYPES,'unira','dummybook'];
-export const printSizes={polos:PLAIN_PRINT_MM,merah:COLOR_PRINT_MM,maroon:COLOR_PRINT_MM,custom:COLOR_PRINT_MM,unira:UNIRA_PRINT_MM,dummybook:DUMMY_PRINT_MM};
+export const coverTypes=['polos',...COLOR_TYPES,'unira','dummybook','softips'];
+export const printSizes={polos:PLAIN_PRINT_MM,merah:COLOR_PRINT_MM,maroon:COLOR_PRINT_MM,custom:COLOR_PRINT_MM,unira:UNIRA_PRINT_MM,dummybook:DUMMY_PRINT_MM,softips:IPS_PRINT_MM};
 export function validateCoverMode(mode,customColor) {
  const type=String(mode||'polos').toLowerCase();
  if(!coverTypes.includes(type))fail('Pilihan jenis cover tidak dikenal.');
@@ -770,11 +772,116 @@ async function generateDummyPDF(data,mm){
  return {bytes,warnings,details:{mode:'dummybook',mm,paper_mm:DUMMY_PRINT_MM,pages:2,spine_font_pt:spine.size,spine_lines:spine.lines.length,back_paragraph_count:layout.paragraphCount,back_lines:layout.totalLines,back_font_pt:layout.size}};
 }
 
+
+/** V4.20 Soft Cover IPS, 330 × 210 mm, landscape.
+ * Based on the user's original Soft Cover IPS.pdf. Only the first reference
+ * page is used as a clean visual base; sample student's text was stripped
+ * without affecting the original colored UIN Madura logo or vector marks.
+ * Fold marks at 5 mm are measured. Sizes 6–10 mm are extrapolated, with
+ * the front/right fold fixed and all FOUR left-side marks translated equally.
+ */
+function ipsTitleSpine(fonts,segs,mm,warnings){
+ const g=ipsSpineGeometry(mm),r=IPS_REFERENCE;
+ const centerTop=r.titleCenterTopPt;
+ const maxLen=2*Math.min(centerTop-r.titleSafeTopPt,r.titleSafeBottomPt-centerTop)-3;
+ const base=mm<=5?5.0:mm<=6?5.4:mm<=8?6.2:7.0;
+ // 2 columns before 3 columns; don't split a word in the middle.
+ for(const rows of [2,3]){
+  for(let size=base;size>=3.5;size=Math.round((size-.25)*100)/100){
+   try{
+    const lines=spineRows(fonts,segs,size,maxLen,rows,rows);
+    const pitch=size*1.08;
+    const glyphHeight=size*1.11;
+    if((rows-1)*pitch+glyphHeight>g.widthPt-1.1)continue;
+    const widths=lines.map(line=>measure(fonts,line,size));
+    if(widths.some(width=>centerTop-width/2<r.titleSafeTopPt || centerTop+width/2>r.titleSafeBottomPt))continue;
+    const xs=lines.map((_,i)=>g.center+(rows-1)*pitch/2-i*pitch);
+    if(rows===3)warnings.push('Soft Cover IPS: punggung memakai 3 kolom karena 2 kolom tidak muat pada batas ukuran minimum.');
+    if(size<base)warnings.push(`Soft Cover IPS ${mm} mm: font judul turun menjadi ${size.toFixed(2)} pt karena lebar dan panjang judul.`);
+    return {lines,xs,size,centerTop,geometry:g};
+   }catch(e){if(!(e instanceof PDFPreflightError))throw e;}
+  }
+ }
+ fail(`Judul terlalu panjang untuk punggung Soft Cover IPS ${mm} mm. Tidak dipecah di tengah kata dan tidak dipotong.`);
+}
+function ipsGuides(page,g){
+ // The source has four independent left-side top and bottom ticks, plus
+ // static right-side ticks and corner guides. Keep the latter untouched.
+ const h=page.getHeight(),white=rgb(1,1,1),ink=BLACK;
+ const old=IPS_REFERENCE.leftTicksPt;
+ for(let i=0;i<old.length;i++){
+  const x=old[i];
+  const start=i===0?x-8.8:x-1.5;
+  const width=i===0?11:3;
+  page.drawRectangle({x:start,y:h-13.0,width,height:13.0,color:white});
+  page.drawRectangle({x:start,y:0,width,height:13.0,color:white});
+ }
+ for(let i=0;i<g.leftTicksPt.length;i++){
+  const x=g.leftTicksPt[i];
+  if(x<1||x>page.getWidth()-1)fail('Garis tanda potong IPS di luar kertas.');
+  page.drawLine({start:{x,y:h-4.1},end:{x,y:h-11.1},thickness:.52,color:ink});
+  page.drawLine({start:{x,y:4.1},end:{x,y:11.1},thickness:.52,color:ink});
+  if(i===0){
+   page.drawLine({start:{x:x-7.0,y:h-8.4},end:{x,y:h-8.4},thickness:.52,color:ink});
+   page.drawLine({start:{x:x-7.0,y:8.4},end:{x,y:8.4},thickness:.52,color:ink});
+  }
+ }
+}
+/** Exported pure/layout entry point for unit tests. */
+export function ipsSpine(fonts,segs,mm,warnings=[]){return ipsTitleSpine(fonts,segs,mm,warnings);}
+async function generateSoftIPSPDF(data,mm){
+ mm=Number(mm);
+ if(!IPS_SIZES.includes(mm))fail('Soft Cover IPS: punggung tersedia 5–10 mm.');
+ const segs=validate(data,10),warnings=[];
+ if(!IPS_MASTER)IPS_MASTER=await loadAsset('./assets/soft_ips_clean.pdf');
+ const src=await PDFDocument.load(IPS_MASTER),doc=await PDFDocument.create();
+ if(src.getPageCount()!==1)fail('Master Soft Cover IPS harus satu halaman.');
+ const [page]=await doc.copyPages(src,[0]);doc.addPage(page);
+ if(Math.abs(page.getWidth()-IPS_REFERENCE.pageWidthPt)>.4||Math.abs(page.getHeight()-IPS_REFERENCE.pageHeightPt)>.4)fail('Ukuran master IPS bukan 330 × 210 mm landscape.');
+ const fonts=await getFonts(doc,warnings);
+ const g=ipsSpineGeometry(mm);
+ ipsGuides(page,g);
+ const cx=IPS_REFERENCE.frontCenterXPt;
+ // Original type sizes and anchors measured directly from reference PDF.
+ // Keep all front fields in place even when spine changes.
+ let front=null;
+ for(let size=8.5;size>=6.5;size-=.25){
+  const lines=greedyLines(fonts,segs,size,305);
+  if(lines.length<=5){front={lines,size};break;}
+ }
+ if(!front)fail('Judul cover depan IPS terlalu panjang untuk kotak judul. Periksa judul asli.');
+ const titlePitch=front.size*1.12;
+ const firstTitleTop=70.4-(front.lines.length-1)*titlePitch/2;
+ for(let i=0;i<front.lines.length;i++)renderLine(page,fonts,front.lines[i],front.size,cx,firstTitleTop+i*titlePitch,false,BLACK);
+ single(page,fonts,upper(data.jenis_dokumen),12.4,cx,153,250,'Jenis dokumen depan IPS',warnings,9,false,BLACK);
+ single(page,fonts,'Oleh:',8.35,cx,234.8,160,'Label Oleh IPS',warnings,8,false,BLACK);
+ single(page,fonts,norm(data.nama),8.35,cx,243.8,270,'Nama depan IPS',warnings,7,false,BLACK);
+ single(page,fonts,`NIM. ${norm(data.nim)}`,8.35,cx,252.9,270,'NIM depan IPS',warnings,7,false,BLACK);
+ single(page,fonts,`PROGRAM STUDI ${upper(data.prodi)}`,8.35,cx,512.1,350,'Prodi IPS',warnings,6.5,false,BLACK);
+ single(page,fonts,`FAKULTAS ${upper(data.fakultas)}`,8.35,cx,521.2,350,'Fakultas IPS',warnings,6.5,false,BLACK);
+ single(page,fonts,upper(canonicalUniversity(data.universitas)),8.35,cx,530.3,350,'Universitas IPS',warnings,6.5,false,BLACK);
+ const year=norm(data.bulan_tahun).match(/\b(?:19|20)\d{2}\b/u)?.[0]||norm(data.bulan_tahun);
+ single(page,fonts,year,8.35,cx,539.3,160,'Tahun IPS',warnings,7,false,BLACK);
+ const spine=ipsTitleSpine(fonts,segs,mm,warnings);
+ for(let i=0;i<spine.lines.length;i++)renderLine(page,fonts,spine.lines[i],spine.size,spine.xs[i],spine.centerTop,true,BLACK);
+ const metaPt=mm<=6?4.05:mm<=8?4.55:5.2;
+ const metaPitch=metaPt*1.03;
+ single(page,fonts,upper(data.nama),metaPt,g.center-metaPitch/2,391,97,'Nama punggung IPS',warnings,3.5,true,BLACK);
+ single(page,fonts,upper(data.jenis_dokumen),metaPt,g.center+metaPitch/2,391,88,'Jenis punggung IPS',warnings,3.5,true,BLACK);
+ single(page,fonts,year,metaPt,g.center,493,78,'Tahun punggung IPS',warnings,3.5,true,BLACK);
+ if(mm!==5)warnings.push(`Ketebalan IPS ${mm} mm dihitung dari referensi 5 mm. Wajib cetak uji skala 100%.`);
+ const bytes=new Uint8Array(await doc.save({useObjectStreams:true}));
+ const verify=await PDFDocument.load(bytes);
+ if(verify.getPageCount()!==1||Math.abs(verify.getPage(0).getWidth()-IPS_REFERENCE.pageWidthPt)>.4||Math.abs(verify.getPage(0).getHeight()-IPS_REFERENCE.pageHeightPt)>.4)fail('Hasil PDF Soft Cover IPS gagal verifikasi halaman dan ukuran.');
+ return {bytes,warnings,details:{mode:'softips',mm,paper_mm:IPS_PRINT_MM,pages:1,spine_font_pt:spine.size,spine_lines:spine.lines.length,guide_left:g.left,guide_right:g.right}};
+}
+
 /** Main public API, backward-compatible with V3.8 */
 export async function generatePDF(data,mm,mode='polos',customColor=null){
  await ensureAssets();
  const c=validateCoverMode(mode,customColor);
  if(c.type==='dummybook')return generateDummyPDF(data,mm);
+ if(c.type==='softips')return generateSoftIPSPDF(data,mm);
  if(c.type==='unira')return generateUniraPDF(data,mm);
  if(c.type!=='polos')return generateColorPDF(data,mm,c.type,c.color);
  const plain=await generatePlainPDF(data,mm);

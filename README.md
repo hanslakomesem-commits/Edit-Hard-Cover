@@ -1,3 +1,9 @@
+# ZAIN.NET COVER V4.20 — SOFT COVER IPS
+
+Tambahan template baru: **Soft Cover IPS**, 330 × 210 mm, punggung 5–10 mm. Referensi asli PDF 6 halaman, tetapi contoh yang diukur memiliki punggung sekitar 5 mm; ukuran 6–10 mm merupakan penyesuaian geometri dan memerlukan proof cetak.
+
+Mode Polos, Merah, Maroon, Custom, UNIRA, dan Dummybook tetap tersedia.
+
 # ZAIN.NET COVER V4.18 — FIX LOGO HITAM UNIRA
 
 **Perubahan dari V4.17:** Perbaikan logo kecil punggung UNIRA yang sebelumnya terlihat sebagai kotak hitam. Gambar asli pada PDF memakai Indexed/LZW dengan soft mask grayscale terpisah. Saat diekstrak sebelumnya, mask hilang. V4.18 memakai gambar dengan mask asli diterapkan dan di-flatten pada putih sesuai background UNIRA untuk kompatibilitas Adobe Reader Windows 7. Nama file dan dimensi aset tetap `assets/unira_logo.png`, 33×34 piksel. Aset RGBA hasil rekonstruksi turut disertakan sebagai `assets/unira_logo_transparan.png` untuk audit. **Posisi cover, ukuran, geometri, dan algoritme Polos/Warna tidak diubah.**
@@ -228,7 +234,7 @@ File baru `REFERENSI_WARNA_3_BARIS_17_HALAMAN.pdf` ditambahkan **sebagai referen
 
 ---
 
-## V4.19 — Dummybook 5–10 mm dengan abstrak halaman belakang
+## V4.20 — Dummybook 5–10 mm dengan abstrak halaman belakang
 
 **File sumber:** `assets/DUMMYBOOK_REFERENSI_2_HALAMAN.pdf` (salinan `dummy.pdf` dari pengguna).
 **Master kosong:** `assets/dummybook_clean_2pages.pdf` (2 halaman A4; gambar/logo/palet pink asli, tanpa teks contoh).

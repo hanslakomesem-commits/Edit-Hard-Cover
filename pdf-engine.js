@@ -1,5 +1,5 @@
 /**
- * ZAIN.NET PDF engine, static-browser GitHub Pages edition V4.20.
+ * ZAIN.NET PDF engine, static-browser GitHub Pages edition V4.21.
  * Each page begins with the already cleaned ORIGINAL PDF vector master.
  * No template lines, crop marks, or cover geometry are re-created here.
  * Important: Tinos is not the commercial Times New Roman face used in the
@@ -18,7 +18,7 @@ const pagePt={width:483*72/25.4,height:330*72/25.4};
 const PLAIN_PRINT_MM={width:480,height:330};
 const COLOR_PRINT_MM={width:475,height:320};
 const UNIRA_PRINT_MM={width:484,height:330};
-const DUMMY_PRINT_MM={width:210,height:297};
+const DUMMY_PRINT_MM={width:420,height:297};
 const IPS_PRINT_MM={width:330,height:210};
 const mmPt=(v)=>v*72/25.4;
 const YELLOW=rgb?.(1,0.9487449527,0);
@@ -668,110 +668,102 @@ async function generateUniraPDF(data,mm){
 }
 
 
-/** New V4.19 Dummybook, based ONLY on the user's original two-page A4 dummy.pdf.
- * Page 1: retains original pink graphics, UIN logo, and campus photos;
- * Page 2: last 1/2/3 real abstract paragraphs, centered in the original zone.
- * The original sample abstract is NEVER copied into new student orders.
+/** V4.21 Dummybook: a SINGLE 420×297mm spread (back/spine/front).
+ * Each size 5–10mm is copied from its corresponding original PDF reference
+ * page, preserving the original photos, logo, pink background and fold marks.
+ * Original student text and old abstract are removed from the clean master.
  */
 export function dummyTitleSpine(fonts,segs,mm,warnings){
- const g=dummySpineGeometry(mm);
- const safeTop=219,safeBottom=555,centerTop=393;
- const maxLen=2*Math.min(centerTop-safeTop,safeBottom-centerTop)-5;
- const start=mm<=6?6:mm<=8?7:8;
- for(const rows of [2,3])for(let size=start;size>=4.5;size-=.5){
+ const g=dummySpineGeometry(mm),centerTop=DUMMY_PAGE.spineTitleCenterPt;
+ const top=DUMMY_PAGE.spineTitleTopPt,bottom=DUMMY_PAGE.spineTitleBottomPt;
+ const maxLen=2*Math.min(centerTop-top,bottom-centerTop)-3;
+ const start=mm<=6?4.7:mm<=8?5.5:6.5;
+ for(const rows of [2,3])for(let size=start;size>=3.5;size=Math.round((size-.25)*100)/100){
   try{
    const lines=spineRows(fonts,segs,size,maxLen,rows,rows);
-   const pitch=size*1.08;
-   // A measured width test, including glyph ascent/descent and .35pt clearance.
-   const actual=(rows-1)*pitch+size*1.10;
-   if(actual>g.widthPt-.70)continue;
-   const lengths=lines.map(line=>measure(fonts,line,size));
-   if(lengths.some(len=>centerTop-len/2<safeTop||centerTop+len/2>safeBottom))continue;
-   const xs=lines.map((_,i)=>g.center+(rows-1)*pitch/2-i*pitch);
-   if(rows===3)warnings.push(`Dummybook ${mm} mm: judul memakai 3 baris karena 2 baris tidak muat.`);
-   if(size<start)warnings.push(`Dummybook ${mm} mm: font judul punggung diturunkan ke ${size} pt karena punggung sempit.`);
-   return {lines,size,xs,fromTop:centerTop,geometry:g};
+   const pitch=size*1.07;
+   if((rows-1)*pitch+size*1.12>g.widthPt-1.0)continue;
+   if(lines.some(line=>{const width=measure(fonts,line,size);return centerTop-width/2<top||centerTop+width/2>bottom;}))continue;
+   if(rows===3)warnings.push('Judul punggung Dummybook memakai tiga baris hanya karena pilihan dua baris tidak muat.');
+   if(size<start)warnings.push(`Font punggung Dummybook turun ke ${size} pt karena sempit.`);
+   return {lines,size,xs:lines.map((_,i)=>g.center+(rows-1)*pitch/2-i*pitch),fromTop:centerTop,geometry:g};
   }catch(e){if(!(e instanceof PDFPreflightError))throw e;}
  }
- fail(`Judul Dummybook terlalu panjang untuk punggung ${mm} mm (min 4,5 pt). Tidak dipotong; ringkas hanya berdasarkan naskah asli atau pilih ketebalan yang benar.`);
+ fail(`Judul terlalu panjang untuk punggung Dummybook ${mm} mm (batas font 3.5 pt). Tidak dipotong demi keselamatan cetak.`);
 }
-function dummyGuideMarks(page,geom){
- const h=page.getHeight();
- const ink=rgb(.28,.20,.33);
- // Top/bottom short alignment ticks; never cover or move the original graphics.
- for(const x of [geom.left,geom.right]){
-  page.drawLine({start:{x,y:h-17},end:{x,y:h-40},color:ink,thickness:.45});
-  page.drawLine({start:{x,y:17},end:{x,y:40},color:ink,thickness:.45});
- }
+function drawJustifiedBackLine(page,font,line,size,x,y,width,justify){
+ const words=line.split(/\s+/u);
+ if(!justify||words.length<2){page.drawText(line,{x,y:page.getHeight()-y,size,font,color:BLACK});return;}
+ const wsum=words.reduce((sum,w)=>sum+font.widthOfTextAtSize(w,size),0);
+ const gap=(width-wsum)/(words.length-1);
+ if(gap<1||gap>19){page.drawText(line,{x,y:page.getHeight()-y,size,font,color:BLACK});return;}
+ let pos=x;
+ for(const w of words){page.drawText(w,{x:pos,y:page.getHeight()-y,size,font,color:BLACK});pos+=font.widthOfTextAtSize(w,size)+gap;}
 }
 async function generateDummyPDF(data,mm){
- mm=Number(mm);
- if(!DUMMY_SIZES.includes(mm))fail('Dummybook menyediakan punggung hanya 5–10 mm.');
+ mm=Number(mm);if(!DUMMY_SIZES.includes(mm))fail('Dummybook hanya tersedia ukuran 5–10 mm.');
  const segs=validate(data,10),warnings=[];
  const pars=String(data.abstract_text||'').split(/\n\s*\n/u).map(p=>p.replace(/\s+/gu,' ').trim()).filter(Boolean);
- if(!pars.length)fail('Dummybook membutuhkan paragraf abstrak asli untuk halaman belakang. Unggah abstrak PDF/DOCX atau tempel teks, lalu periksa.');
- if(pars.length>40)fail('Terlalu banyak paragraf abstrak. Periksa pembagian paragraf secara manual.');
- if(!DUMMY_MASTER)DUMMY_MASTER=await loadAsset('./assets/dummybook_clean_2pages.pdf');
+ if(!pars.length)fail('Abstrak belum ada. Baca abstrak asli dari PDF/DOCX lengkap atau isi kolom abstrak.');
+ if(pars.length>50)fail('Pemisahan paragraf abstrak tampak salah. Periksa kolom abstrak sebelum ekspor.');
+ if(!DUMMY_MASTER)DUMMY_MASTER=await loadAsset('./assets/dummybook_spread_clean_5-10mm.pdf');
  const src=await PDFDocument.load(DUMMY_MASTER),doc=await PDFDocument.create();
- if(src.getPageCount()!==2)fail('Master Dummybook harus 2 halaman A4.');
- const pp=await doc.copyPages(src,[0,1]);for(const p of pp)doc.addPage(p);
- const page=doc.getPage(0),back=doc.getPage(1);
- for(const p of [page,back])if(Math.abs(p.getWidth()-DUMMY_PAGE.widthPt)>.5||Math.abs(p.getHeight()-DUMMY_PAGE.heightPt)>.5)fail('Template Dummybook bukan A4 210×297 mm.');
+ if(src.getPageCount()!==6)fail('Master Dummybook baru harus berisi enam pilihan ukuran 5–10 mm.');
+ const g=dummySpineGeometry(mm);
+ const [page]=await doc.copyPages(src,[g.page]);doc.addPage(page);
+ if(Math.abs(page.getWidth()-DUMMY_PAGE.widthPt)>.6||Math.abs(page.getHeight()-DUMMY_PAGE.heightPt)>.6)fail('Master Dummybook bukan 420×297 mm.');
  const fonts=await getFonts(doc,warnings);
  const spine=dummyTitleSpine(fonts,segs,mm,warnings);
- const g=spine.geometry;
- dummyGuideMarks(page,g);
- // Campus artwork and pink cover remain untouched. The fixed front positions
- // were calibrated directly from dummy.pdf page 1; varying spine stays x<=46.
+ // Front cover: measured from the right half of the new reference.
  let front=null;
  for(let sz=14;sz>=10;sz-=.5){
-  const lines=greedyLines(fonts,segs,sz,452);
-  if(lines.length<=5){front={lines,size:sz};break;}
+  const lines=greedyLines(fonts,segs,sz,460);
+  if(lines.length<=4){front={lines,size:sz};break;}
  }
- if(!front)fail('Judul depan Dummybook tidak muat dalam area atas yang disediakan.');
- const frontCenter=304;
- for(let i=0;i<front.lines.length;i++)renderLine(page,fonts,front.lines[i],front.size,frontCenter,95.0+i*15.65,false,BLACK);
- single(page,fonts,'Oleh:',15.5,frontCenter,553,280,'Oleh Dummybook',warnings,12,false,BLACK);
- single(page,fonts,upper(data.nama),15.0,frontCenter,571,360,'Nama Dummybook',warnings,9,false,BLACK);
- single(page,fonts,`NIM. ${norm(data.nim)}`,15.0,frontCenter,589,360,'NIM Dummybook',warnings,9,false,BLACK);
- single(page,fonts,`PROGRAM STUDI ${upper(data.prodi)}`,14.0,frontCenter,685,405,'Prodi Dummybook',warnings,9,false,BLACK);
- single(page,fonts,`FAKULTAS ${upper(data.fakultas)}`,14.0,frontCenter,701,405,'Fakultas Dummybook',warnings,9,false,BLACK);
- single(page,fonts,upper(canonicalUniversity(data.universitas)),14.0,frontCenter,716.6,405,'Universitas Dummybook',warnings,9,false,BLACK);
- single(page,fonts,upper(data.bulan_tahun),14,frontCenter,732.5,300,'Bulan/tahun Dummybook',warnings,9,false,BLACK);
- // Spine title: 2 lines as the default; 3 only after two-line options fail.
+ if(!front)fail('Judul depan Dummybook terlalu panjang untuk zona atas. Periksa judul asli.');
+ const cx=DUMMY_PAGE.frontCenterPt;
+ const pitch=Math.min(15.7,(DUMMY_PAGE.titleBottomPt-DUMMY_PAGE.titleTopPt)/Math.max(1,front.lines.length));
+ for(let i=0;i<front.lines.length;i++)renderLine(page,fonts,front.lines[i],front.size,cx,118+i*pitch,false,BLACK);
+ single(page,fonts,'Oleh:',16,cx,579,300,'Oleh Dummybook',warnings,13,false,BLACK);
+ single(page,fonts,upper(data.nama),16,cx,595,370,'Nama Dummybook',warnings,9,false,BLACK);
+ single(page,fonts,`NIM. ${norm(data.nim)}`,14,cx,611,340,'NIM Dummybook',warnings,9,false,BLACK);
+ single(page,fonts,`PROGRAM STUDI ${upper(data.prodi)}`,14,cx,707,420,'Prodi Dummybook',warnings,9,false,BLACK);
+ single(page,fonts,`FAKULTAS ${upper(data.fakultas)}`,14,cx,722.6,420,'Fakultas Dummybook',warnings,9,false,BLACK);
+ single(page,fonts,upper(canonicalUniversity(data.universitas)),14,cx,738.2,420,'Universitas Dummybook',warnings,9,false,BLACK);
+ single(page,fonts,upper(data.bulan_tahun),14,cx,753.8,300,'Tanggal Dummybook',warnings,9,false,BLACK);
+ // Spine text: centered inside the two ORIGINAL fold marks (no guessed shift).
  for(let i=0;i<spine.lines.length;i++)renderLine(page,fonts,spine.lines[i],spine.size,spine.xs[i],spine.fromTop,true,BLACK);
- const metaPt=mm<=6?4.6:5.3;
- const metaPitch=metaPt*1.03;
- single(page,fonts,upper(data.nama),metaPt,g.center+metaPitch/2,149,93,'Nama punggung Dummybook',warnings,4.2,true,BLACK);
- single(page,fonts,`NIM. ${norm(data.nim)}`,metaPt,g.center-metaPitch/2,149,90,'NIM punggung Dummybook',warnings,4.2,true,BLACK);
- single(page,fonts,upper(data.bulan_tahun),metaPt,g.center,695,75,'Tahun punggung Dummybook',warnings,4.2,true,BLACK);
- // Embed Tinos regular separately for high-legibility academic abstract prose.
+ const metaSize=mm<=6?3.9:4.5,step=metaSize*1.1;
+ single(page,fonts,upper(data.nama),metaSize,g.center+step/2,170,93,'Nama punggung Dummybook',warnings,3.5,true,BLACK);
+ single(page,fonts,`NIM. ${norm(data.nim)}`,metaSize,g.center-step/2,170,95,'NIM punggung Dummybook',warnings,3.5,true,BLACK);
+ single(page,fonts,upper(data.bulan_tahun),metaSize,g.center,730,75,'Tahun punggung Dummybook',warnings,3.5,true,BLACK);
+ // Exact final paragraphs, never summarized / invented / sliced mid-paragraph.
  const fontBytes=await getAutomaticUnicodeRegular();
  const regular=await doc.embedFont(fontBytes,{subset:true});
  const characters=new Set(regular.getCharacterSet());
- const widthFn=(text,size)=>{
-  for(const ch of text)if(!characters.has(ch.codePointAt(0)))fail(`Karakter abstrak ${ch} tidak ada di font Unicode. Koreksi font sebelum ekspor.`);
-  return regular.widthOfTextAtSize(text,size);
+ const widthFn=(s,size)=>{
+  for(const ch of s)if(!characters.has(ch.codePointAt(0)))fail(`Karakter abstrak '${ch}' tidak ada pada font Unicode. Pilih font yang sesuai.`);
+  return regular.widthOfTextAtSize(s,size);
  };
- let layout;
- try{layout=chooseDummyBackText(pars,widthFn);}catch(e){fail(e.message||String(e));}
- const availableHeight=DUMMY_PAGE.backBottomPt-DUMMY_PAGE.backTopPt;
- let currentY=DUMMY_PAGE.backTopPt+(availableHeight-layout.height)/2+layout.size;
+ let layout;try{layout=chooseDummyBackText(pars,widthFn);}catch(e){fail(e.message||String(e));}
+ const h=DUMMY_PAGE.backBottomPt-DUMMY_PAGE.backTopPt;
+ let y=DUMMY_PAGE.backTopPt+(h-layout.height)/2+layout.size;
  for(const rows of layout.lines){
-  for(const line of rows){
-   back.drawText(line,{x:DUMMY_PAGE.backXPt,y:back.getHeight()-currentY,size:layout.size,font:regular,color:BLACK});
-   currentY+=layout.linePitch;
+  for(let i=0;i<rows.length;i++){
+   drawJustifiedBackLine(page,regular,rows[i],layout.size,DUMMY_PAGE.backXPt,y,DUMMY_PAGE.backWidthPt,i<rows.length-1);
+   y+=layout.linePitch;
   }
-  currentY+=layout.gap;
+  y+=layout.gap;
  }
- if(currentY-layout.gap>DUMMY_PAGE.backBottomPt+1)fail('Paragraf belakang melewati kotak aman A4.');
- warnings.push(`Dummybook: halaman belakang berisi ${layout.paragraphCount} paragraf terakhir dari teks asli (${layout.totalLines} baris, ${layout.size} pt).`);
+ if(y-layout.gap>DUMMY_PAGE.backBottomPt+2)fail('Teks belakang melewati zona aman.');
+ warnings.push(`Dummybook: ${layout.reason} ${layout.paragraphCount} paragraf terakhir, ${layout.totalLines} baris, ${layout.size} pt.`);
  const bytes=new Uint8Array(await doc.save({useObjectStreams:true}));
- const reread=await PDFDocument.load(bytes);
- if(reread.getPageCount()!==2)fail('Dummybook PDF harus memiliki dua halaman.');
- return {bytes,warnings,details:{mode:'dummybook',mm,paper_mm:DUMMY_PRINT_MM,pages:2,spine_font_pt:spine.size,spine_lines:spine.lines.length,back_paragraph_count:layout.paragraphCount,back_lines:layout.totalLines,back_font_pt:layout.size}};
+ const checked=await PDFDocument.load(bytes);
+ if(checked.getPageCount()!==1)fail('Dummybook terbaru wajib 1 lembar 420×297 mm.');
+ return {bytes,warnings,details:{mode:'dummybook',mm,paper_mm:DUMMY_PRINT_MM,pages:1,
+  spine_font_pt:spine.size,spine_lines:spine.lines.length,back_paragraph_count:layout.paragraphCount,
+  back_lines:layout.totalLines,back_font_pt:layout.size,source_reference_page:g.page+1}};
 }
-
 
 /** V4.20 Soft Cover IPS, 330 × 210 mm, landscape.
  * Based on the user's original Soft Cover IPS.pdf. Only the first reference

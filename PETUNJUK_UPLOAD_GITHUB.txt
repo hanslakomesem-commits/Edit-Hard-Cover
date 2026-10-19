@@ -1,0 +1,24 @@
+ZAIN.NET COVER V4.21 - PAKET DEPLOY RINGKAS (31 FILE APLIKASI + PETUNJUK)
+
+KENAPA PAKET INI?
+GitHub menampilkan: Yowza, that's a lot of files. Try uploading fewer than 100 at a time.
+Paket asli V4.21 berisi 105 berkas termasuk tests, arsip, laporan, dan gambar audit.
+Paket ini hanya berisi kode aplikasi, aset runtime, dan contoh referensi yang ditautkan di halaman.
+
+LANGKAH:
+1. Ekstrak ZIP ini, jangan upload ZIP langsung.
+2. Masuk ke repository Edit-Hard-Cover, bagian root (/), branch main.
+3. Klik Add file -> Upload files.
+4. Drag seluruh ISI folder ekstrak (termasuk folder assets dan vendor), bukan folder pembungkusnya.
+5. Pastikan pada daftar upload ada assets/layout.json, assets/masters.pdf,
+   assets/dummybook_spread_clean_5-10mm.pdf, assets/soft_ips_clean.pdf,
+   assets/unira_clean.pdf, vendor/jszip.min.js, dan index.html.
+6. Klik Commit changes; buka Actions / Deployments untuk cek Pages sukses.
+7. Buka website GitHub Pages lalu Ctrl+F5 untuk refresh (atau private window).
+
+PENTING: JANGAN datarkan seluruh isi folder assets dan vendor menjadi file
+di root. Asset di root (contoh masters.pdf) tidak menggantikan assets/masters.pdf.
+Upload juga tidak otomatis menghapus arsip lama dari repo; itu tidak masalah
+untuk menjalankan versi baru selama file runtime berada di lokasi yang benar.
+
+Pengujian ini hanya memastikan kelengkapan aset dan struktur; cetak uji tetap penting.

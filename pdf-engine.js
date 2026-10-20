@@ -1,5 +1,5 @@
 /**
- * ZAIN.NET PDF engine, static-browser GitHub Pages edition V4.23.
+ * ZAIN.NET PDF engine, static-browser GitHub Pages edition V4.24.
  * Each page begins with the already cleaned ORIGINAL PDF vector master.
  * No template lines, crop marks, or cover geometry are re-created here.
  * Important: Tinos is not the commercial Times New Roman face used in the
@@ -13,9 +13,10 @@ import {DUMMY_SIZES,DUMMY_PAGE,dummySpineGeometry,chooseDummyBackText} from './d
 import {IPS_SIZES,IPS_REFERENCE,ipsSpineGeometry} from './soft-ips-layout.js';
 import {CD_PAGE_MM,CD_PAGE_PT,CD_LAYOUT,assertCDData,computeCDTitle} from './cover-cd-layout.js';
 import {canonicalUniversity} from './classifier.js';
+import {PLAIN_V1,PLAIN_V2,PLAIN_LOGO_ASSET,plainFrontLayout,plainFrontFits} from './plain-variant-layout.js';
 const {PDFDocument, StandardFonts, degrees, rgb}=globalThis.PDFLib||{};
 const ALL=Array.from({length:19},(_,i)=>i+10);
-let LAYOUT=null,MASTER=null,COLOR_MASTERS=null,COLOR_TRANSPARENT=null,UNIRA_MASTER=null,UNIRA_LOGO=null,DUMMY_MASTER=null,IPS_MASTER=null;
+let LAYOUT=null,MASTER=null,COLOR_MASTERS=null,COLOR_TRANSPARENT=null,UNIRA_MASTER=null,UNIRA_LOGO=null,DUMMY_MASTER=null,IPS_MASTER=null,PLAIN_LOGO=null;
 const pagePt={width:483*72/25.4,height:330*72/25.4};
 const PLAIN_PRINT_MM={width:480,height:330};
 const COLOR_PRINT_MM={width:475,height:320};
@@ -34,11 +35,11 @@ async function loadAsset(url,kind='bytes'){
  finally{clearTimeout(id);}
 }
 async function ensureAssets(){
- if(LAYOUT&&MASTER&&COLOR_MASTERS&&COLOR_TRANSPARENT&&UNIRA_MASTER&&UNIRA_LOGO)return;
+ if(LAYOUT&&MASTER&&COLOR_MASTERS&&COLOR_TRANSPARENT&&UNIRA_MASTER&&UNIRA_LOGO&&PLAIN_LOGO)return;
  if(!PDFDocument)throw Error('Pustaka pdf-lib gagal dimuat. Cek internet untuk memuat pustaka statis CDN, kemudian refresh.');
- const [lo,ma,co,tr,unira,uniraLogo]=await Promise.all([
-  loadAsset('./assets/layout.json','json'),loadAsset('./assets/masters.pdf'),loadAsset('./assets/warna_clean.pdf'),loadAsset('./assets/warna_transparent_marks_logo.pdf'),loadAsset('./assets/unira_clean.pdf'),loadAsset('./assets/unira_logo_custom.png?v=4.22')]);
- LAYOUT=lo.templates;MASTER=ma;COLOR_MASTERS=co;COLOR_TRANSPARENT=tr;UNIRA_MASTER=unira;UNIRA_LOGO=uniraLogo;
+ const [lo,ma,co,tr,unira,uniraLogo,plainLogo]=await Promise.all([
+  loadAsset('./assets/layout.json','json'),loadAsset('./assets/masters.pdf'),loadAsset('./assets/warna_clean.pdf'),loadAsset('./assets/warna_transparent_marks_logo.pdf'),loadAsset('./assets/unira_clean.pdf'),loadAsset('./assets/unira_logo_custom.png?v=4.22'),loadAsset(PLAIN_LOGO_ASSET)]);
+ LAYOUT=lo.templates;MASTER=ma;COLOR_MASTERS=co;COLOR_TRANSPARENT=tr;UNIRA_MASTER=unira;UNIRA_LOGO=uniraLogo;PLAIN_LOGO=plainLogo;
 }
 export async function checkAssets(){await ensureAssets();return {thicknesses:ALL};}
 const NEAR=0.18;
@@ -312,7 +313,7 @@ function single(page,fonts,text,size,cx,y,maxWidth,label,warnings,minFont=size,r
  renderLine(page,fonts,[{text,italic:false}],final,cx,y,rotated,ink);
 }
 
-async function generatePlainPDF(data,mm){
+async function generatePlainPDF(data,mm,variant=PLAIN_V1){
  mm=Number(mm);const segs=validate(data,mm);const conf=LAYOUT[mm],warnings=[];
  const doc=await PDFDocument.create();const src=await PDFDocument.load(MASTER);
  if(src.getPageCount()!==ALL.length)fail('Jumlah master PDF tidak sama dengan konfigurasi 19 ukuran.');
@@ -320,16 +321,25 @@ async function generatePlainPDF(data,mm){
  if(Math.abs(page.getWidth()-pagePt.width)>.55||Math.abs(page.getHeight()-pagePt.height)>.55)fail('Ukuran master bukan 483 × 330 mm.');
  const fonts=await getFonts(doc,warnings);
  for(const c of [...String(data.judul),...segs.map(s=>s.text)].join(''))if(LATIN_CHECK.test(c))fail('Aksara Arab belum mendukung shaping RTL.');
+ const placement=plainFrontLayout(variant,conf);
+ if(!plainFrontFits(placement))fail('Logo Polos akan menimpa teks identitas. Periksa kalibrasi template.');
  const front=frontTitle(fonts,segs,conf,data,warnings);
- for(let i=0;i<front.lines.length;i++)renderLine(page,fonts,front.lines[i],front.size,conf.front_cx,conf.front_title_y+i*conf.front_title_pitch);
- single(page,fonts,upper(data.jenis_dokumen),17.8998,conf.front_type_cx,conf.front_type_y,240,'Jenis dokumen',warnings,13);
- single(page,fonts,'Oleh:',12,conf.front_cx,conf.front_label_y,180,'Label Oleh',warnings,12);
- single(page,fonts,upper(data.nama),12,conf.front_cx,conf.front_name_y,400,'Nama depan',warnings,9);
- single(page,fonts,`${conf.front_nim_prefix} ${norm(data.nim)}`,12,conf.front_cx,conf.front_nim_y,390,'NIM',warnings,9);
- single(page,fonts,`PROGRAM STUDI ${upper(data.prodi)}`,12,conf.front_cx,conf.front_prodi_y,395,'Prodi',warnings,9);
- single(page,fonts,`FAKULTAS ${upper(data.fakultas)}`,12,conf.front_cx,conf.front_fakultas_y,395,'Fakultas',warnings,9);
- single(page,fonts,upper(canonicalUniversity(data.universitas)),12,conf.front_cx,conf.front_universitas_y,395,'Universitas',warnings,9);
- single(page,fonts,upper(data.bulan_tahun),12,conf.front_cx,conf.front_year_y,395,'Tanggal',warnings,9.5);
+ for(let i=0;i<front.lines.length;i++)renderLine(page,fonts,front.lines[i],front.size,placement.frontCX,placement.titleY+i*placement.titlePitch);
+ single(page,fonts,upper(data.jenis_dokumen),17.8998,placement.typeCX,placement.typeY,240,'Jenis dokumen',warnings,13);
+ single(page,fonts,'Oleh:',12,placement.frontCX,placement.labelY,180,'Label Oleh',warnings,12);
+ single(page,fonts,upper(data.nama),12,placement.frontCX,placement.nameY,400,'Nama depan',warnings,9);
+ single(page,fonts,`${conf.front_nim_prefix} ${norm(data.nim)}`,12,placement.frontCX,placement.nimY,390,'NIM',warnings,9);
+ single(page,fonts,`PROGRAM STUDI ${upper(data.prodi)}`,12,placement.frontCX,placement.prodiY,395,'Prodi',warnings,9);
+ single(page,fonts,`FAKULTAS ${upper(data.fakultas)}`,12,placement.frontCX,placement.fakultasY,395,'Fakultas',warnings,9);
+ single(page,fonts,upper(canonicalUniversity(data.universitas)),12,placement.frontCX,placement.universitasY,395,'Universitas',warnings,9);
+ single(page,fonts,upper(data.bulan_tahun),12,placement.frontCX,placement.tahunY,395,'Tanggal',warnings,9.5);
+ // The current Polos reference PDF has no embedded logo; use the existing
+ // colored UIN Madura image already shipped with Cover CD. White paper stays white.
+ const logo=await doc.embedPng(PLAIN_LOGO);
+ const ratio=logo.width/logo.height;
+ const imgH=placement.logoHeightPt,imgW=imgH*ratio;
+ if(imgW>175)fail('Logo Polos terlalu lebar untuk zona identitas depan.');
+ page.drawImage(logo,{x:placement.logoCenterX-imgW/2,y:page.getHeight()-placement.logoTopY-imgH,width:imgW,height:imgH});
  const spine=chooseSpine(fonts,segs,mm,warnings);
  for(let i=0;i<spine.result.length;i++)renderLine(page,fonts,spine.result[i],spine.size,spine.xs[i],spine.cy??conf.spine_title_center_y,true);
  single(page,fonts,upper(data.jenis_dokumen),conf.spine_type_pt,conf.spine_type_x,conf.spine_type_y,135,'Jenis dokumen punggung',warnings,6,true);
@@ -341,7 +351,7 @@ async function generatePlainPDF(data,mm){
  if(reopened.getPageCount()!==1)fail('PDF hasil harus terdiri dari tepat satu halaman.');
  const p=reopened.getPage(0);
  if(Math.abs(p.getWidth()-pagePt.width)>.55||Math.abs(p.getHeight()-pagePt.height)>.55)fail('PDF hasil tidak berukuran 483 × 330 mm.');
- return {bytes:new Uint8Array(bytes),warnings,details:{mm,spine_font_pt:spine.size,spine_lines:spine.result.length,spine_title_center_y:spine.cy??conf.spine_title_center_y,spine_title_bounds_pt:spine.titleBoundsPt}};
+ return {bytes:new Uint8Array(bytes),warnings,details:{mm,spine_font_pt:spine.size,spine_lines:spine.result.length,spine_title_center_y:spine.cy??conf.spine_title_center_y,spine_title_bounds_pt:spine.titleBoundsPt,plain_variant:variant,front_logo_top_pt:placement.logoTopY}};
 }
 
 
@@ -359,8 +369,8 @@ async function resizePlainToPrint(bytes) {
 }
 
 const COLOR_TYPES=['merah','maroon','custom'];
-export const coverTypes=['polos',...COLOR_TYPES,'unira','dummybook','softips','covercd'];
-export const printSizes={polos:PLAIN_PRINT_MM,merah:COLOR_PRINT_MM,maroon:COLOR_PRINT_MM,custom:COLOR_PRINT_MM,unira:UNIRA_PRINT_MM,dummybook:DUMMY_PRINT_MM,softips:IPS_PRINT_MM,covercd:CD_PRINT_MM};
+export const coverTypes=['polos','poloslogoatas',...COLOR_TYPES,'unira','dummybook','softips','covercd'];
+export const printSizes={polos:PLAIN_PRINT_MM,poloslogoatas:PLAIN_PRINT_MM,merah:COLOR_PRINT_MM,maroon:COLOR_PRINT_MM,custom:COLOR_PRINT_MM,unira:UNIRA_PRINT_MM,dummybook:DUMMY_PRINT_MM,softips:IPS_PRINT_MM,covercd:CD_PRINT_MM};
 export function validateCoverMode(mode,customColor) {
  const type=String(mode||'polos').toLowerCase();
  if(!coverTypes.includes(type))fail('Pilihan jenis cover tidak dikenal.');
@@ -940,10 +950,10 @@ export async function generatePDF(data,mm,mode='polos',customColor=null){
  if(c.type==='dummybook')return generateDummyPDF(data,mm);
  if(c.type==='softips')return generateSoftIPSPDF(data,mm);
  if(c.type==='unira')return generateUniraPDF(data,mm);
- if(c.type!=='polos')return generateColorPDF(data,mm,c.type,c.color);
- const plain=await generatePlainPDF(data,mm);
+ if(c.type!==PLAIN_V1&&c.type!==PLAIN_V2)return generateColorPDF(data,mm,c.type,c.color);
+ const plain=await generatePlainPDF(data,mm,c.type);
  const out=await resizePlainToPrint(plain.bytes);
  const reopened=await PDFDocument.load(out);
  if(Math.abs(reopened.getPage(0).getWidth()-mmPt(480))>.3||Math.abs(reopened.getPage(0).getHeight()-mmPt(330))>.3)fail('PDF polos gagal validasi ukuran 480 × 330 mm.');
- return {...plain,bytes:out,details:{...plain.details,mode:'polos',paper_mm:PLAIN_PRINT_MM}};
+ return {...plain,bytes:out,details:{...plain.details,mode:c.type,paper_mm:PLAIN_PRINT_MM}};
 }

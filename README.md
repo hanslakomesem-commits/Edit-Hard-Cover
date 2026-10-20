@@ -1,7 +1,45 @@
-# ZAIN.NET COVER V4.23 — Tambahan COVER CD
+# ZAIN.NET COVER V4.24 — Dua pilihan Polos (Nama–Logo / Logo–Nama)
 
-Situs statis GitHub Pages untuk cover Polos, Warna, UNIRA, Dummybook, Soft Cover IPS, dan COVER CD.
+Source statis siap upload ke GitHub Pages, berasal dari V4.23 (semua menu lama dipertahankan).
 
+## Polos V1: Nama → Logo
+- Menu: **Polos V1 — Nama di Atas Logo**, nilai internal `polos` supaya pesanan lama kompatibel.
+- Judul depan, posisi nama, NIM, data kampus dan punggung memakai kalibrasi Serli yang ada.
+- Logo UIN Madura ditaruh di bawah nama/NIM dan sebelum bagian prodi/fakultas.
+
+## Polos V2: Logo → Nama
+- Menu: **Polos V2 — Logo di Atas Nama**, nilai internal `poloslogoatas`.
+- Logo berada di atas label OLEH, nama dan NIM.
+- Koordinat judul, OLEH, nama, NIM, prodi/fakultas/universitas/tahun berasal dari `polos logo atas.pdf` baru; untuk mempertahankan master Polos 483×330 mm dipetakan dengan inset sumber (+4 mm x dan +5 mm y).
+- **PENTING: PDF referensi terbaru tidak mengandung gambar logo.** Logo yang ditempatkan berasal dari `assets/cover_cd_uin_logo.png` yang sudah dipakai Cover CD.
+
+## Aturan umum kedua Polos
+- Tetap memilih punggung **10–28 mm** dengan kalibrasi Serli dan prioritas 9 pt di punggung lebar.
+- Output PDF Polos fisik tetap **480 × 330 mm**. Master sumber Serli 483 × 330 mm disesuaikan lebar saat output (kode lama).
+- Hasil PDF satuan/ZIP/gabungan tetap tersedia. Kedua gaya bisa digunakan dalam satu batch.
+- Menu Merah, Maroon, Custom, UNIRA, Dummybook, Soft Cover IPS, dan Cover CD tidak dimodifikasi.
+
+## Berkas yang relevan
+- `plain-variant-layout.js` — konfigurasi dan pemeriksaan area logo/identitas per varian.
+- `pdf-engine.js` — injeksi logo ke dua varian Polos, pemilihan rendering depan V2.
+- `app.js`, `index.html` — dua pilihan Polos di menu per pesanan dan menu utama.
+- `assets/REFERENSI_POLOS_V2_LOGO_ATAS.pdf` — file PDF terbaru pengguna, disertakan sebagai referensi (belum ada gambar logo di dalamnya).
+- `assets/cover_cd_uin_logo.png` — logo UIN yang sudah ada sebelum V4.24.
+
+## Pengujian yang dilakukan
+- `node tests/test_plain_v424.mjs`: 19 ketebalan × 2 pilihan = 38 tes jalur generator dan tumpukan logo melalui runtime PDF tiruan.
+- `node tests/test_cover_cd.mjs`: regresi Cover CD.
+- `node --check app.js`, `node --check pdf-engine.js`: pemeriksaan sintaks JS.
+- Pemeriksaan semua `src`/`href` lokal dan integritas ZIP.
+- **Belum** memverifikasi PDF hasil melalui Chrome end-to-end atau cetak fisik dengan skala 100%. Pengukuran dan mock runtime tidak menggantikan cetak proof.
+
+## Update GitHub Pages
+1. Ekstrak ZIP; unggah isinya ke **root** branch `main` repository Edit-Hard-Cover, bukan file ZIP utuh.
+2. Pastikan `assets/`, `vendor/`, `index.html`, `app.js`, `pdf-engine.js`, `plain-variant-layout.js` ada.
+3. Commit; tunggu deploy GitHub Pages hijau; refresh `Ctrl+F5`.
+4. Coba Polos V1 dan V2 pada 10 mm dan 23 mm, bandingkan urutan nama/logo dan posisi punggung.
+
+ 
 ## COVER CD — berdasarkan referensi Word pengguna
 
 - Ukuran cetak tepat mengikuti page size pada `COVER CD IAIN MADURA fix.docx`: **137,0189 × 137,0189 mm**, halaman **persegi**, 1 halaman PDF per orang.

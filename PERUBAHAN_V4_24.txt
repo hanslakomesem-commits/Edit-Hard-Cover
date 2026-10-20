@@ -1,0 +1,1 @@
+V4.24: Polos V1 = nama/NIM di atas logo. Polos V2 = logo di atas nama/NIM sesuai acuan `polos logo atas.pdf` (file sumber tidak mengandung logo, logo UIN memakai aset existing). Dua mode Polos tetap 10-28 mm, PDF 480x330; fitur lama dipertahankan.

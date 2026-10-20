@@ -1,6 +1,6 @@
 import {readPDF,readWord,readPhoto,withTimeout,setOCRProgress} from './document-reader.js';
 import {resetOCR} from './ocr-fast.js';
-import {generatePDF,checkAssets,setUserFonts} from './pdf-engine.js?v=4.23';
+import {generatePDF,checkAssets,setUserFonts} from './pdf-engine.js?v=4.24';
 import {canonicalUniversity} from './classifier.js';
 import {readAbstractFromFile,isAbstractMetadata} from './abstract-reader.js';
 import {chooseDummyBackText,DUMMY_PAGE} from './dummybook-layout.js';
@@ -9,11 +9,11 @@ import {DUMMY_SIZES} from './dummybook-layout.js';
 import {IPS_SIZES} from './soft-ips-layout.js';
 
 'use strict';
-// V4.23: unggahan otomatis diproses + status yang tidak menggantung; semua input lokal tanpa API.
+// V4.24: unggahan otomatis diproses + status yang tidak menggantung; semua input lokal tanpa API.
 const $ = id => document.getElementById(id);
 const FIELDS=['nama','nim','prodi','fakultas','universitas','jenis_dokumen','bulan_tahun'];
 const REQUIRED=['judul',...FIELDS];
-const COVER_TYPES=['polos','merah','maroon','custom','unira','dummybook','softips','covercd'];
+const COVER_TYPES=['polos','poloslogoatas','merah','maroon','custom','unira','dummybook','softips','covercd'];
 const sizesForStyle=style=>style==='covercd'?[]:style==='dummybook'?DUMMY_SIZES:style==='softips'?IPS_SIZES:availableMM;
 const validThickness=o=>o?.style==='covercd'||(sizesForStyle(o?.style).includes(Number(o?.thickness))&&o.thickness!==null);
 const unsafeProduction=o=>o&&['merah','maroon','custom'].includes(o.style)&&o.thickness===28;
@@ -135,7 +135,7 @@ function renderOrders(){
     else select.value=o.thickness===null?'':String(o.thickness);
     select.addEventListener('change',()=>setThickness(o.id,select.value?Number(select.value):null));
     const styleChoice=document.createElement('select');styleChoice.className='order-style';styleChoice.setAttribute('aria-label',`Jenis cover pesanan ${orderNumber(o)}`);
-    for(const [v,label] of [['polos','Polos'],['merah','Merah'],['maroon','Maroon'],['custom','Custom'],['unira','UNIRA'],['dummybook','Dummybook'],['softips','Soft Cover IPS'],['covercd','Cover CD']]){const opt=document.createElement('option');opt.value=v;opt.textContent=label;styleChoice.append(opt);}
+    for(const [v,label] of [['polos','Polos V1 (Nama → Logo)'],['poloslogoatas','Polos V2 (Logo → Nama)'],['merah','Merah'],['maroon','Maroon'],['custom','Custom'],['unira','UNIRA'],['dummybook','Dummybook'],['softips','Soft Cover IPS'],['covercd','Cover CD']]){const opt=document.createElement('option');opt.value=v;opt.textContent=label;styleChoice.append(opt);}
     styleChoice.value=o.style;styleChoice.addEventListener('change',()=>setStyle(o.id,styleChoice.value));
     const remove=document.createElement('button');remove.type='button';remove.className='order-remove';remove.textContent='✕';remove.title=`Hapus pesanan ${orderNumber(o)}`;remove.addEventListener('click',()=>removeOrder(o.id));
     row.append(open,styleChoice,select,remove);target.append(row);
@@ -250,7 +250,7 @@ function setStyle(id,style){
  if(unsafeProduction(o)){o.thickness=null;reset=true;}
  if(o.id===activeId){renderCoverStyle();renderThickness();clearPDFPreview();}
  renderOrders();
- notice(`Pesanan ${orderNumber(o)}: cover ${style.toUpperCase()} (${style==='dummybook'?'spread 420 × 297':style==='softips'?'330 × 210':style==='covercd'?'137 × 137':style==='polos'?'480 × 330':style==='unira'?'484 × 330':'475 × 320'} mm).`+(reset?' Ukuran punggung lama direset; pilih ukuran yang berlaku.':''),'info');
+ notice(`Pesanan ${orderNumber(o)}: cover ${style.toUpperCase()} (${style==='dummybook'?'spread 420 × 297':style==='softips'?'330 × 210':style==='covercd'?'137 × 137':['polos','poloslogoatas'].includes(style)?'480 × 330':style==='unira'?'484 × 330':'475 × 320'} mm).`+(reset?' Ukuran punggung lama direset; pilih ukuran yang berlaku.':''),'info');
  if(style==='dummybook'&&!o.data.abstract_text && o.file&&(isPdf(o.file)||isWord(o.file)))void populateAbstract(o,o.file);
 }
 function setThickness(id,mm){
@@ -502,7 +502,7 @@ $('downloadButton').addEventListener('click',()=>{
   notice('PDF telah disiapkan. Jika browser tidak langsung mengunduh, gunakan tombol hijau "Download" di bawah pratinjau.','success');
 });
 async function loadStatus(){
- $('connection').textContent='GitHub Pages V4.23 • Dummybook spread A3 5–10 mm • Tanpa token';
+ $('connection').textContent='GitHub Pages V4.24 • Dummybook spread A3 5–10 mm • Tanpa token';
  $('serverDot').classList.add('online');
  notice('Mode lokal: Word dan PDF teks dibaca di browser tanpa OCR lokal. Foto dan PDF scan memakai OCR Tesseract lokal (model bahasa mungkin perlu diunduh).','info');
  // JANGAN menunggu template saat memuat UI; tidak membuat tombol membaca macet.

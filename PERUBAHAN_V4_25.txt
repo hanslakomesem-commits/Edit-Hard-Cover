@@ -1,0 +1,1 @@
+V4.25: Hapus seluruh gambar logo yang ditambahkan pada cover Polos V1 dan V2. Posisi teks masing-masing versi tetap berbeda. Hapus ketergantungan aset logo dari generator Polos. Jenis cover lain tidak berubah.

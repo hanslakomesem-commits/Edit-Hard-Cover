@@ -1,11 +1,10 @@
 /**
- * ZAIN.NET COVER V4.24 - tata letak dua pilihan Polos.
+ * ZAIN.NET COVER V4.25 - dua pilihan tata letak Polos TANPA GAMBAR LOGO.
  * Koordinat PDF dihitung dari tepi atas halaman sumber 483 x 330 mm.
  * Polos V1 mengikuti identitas Serli yang sudah digunakan pengguna.
  * Polos V2 mengambil posisi teks depan dari `polos logo atas.pdf` 475 x 320 mm
  * dengan transformasi inset +4mm pada tiap sisi ke master sumber 483 x 330mm.
- * Referensi V2 tidak memiliki gambar logo, maka logo UIN asli diambil dari
- * aset Cover CD yang sudah ada di website, bukan dipalsukan sebagai isi PDF.
+ * Kedua versi sengaja TIDAK memiliki gambar logo. Sebutan lama hanya nama jenis layout.
  */
 export const PLAIN_V1='polos';
 export const PLAIN_V2='poloslogoatas';
@@ -13,8 +12,6 @@ export const PLAIN_VARIANTS=Object.freeze([PLAIN_V1,PLAIN_V2]);
 const MM_PT=72/25.4;
 const INSET_X=4*MM_PT;
 const INSET_Y=5*MM_PT;
-// The image contains a white background on white Polos paper.
-export const PLAIN_LOGO_ASSET='./assets/cover_cd_uin_logo.png';
 export function plainFrontLayout(variant,calibration){
  if(!PLAIN_VARIANTS.includes(variant))throw Error('Varian Polos tidak dikenal');
  if(!calibration?.front_cx)throw Error('Kalibrasi depan Polos hilang');
@@ -26,8 +23,7 @@ export function plainFrontLayout(variant,calibration){
    labelY:calibration.front_label_y,nameY:calibration.front_name_y,nimY:calibration.front_nim_y,
    prodiY:calibration.front_prodi_y,fakultasY:calibration.front_fakultas_y,
    universitasY:calibration.front_universitas_y,tahunY:calibration.front_year_y,
-   logoCenterX:calibration.front_cx,logoTopY:452,logoHeightPt:125,
-   order:['nama','logo'],
+   order:['nama'],
   };
  }
  // Exact text anchors measured on the new user-supplied PDF (from page top).
@@ -43,17 +39,18 @@ export function plainFrontLayout(variant,calibration){
   labelY:source.label+INSET_Y,nameY:source.name+INSET_Y,nimY:source.nim+INSET_Y,
   prodiY:source.prodi+INSET_Y,fakultasY:source.fakultas+INSET_Y,
   universitasY:source.universitas+INSET_Y,tahunY:source.tahun+INSET_Y,
-  logoCenterX:calibration.front_cx,logoTopY:448,logoHeightPt:135,
-  order:['logo','nama'],
+  order:['nama'],
   originalReferenceMM:{width:475,height:320},
   sourceInsetPt:{x:INSET_X,y:INSET_Y},
  };
 }
+/** Verify visual order and safe identity spacing without requiring any logo. */
 export function plainFrontFits(layout){
- if(!layout||layout.logoHeightPt<=0)return false;
- const logoBottom=layout.logoTopY+layout.logoHeightPt;
- if(layout.order[0]==='nama'){
-  return layout.nimY+22<layout.logoTopY && logoBottom+30<layout.prodiY;
- }
- return layout.typeY+50<layout.logoTopY && logoBottom+18<layout.labelY && layout.nimY+35<layout.prodiY;
+ if(!layout||!Number.isFinite(layout.titleY)||!Number.isFinite(layout.frontCX))return false;
+ return layout.titleY+25 < layout.typeY &&
+        layout.typeY+30 < layout.labelY &&
+        layout.labelY < layout.nameY && layout.nameY < layout.nimY &&
+        layout.nimY+35 < layout.prodiY &&
+        layout.prodiY < layout.fakultasY &&
+        layout.fakultasY < layout.universitasY && layout.universitasY < layout.tahunY;
 }

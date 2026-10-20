@@ -1,17 +1,28 @@
-# ZAIN.NET COVER V4.24 — Dua pilihan Polos (Nama–Logo / Logo–Nama)
+# ZAIN.NET COVER V4.25 — Dua Versi Polos TANPA LOGO
+
+**Koreksi:** Sebutan nama/logo pada V4.24 hanyalah istilah untuk dua pola layout. Pada V4.25 **tidak ada logo dicetak pada Polos V1 maupun Polos V2**. Perbedaan kedua pilihan adalah koordinat teks pada cover depan:
+- `polos` (V1): koordinat tata letak lama berdasarkan Serli.
+- `poloslogoatas` (V2): koordinat tata letak terbaru berdasarkan `polos logo atas.pdf`.
+
+**Dipertahankan:** geometri punggung 10–28 mm, font adaptif, ukuran PDF Polos 480×330 mm, jenis cover Merah/Maroon/Custom/UNIRA/Dummybook/Soft Cover IPS/Cover CD. Logo untuk cover-cover tersebut **tidak dihapus**.
+
+**Pengujian:** `node tests/test_plain_v425.mjs` menguji 38 ekspor Polos dengan runtime PDF simulasi dan memeriksa tidak ada instruksi menggambar logo. Ini bukan uji printer fisik.
+
+---
+
+# ZAIN.NET COVER V4.25 — Dua pilihan Polos (Nama–Logo / Logo–Nama)
 
 Source statis siap upload ke GitHub Pages, berasal dari V4.23 (semua menu lama dipertahankan).
 
-## Polos V1: Nama → Logo
-- Menu: **Polos V1 — Nama di Atas Logo**, nilai internal `polos` supaya pesanan lama kompatibel.
-- Judul depan, posisi nama, NIM, data kampus dan punggung memakai kalibrasi Serli yang ada.
-- Logo UIN Madura ditaruh di bawah nama/NIM dan sebelum bagian prodi/fakultas.
+## Polos V1 — Tata Letak Lama (tanpa logo)
+- Nilai pilihan: `polos`; tetap kompatibel dengan pesanan sebelumnya.
+- Posisi judul, identitas, dan kampus berdasarkan kalibrasi Serli versi lama.
+- Tidak menambahkan gambar apa pun ke cover.
 
-## Polos V2: Logo → Nama
-- Menu: **Polos V2 — Logo di Atas Nama**, nilai internal `poloslogoatas`.
-- Logo berada di atas label OLEH, nama dan NIM.
-- Koordinat judul, OLEH, nama, NIM, prodi/fakultas/universitas/tahun berasal dari `polos logo atas.pdf` baru; untuk mempertahankan master Polos 483×330 mm dipetakan dengan inset sumber (+4 mm x dan +5 mm y).
-- **PENTING: PDF referensi terbaru tidak mengandung gambar logo.** Logo yang ditempatkan berasal dari `assets/cover_cd_uin_logo.png` yang sudah dipakai Cover CD.
+## Polos V2 — Tata Letak Baru (tanpa logo)
+- Nilai pilihan: `poloslogoatas`; nama internal lama dipertahankan untuk kompatibilitas.
+- Teks judul, nama, NIM, prodi, fakultas, universitas, dan tahun mengikuti koordinat acuan terbaru `polos logo atas.pdf` (tanpa menambahkan logo).
+- Tidak menambahkan gambar apa pun ke cover.
 
 ## Aturan umum kedua Polos
 - Tetap memilih punggung **10–28 mm** dengan kalibrasi Serli dan prioritas 9 pt di punggung lebar.
@@ -20,14 +31,14 @@ Source statis siap upload ke GitHub Pages, berasal dari V4.23 (semua menu lama d
 - Menu Merah, Maroon, Custom, UNIRA, Dummybook, Soft Cover IPS, dan Cover CD tidak dimodifikasi.
 
 ## Berkas yang relevan
-- `plain-variant-layout.js` — konfigurasi dan pemeriksaan area logo/identitas per varian.
-- `pdf-engine.js` — injeksi logo ke dua varian Polos, pemilihan rendering depan V2.
+- `plain-variant-layout.js` — konfigurasi dan pemeriksaan area teks identitas per varian.
+- `pdf-engine.js` — generator kedua varian Polos tanpa gambar logo.
 - `app.js`, `index.html` — dua pilihan Polos di menu per pesanan dan menu utama.
 - `assets/REFERENSI_POLOS_V2_LOGO_ATAS.pdf` — file PDF terbaru pengguna, disertakan sebagai referensi (belum ada gambar logo di dalamnya).
-- `assets/cover_cd_uin_logo.png` — logo UIN yang sudah ada sebelum V4.24.
+- `assets/cover_cd_uin_logo.png` — logo untuk Cover CD saja, **tidak** dipakai Polos.
 
 ## Pengujian yang dilakukan
-- `node tests/test_plain_v424.mjs`: 19 ketebalan × 2 pilihan = 38 tes jalur generator dan tumpukan logo melalui runtime PDF tiruan.
+- `node tests/test_plain_v424.mjs`: 19 ketebalan × 2 pilihan = 38 tes jalur generator serta tidak adanya logo melalui runtime PDF tiruan.
 - `node tests/test_cover_cd.mjs`: regresi Cover CD.
 - `node --check app.js`, `node --check pdf-engine.js`: pemeriksaan sintaks JS.
 - Pemeriksaan semua `src`/`href` lokal dan integritas ZIP.
@@ -37,7 +48,7 @@ Source statis siap upload ke GitHub Pages, berasal dari V4.23 (semua menu lama d
 1. Ekstrak ZIP; unggah isinya ke **root** branch `main` repository Edit-Hard-Cover, bukan file ZIP utuh.
 2. Pastikan `assets/`, `vendor/`, `index.html`, `app.js`, `pdf-engine.js`, `plain-variant-layout.js` ada.
 3. Commit; tunggu deploy GitHub Pages hijau; refresh `Ctrl+F5`.
-4. Coba Polos V1 dan V2 pada 10 mm dan 23 mm, bandingkan urutan nama/logo dan posisi punggung.
+4. Coba Polos V1 dan V2 pada 10 mm dan 23 mm, bandingkan posisi teks dan punggung; keduanya tanpa logo.
 
  
 ## COVER CD — berdasarkan referensi Word pengguna

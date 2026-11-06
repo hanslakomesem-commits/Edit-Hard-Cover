@@ -1,6 +1,6 @@
 import {readPDF,readWord,readPhoto,withTimeout,setOCRProgress} from './document-reader.js';
 import {resetOCR} from './ocr-fast.js';
-import {generatePDF,checkAssets,setUserFonts} from './pdf-engine.js?v=4.25';
+import {generatePDF,checkAssets,setUserFonts} from './pdf-engine.js?v=4.28';
 import {canonicalUniversity} from './classifier.js';
 import {readAbstractFromFile,isAbstractMetadata} from './abstract-reader.js';
 import {chooseDummyBackText,DUMMY_PAGE} from './dummybook-layout.js';
@@ -9,10 +9,10 @@ import {DUMMY_SIZES} from './dummybook-layout.js';
 import {IPS_SIZES} from './soft-ips-layout.js';
 
 'use strict';
-// V4.25: unggahan otomatis diproses + status yang tidak menggantung; semua input lokal tanpa API.
+// V4.28: unggahan otomatis diproses + status yang tidak menggantung; semua input lokal tanpa API.
 const $ = id => document.getElementById(id);
 const FIELDS=['nama','nim','prodi','fakultas','universitas','jenis_dokumen','bulan_tahun'];
-const REQUIRED=['judul',...FIELDS];
+const REQUIRED=['judul',...FIELDS.filter(name=>name!=='fakultas')];
 const COVER_TYPES=['polos','poloslogoatas','merah','maroon','custom','unira','dummybook','softips','covercd'];
 const sizesForStyle=style=>style==='covercd'?[]:style==='dummybook'?DUMMY_SIZES:style==='softips'?IPS_SIZES:availableMM;
 const validThickness=o=>o?.style==='covercd'||(sizesForStyle(o?.style).includes(Number(o?.thickness))&&o.thickness!==null);
@@ -233,7 +233,8 @@ function renderCoverStyle(){
  document.querySelectorAll('[data-cover-style]').forEach(b=>{b.classList.toggle('selected',b.dataset.coverStyle===(o?.style||'polos'));b.disabled=!o;});
  $('studentIdLabel').innerHTML=o?.style==='unira'?'NPM <i>*</i>':'NIM <i>*</i>';
  const optionalCD=isCoverCD(o);
- document.querySelectorAll('[name="fakultas"],[name="universitas"],[name="jenis_dokumen"],[name="prodi"],[name="bulan_tahun"]').forEach(e=>{e.required=!optionalCD;});
+ document.querySelectorAll('[name="universitas"],[name="jenis_dokumen"],[name="prodi"],[name="bulan_tahun"]').forEach(e=>{e.required=!optionalCD;});
+ const facultyInput=document.querySelector('[name="fakultas"]');if(facultyInput)facultyInput.required=false;
  const cdHint=$('cdCoverHint');if(cdHint)cdHint.classList.toggle('hidden',!optionalCD);
  $('dummyAbstractPanel').classList.toggle('hidden',o?.style!=='dummybook');
  $('dummyAbstractStatus').textContent=o?.abstractStatus||'Tempel abstrak asli; pisahkan antarparagraf dengan satu baris kosong. Otomatis: 2 paragraf terakhir, atau 1/3 jika perlu.';
@@ -383,7 +384,7 @@ async function makeSelectedPDF({downloadAfter=false}={}){
  try{
   const result=await withTimeout(generatePDF(a.data,a.thickness,a.style,a.custom_color),90000,'Pembuatan PDF lokal');
   a.pdfBlob=new Blob([result.bytes],{type:'application/pdf'});
-  $('spineFontResult').textContent=isCoverCD(a)?`Hasil Cover CD 137 × 137 mm • Judul ${result.details?.title_lines||'?'} baris • font ${result.details?.title_font_pt||'?'} pt • 2 logo`:`Hasil aktual: ${a.style.toUpperCase()} ${a.thickness} mm • ${result.details?.spine_lines??'?'} baris • font punggung ${result.details?.spine_font_pt??'?'} pt`+(a.style==='dummybook'?` • ${result.details?.back_paragraph_count} paragraf abstrak • 1 halaman 420 × 297 mm`:``);
+  $('spineFontResult').textContent=isCoverCD(a)?`Hasil Cover CD 137 × 137 mm • Judul ${result.details?.title_lines||'?'} baris • font ${result.details?.title_font_pt||'?'} pt • 2 logo`:`Hasil aktual: ${a.style.toUpperCase()} ${a.thickness} mm • ${result.details?.spine_lines??'?'} baris • font punggung ${result.details?.spine_font_pt??'?'} pt`+(a.style==='dummybook'?` • ${result.details?.back_paragraph_count} paragraf abstrak • 1 halaman 420 × 297 mm`:``)+(a.style==='polos'&&result.details?.spine_year_font_pt?` • font tahun punggung ${result.details.spine_year_font_pt} pt`:``);
 
   updatePDFPreview(a);renderOrders();step(4);
   if(downloadAfter)triggerDownload(a.pdfBlob,coverFileName(a));
@@ -502,7 +503,7 @@ $('downloadButton').addEventListener('click',()=>{
   notice('PDF telah disiapkan. Jika browser tidak langsung mengunduh, gunakan tombol hijau "Download" di bawah pratinjau.','success');
 });
 async function loadStatus(){
- $('connection').textContent='GitHub Pages V4.25 • Dummybook spread A3 5–10 mm • Tanpa token';
+ $('connection').textContent='GitHub Pages V4.28 • Dummybook spread A3 5–10 mm • Tanpa token';
  $('serverDot').classList.add('online');
  notice('Mode lokal: Word dan PDF teks dibaca di browser tanpa OCR lokal. Foto dan PDF scan memakai OCR Tesseract lokal (model bahasa mungkin perlu diunduh).','info');
  // JANGAN menunggu template saat memuat UI; tidak membuat tombol membaca macet.

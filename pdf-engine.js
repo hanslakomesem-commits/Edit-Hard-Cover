@@ -1,5 +1,5 @@
 /**
- * ZAIN.NET PDF engine, static-browser GitHub Pages edition V4.25.
+ * ZAIN.NET PDF engine, static-browser GitHub Pages edition V4.28.
  * Each page begins with the already cleaned ORIGINAL PDF vector master.
  * No template lines, crop marks, or cover geometry are re-created here.
  * Important: Tinos is not the commercial Times New Roman face used in the
@@ -63,11 +63,17 @@ function normalizeTitleSegments(data){
 function validate(data,thickness){
  if(!data||typeof data!=='object')fail('Data cover tidak valid.');
  if(!ALL.includes(Number(thickness)))fail('Pilihan ketebalan tidak tersedia di master PDF.');
- for(const name of ['judul','nama','nim','prodi','fakultas','universitas','jenis_dokumen','bulan_tahun']){
+ for(const name of ['judul','nama','nim','prodi','universitas','jenis_dokumen','bulan_tahun']){
   if(!String(data[name]??'').trim())fail(`Kolom ${name} belum diisi.`);
   if(String(data[name]).length>2000)fail(`Kolom ${name} terlalu panjang.`);
   if(String(data[name]).includes('\u00ad'))fail(`Kolom ${name} mengandung soft hyphen (U+00AD). Koreksi manual sebelum ekspor.`);
   if(LATIN_CHECK.test(String(data[name])))fail('Aksara Arab langsung belum didukung engine PDF Node ini. Transliterasi Arab-Latin dapat digunakan.');
+ }
+ // Fakultas opsional; tetap periksa karakter jika kolom diisi.
+ if(norm(data.fakultas)){
+  if(String(data.fakultas).length>2000)fail('Kolom fakultas terlalu panjang.');
+  if(String(data.fakultas).includes('\u00ad'))fail('Kolom fakultas mengandung soft hyphen (U+00AD).');
+  if(LATIN_CHECK.test(String(data.fakultas)))fail('Aksara Arab langsung pada kolom fakultas belum didukung.');
  }
  return normalizeTitleSegments(data);
 }
@@ -313,6 +319,28 @@ function single(page,fonts,text,size,cx,y,maxWidth,label,warnings,minFont=size,r
  renderLine(page,fonts,[{text,italic:false}],final,cx,y,rotated,ink);
 }
 
+/** V4.27: Font TAHUN/BULAN-TAHUN untuk punggung Polos V1.
+ * Jangan campur dengan font judul punggung yang tetap adaptif.
+ * Master Serli memakai ukuran tahun kecil (7.28–10.92 pt); pengaturan
+ * produksi baru meminta 12 pt untuk 12–28mm. Pada 10/11mm geser
+ * baseline ke tengah punggung agar 10.5/11 pt tetap aman.
+ * Koordinat Y tahun tidak berubah dari referensi master.
+ */
+export function plainSpineYearLayout(mm,layout){
+ mm=Number(mm);
+ if(!Number.isInteger(mm)||mm<10||mm>28||!layout||
+     !Number.isFinite(layout.left)||!Number.isFinite(layout.right)||
+     !Number.isFinite(layout.spine_year_x)||!Number.isFinite(layout.spine_year_y))
+    throw new PDFPreflightError('Kalibrasi tahun punggung Polos tidak tersedia.');
+ const size=mm===10?10.5:mm===11?11:12;
+ const x=mm<=11?(layout.left+layout.right)/2:layout.spine_year_x;
+ const margin=1.0;
+ // Konservatif: ruang horizontal per sisi minimal 0.6 x font + 1 pt.
+ if(x-layout.left<size*.6+margin || layout.right-x<size*.6+margin)
+    throw new PDFPreflightError(`Tahun ${size} pt tidak muat di punggung Polos ${mm} mm.`);
+ return {size,x,y:layout.spine_year_y,margin};
+}
+
 async function generatePlainPDF(data,mm,variant=PLAIN_V1){
  mm=Number(mm);const segs=validate(data,mm);const conf=LAYOUT[mm],warnings=[];
  const doc=await PDFDocument.create();const src=await PDFDocument.load(MASTER);
@@ -329,8 +357,8 @@ async function generatePlainPDF(data,mm,variant=PLAIN_V1){
  single(page,fonts,'Oleh:',12,placement.frontCX,placement.labelY,180,'Label Oleh',warnings,12);
  single(page,fonts,upper(data.nama),12,placement.frontCX,placement.nameY,400,'Nama depan',warnings,9);
  single(page,fonts,`${conf.front_nim_prefix} ${norm(data.nim)}`,12,placement.frontCX,placement.nimY,390,'NIM',warnings,9);
- single(page,fonts,`PROGRAM STUDI ${upper(data.prodi)}`,12,placement.frontCX,placement.prodiY,395,'Prodi',warnings,9);
- single(page,fonts,`FAKULTAS ${upper(data.fakultas)}`,12,placement.frontCX,placement.fakultasY,395,'Fakultas',warnings,9);
+ single(page,fonts,`PROGRAM STUDI ${upper(data.prodi)}`,12,placement.frontCX,norm(data.fakultas)?placement.prodiY:placement.fakultasY,395,'Prodi',warnings,9);
+ if(norm(data.fakultas))single(page,fonts,`FAKULTAS ${upper(data.fakultas)}`,12,placement.frontCX,placement.fakultasY,395,'Fakultas',warnings,9);
  single(page,fonts,upper(canonicalUniversity(data.universitas)),12,placement.frontCX,placement.universitasY,395,'Universitas',warnings,9);
  single(page,fonts,upper(data.bulan_tahun),12,placement.frontCX,placement.tahunY,395,'Tanggal',warnings,9.5);
  // Polos V1 dan Polos V2 harus TIDAK menampilkan gambar logo.
@@ -339,14 +367,20 @@ async function generatePlainPDF(data,mm,variant=PLAIN_V1){
  for(let i=0;i<spine.result.length;i++)renderLine(page,fonts,spine.result[i],spine.size,spine.xs[i],spine.cy??conf.spine_title_center_y,true);
  single(page,fonts,upper(data.jenis_dokumen),conf.spine_type_pt,conf.spine_type_x,conf.spine_type_y,135,'Jenis dokumen punggung',warnings,6,true);
  single(page,fonts,upper(data.nama),conf.spine_name_pt,conf.spine_name_x,conf.spine_name_y,175,'Nama punggung',warnings,6,true);
- single(page,fonts,upper(data.bulan_tahun),conf.spine_year_pt,conf.spine_year_x,conf.spine_year_y,115,'Tanggal punggung',warnings,6,true);
+ const yearPlacement=variant===PLAIN_V1?plainSpineYearLayout(mm,conf):
+   {size:conf.spine_year_pt,x:conf.spine_year_x,y:conf.spine_year_y};
+ // Untuk V1 jangan mengecilkan tahun 12 pt secara diam-diam. Jika tulisan
+ // terlalu panjang, minta koreksi manual daripada merusak standar cetak.
+ single(page,fonts,upper(data.bulan_tahun),yearPlacement.size,yearPlacement.x,yearPlacement.y,
+   variant===PLAIN_V1?145:115,'Tanggal punggung',warnings,
+   variant===PLAIN_V1?yearPlacement.size:6,true);
  const bytes=await doc.save({useObjectStreams:true});
  // This is a structural preflight, NOT a substitute for a pixel-perfect print proof.
  const reopened=await PDFDocument.load(bytes);
  if(reopened.getPageCount()!==1)fail('PDF hasil harus terdiri dari tepat satu halaman.');
  const p=reopened.getPage(0);
  if(Math.abs(p.getWidth()-pagePt.width)>.55||Math.abs(p.getHeight()-pagePt.height)>.55)fail('PDF hasil tidak berukuran 483 × 330 mm.');
- return {bytes:new Uint8Array(bytes),warnings,details:{mm,spine_font_pt:spine.size,spine_lines:spine.result.length,spine_title_center_y:spine.cy??conf.spine_title_center_y,spine_title_bounds_pt:spine.titleBoundsPt,plain_variant:variant,front_logo:false}};
+ return {bytes:new Uint8Array(bytes),warnings,details:{mm,spine_font_pt:spine.size,spine_lines:spine.result.length,spine_title_center_y:spine.cy??conf.spine_title_center_y,spine_title_bounds_pt:spine.titleBoundsPt,plain_variant:variant,front_logo:false,spine_year_font_pt:yearPlacement.size}};
 }
 
 
@@ -493,6 +527,33 @@ export function drawPrecisionColorGuides(page,mm,background){
  }
  return geom;
 }
+/** Physically separated vertical lanes for colored spine metadata.
+ * V4.25 used a fixed 8.9pt pitch for both 9pt lanes, causing glyphs to touch.
+ * Use conservative text ink height (1.108*font size; Tinos ascent/descent)
+ * and an explicitly empty 1.5mm band between the two printed lanes.
+ * If the spine is too narrow, reduce the font; never let labels collide.
+ */
+export function colorSpineMetadataLanes(mm, fontSize=Math.max(6,Math.min(9,Number(mm)-2))){
+ const geom=colorGuideGeometry(mm);
+ const spanPt=geom.right-geom.left;
+ const gapPt=mmPt(1.5);
+ const edgePt=mmPt(0.9);
+ const inkRatio=1.108;
+ for(let size=fontSize;size>=6;size-=0.5){
+  const inkWidth=inkRatio*size;
+  const pitch=inkWidth+gapPt;
+  const total=2*inkWidth+gapPt;
+  if(total+2*edgePt<=spanPt+1e-5){
+   const nameX=geom.center-pitch/2;
+   const typeX=geom.center+pitch/2;
+   const actualGap=typeX-inkWidth/2-(nameX+inkWidth/2);
+   return {typeX,nameX,size,pitch,gapPt:actualGap,inkWidth,
+     leftPrinted:nameX-inkWidth/2,rightPrinted:typeX+inkWidth/2,
+     foldLeft:geom.left,foldRight:geom.right,marginPt:edgePt};
+  }
+ }
+ throw new PDFPreflightError(`Dua tulisan identitas punggung warna ${mm} mm tidak muat dengan jarak minimum 1,5 mm. Hasil PDF dibatalkan agar tulisan tidak bertabrakan.`);
+}
 async function generateColorPDF(data,mm,mode,customColor){
  mm=Number(mm);
  const segs=validate(data,mm),warnings=[];
@@ -540,8 +601,8 @@ async function generateColorPDF(data,mm,mode,customColor){
  single(page,fonts,'Oleh',12,1000.7,614.8,165,'Label Oleh',warnings,12,false,YELLOW);
  single(page,fonts,norm(data.nama),12,1000.7,628.1,330,'Nama warna',warnings,8,false,YELLOW);
  single(page,fonts,`NIM. ${norm(data.nim)}`,12,1000.7,641.4,330,'NIM warna',warnings,9,false,YELLOW);
- single(page,fonts,`PROGRAM STUDI ${upper(data.prodi)}`,12,1000.7,767.1,395,'Prodi warna',warnings,9,false,YELLOW);
- single(page,fonts,`FAKULTAS ${upper(data.fakultas)}`,12,1000.7,780.4,395,'Fakultas warna',warnings,9,false,YELLOW);
+ single(page,fonts,`PROGRAM STUDI ${upper(data.prodi)}`,12,1000.7,norm(data.fakultas)?767.1:780.4,395,'Prodi warna',warnings,9,false,YELLOW);
+ if(norm(data.fakultas))single(page,fonts,`FAKULTAS ${upper(data.fakultas)}`,12,1000.7,780.4,395,'Fakultas warna',warnings,9,false,YELLOW);
  single(page,fonts,upper(canonicalUniversity(data.universitas)),12,1000.7,793.7,395,'Universitas warna',warnings,9,false,YELLOW);
  // Original colored samples print the YEAR only, not the month name.
  const yearMatch=norm(data.bulan_tahun).match(/\b\d{4}\b/u);
@@ -551,17 +612,18 @@ async function generateColorPDF(data,mm,mode,customColor){
  for(let i=0;i<spine.lines.length;i++)renderLine(page,fonts,spine.lines[i],spine.size,spine.x[i],spine.fromTop[i],true,YELLOW);
  // Two vertical lanes for document type and name, and a separate year below.
  // These are calculated from the ACTUAL available width for each order.
- const pitch=mm>=13?8.9:6.2;
- const spineTypeSize=Math.max(6,Math.min(9,mm-2));
- single(page,fonts,upper(data.jenis_dokumen),spineTypeSize,spine.middle+pitch/2,661,100,'Jenis dokumen punggung warna',warnings,6,true,YELLOW);
- single(page,fonts,upper(data.nama),spineTypeSize,spine.middle-pitch/2,661,175,'Nama punggung warna',warnings,6,true,YELLOW);
- single(page,fonts,year,Math.min(8,spineTypeSize),spine.middle,798,75,'Tahun punggung warna',warnings,6,true,YELLOW);
+ const metadata=colorSpineMetadataLanes(mm);
+ if(metadata.size<Math.max(6,Math.min(9,mm-2)))
+  warnings.push(`Font nama/jenis dokumen punggung warna disesuaikan ke ${metadata.size} pt untuk menjaga jarak minimum 1,5 mm.`);
+ single(page,fonts,upper(data.jenis_dokumen),metadata.size,metadata.typeX,661,100,'Jenis dokumen punggung warna',warnings,6,true,YELLOW);
+ single(page,fonts,upper(data.nama),metadata.size,metadata.nameX,661,175,'Nama punggung warna',warnings,6,true,YELLOW);
+ single(page,fonts,year,Math.min(8,metadata.size),spine.middle,798,75,'Tahun punggung warna',warnings,6,true,YELLOW);
  const out=new Uint8Array(await doc.save({useObjectStreams:true}));
  const reread=await PDFDocument.load(out);
  if(reread.getPageCount()!==1||Math.abs(reread.getPage(0).getWidth()-mmPt(475))>.3||Math.abs(reread.getPage(0).getHeight()-mmPt(320))>.3)fail('PDF warna gagal validasi ukuran 475 × 320 mm.');
  return {bytes:out,warnings,details:{mode:type,mm,spine_font_pt:spine.size,spine_lines:spine.lines.length,reference_3row_page:refStatus.referencePage,reference_3row_verified:refStatus.referenceAvailable,
     title_anchor_pt:spine.titleCenterTopPt,title_bounds_pt:spine.titleBoundsPt,
-    guide_left:marks.left,guide_right:marks.right,paper_mm:COLOR_PRINT_MM,logo:'logo asli dari PDF warna'}};
+    guide_left:marks.left,guide_right:marks.right,paper_mm:COLOR_PRINT_MM,spine_metadata_font_pt:metadata.size,spine_metadata_gap_mm:metadata.gapPt/mmPt(1),logo:'logo asli dari PDF warna'}};
 }
 
 /** UNIRA/Universitas Madura cover, measured from the uploaded 484x330mm reference.\n * Coordinates are in PDF points, origin at the upper-left for all text.\n * The supplied sample is a 10mm spine; all LEFT crop guides move by the\n * width delta while the RIGHT front cover and its title remain unchanged.\n * At 28mm, the leftmost horizontal corner is shortened if it crosses x=0.\n */
@@ -651,8 +713,8 @@ async function generateUniraPDF(data,mm){
  single(page,fonts,'Oleh :',12,cx,570,170,'Label Oleh UNIRA',warnings,12,false,BLACK);
  single(page,fonts,upper(data.nama),12,cx,583.3,330,'Nama UNIRA',warnings,8,false,BLACK);
  single(page,fonts,`NPM. ${norm(data.nim)}`,12,cx,596.6,330,'NPM UNIRA',warnings,8,false,BLACK);
- single(page,fonts,`PRODI ${upper(data.prodi)}`,12,cx,781.3,390,'Prodi UNIRA',warnings,9,false,BLACK);
- single(page,fonts,`FAKULTAS ${upper(data.fakultas)}`,12,cx,794.6,390,'Fakultas UNIRA',warnings,9,false,BLACK);
+ single(page,fonts,`PRODI ${upper(data.prodi)}`,12,cx,norm(data.fakultas)?781.3:794.6,390,'Prodi UNIRA',warnings,9,false,BLACK);
+ if(norm(data.fakultas))single(page,fonts,`FAKULTAS ${upper(data.fakultas)}`,12,cx,794.6,390,'Fakultas UNIRA',warnings,9,false,BLACK);
  const institution=upper(canonicalUniversity(data.universitas));
  if(institution!=='UNIVERSITAS MADURA')warnings.push('Mode UNIRA dipilih tetapi nama universitas bukan UNIVERSITAS MADURA. Periksa sebelum cetak.');
  single(page,fonts,institution,12,cx,807.8,390,'Universitas UNIRA',warnings,9,false,BLACK);
@@ -758,8 +820,8 @@ async function generateDummyPDF(data,mm){
  single(page,fonts,'Oleh:',16,cx,579,300,'Oleh Dummybook',warnings,13,false,BLACK);
  single(page,fonts,upper(data.nama),16,cx,595,370,'Nama Dummybook',warnings,9,false,BLACK);
  single(page,fonts,`NIM. ${norm(data.nim)}`,14,cx,611,340,'NIM Dummybook',warnings,9,false,BLACK);
- single(page,fonts,`PROGRAM STUDI ${upper(data.prodi)}`,14,cx,707,420,'Prodi Dummybook',warnings,9,false,BLACK);
- single(page,fonts,`FAKULTAS ${upper(data.fakultas)}`,14,cx,722.6,420,'Fakultas Dummybook',warnings,9,false,BLACK);
+ single(page,fonts,`PROGRAM STUDI ${upper(data.prodi)}`,14,cx,norm(data.fakultas)?707:722.6,420,'Prodi Dummybook',warnings,9,false,BLACK);
+ if(norm(data.fakultas))single(page,fonts,`FAKULTAS ${upper(data.fakultas)}`,14,cx,722.6,420,'Fakultas Dummybook',warnings,9,false,BLACK);
  single(page,fonts,upper(canonicalUniversity(data.universitas)),14,cx,738.2,420,'Universitas Dummybook',warnings,9,false,BLACK);
  single(page,fonts,upper(data.bulan_tahun),14,cx,753.8,300,'Tanggal Dummybook',warnings,9,false,BLACK);
  // Spine text: centered inside the two ORIGINAL fold marks (no guessed shift).
@@ -879,8 +941,8 @@ async function generateSoftIPSPDF(data,mm){
  single(page,fonts,'Oleh:',8.35,cx,234.8,160,'Label Oleh IPS',warnings,8,false,BLACK);
  single(page,fonts,norm(data.nama),8.35,cx,243.8,270,'Nama depan IPS',warnings,7,false,BLACK);
  single(page,fonts,`NIM. ${norm(data.nim)}`,8.35,cx,252.9,270,'NIM depan IPS',warnings,7,false,BLACK);
- single(page,fonts,`PROGRAM STUDI ${upper(data.prodi)}`,8.35,cx,512.1,350,'Prodi IPS',warnings,6.5,false,BLACK);
- single(page,fonts,`FAKULTAS ${upper(data.fakultas)}`,8.35,cx,521.2,350,'Fakultas IPS',warnings,6.5,false,BLACK);
+ single(page,fonts,`PROGRAM STUDI ${upper(data.prodi)}`,8.35,cx,norm(data.fakultas)?512.1:521.2,350,'Prodi IPS',warnings,6.5,false,BLACK);
+ if(norm(data.fakultas))single(page,fonts,`FAKULTAS ${upper(data.fakultas)}`,8.35,cx,521.2,350,'Fakultas IPS',warnings,6.5,false,BLACK);
  single(page,fonts,upper(canonicalUniversity(data.universitas)),8.35,cx,530.3,350,'Universitas IPS',warnings,6.5,false,BLACK);
  const year=norm(data.bulan_tahun).match(/\b(?:19|20)\d{2}\b/u)?.[0]||norm(data.bulan_tahun);
  single(page,fonts,year,8.35,cx,539.3,160,'Tahun IPS',warnings,7,false,BLACK);

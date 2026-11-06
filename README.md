@@ -1,6 +1,22 @@
-# ZAIN.NET COVER V4.25 — Dua Versi Polos TANPA LOGO
+# ZAIN.NET COVER V4.28 — Fakultas Opsional
 
-**Koreksi:** Sebutan nama/logo pada V4.24 hanyalah istilah untuk dua pola layout. Pada V4.25 **tidak ada logo dicetak pada Polos V1 maupun Polos V2**. Perbedaan kedua pilihan adalah koordinat teks pada cover depan:
+Kampus yang tidak memiliki fakultas (contoh Sekolah Tinggi Agama Islam) boleh membiarkan kolom Fakultas kosong.
+Jika diisi, tata letak tetap seperti sebelumnya. Jika kosong, baris Fakultas tidak dicetak; prodi mengisi baris fakultas agar identitas bawah tidak berjarak kosong.
+Mencakup Polos V1/V2, Merah, Maroon, Custom, UNIRA, Dummybook, dan Soft Cover IPS. Cover CD tetap tidak menggunakan kolom fakultas.
+
+Catatan: pendeteksian otomatis data dari foto/PDF/Word tetap perlu diverifikasi manual.
+
+# ZAIN.NET COVER V4.28 — Tahun Punggung Polos V1
+
+- Polos V1: 12–28 mm memakai tahun punggung **12 pt**.
+- Polos V1: 10 mm memakai **10,5 pt**, 11 mm memakai **11 pt**; posisi tahun disejajarkan ke tengah area punggung.
+- Polos V2 dan seluruh cover lainnya **tidak diubah**.
+- Tulisan bulan/tahun yang terlalu panjang tidak diperkecil diam-diam. Aplikasi meminta pemeriksaan jika tidak muat.
+- Hasil layout/geometri telah diuji; browser dan cetak fisik tetap perlu diuji oleh pengguna.
+
+# ZAIN.NET COVER V4.26 — Dua Versi Polos TANPA LOGO
+
+**Koreksi:** Sebutan nama/logo pada V4.24 hanyalah istilah untuk dua pola layout. Pada V4.26 **tidak ada logo dicetak pada Polos V1 maupun Polos V2**. Perbedaan kedua pilihan adalah koordinat teks pada cover depan:
 - `polos` (V1): koordinat tata letak lama berdasarkan Serli.
 - `poloslogoatas` (V2): koordinat tata letak terbaru berdasarkan `polos logo atas.pdf`.
 
@@ -10,7 +26,7 @@
 
 ---
 
-# ZAIN.NET COVER V4.25 — Dua pilihan Polos (Nama–Logo / Logo–Nama)
+# ZAIN.NET COVER V4.26 — Dua pilihan Polos (Nama–Logo / Logo–Nama)
 
 Source statis siap upload ke GitHub Pages, berasal dari V4.23 (semua menu lama dipertahankan).
 
@@ -84,3 +100,7 @@ Ekstrak ZIP → pilih seluruh file/folder **di dalamnya** → unggah ke root rep
 - CD menghasilkan **PDF** seperti keluaran cover lainnya; dokumen Word disertakan sebagai **referensi**, bukan output DOCX yang otomatis diisi.
 
 Semua template terdahulu disertakan dalam ZIP tanpa perubahan sumber master mereka.
+
+## Update V4.26 — Jarak punggung Merah/Maroon/Custom
+
+Posisi `SKRIPSI` (jenis dokumen) dan nama pada punggung warna kini mengikuti lebar punggung aktual. Tidak lagi memakai jarak tetap 8,9 pt. Jarak kosong di antara dua jalur minimal 1,5 mm, dengan margin 0,9 mm dari garis lipatan. Font 9 pt tetap dipakai jika ada ruang. Tata letak judul, tahun, muka, dan jenis cover lain tidak diubah. Lihat `HASIL_UJI_V4_26.md`.

@@ -1,0 +1,6 @@
+ZAIN.NET COVER V4.26 — Perbaikan jarak SKRIPSI dan nama di punggung warna Merah/Maroon/Custom.
+- Hapus pitch tetap 8,9/6,2 pt yang menyebabkan overlap saat huruf 9 pt.
+- Dua jalur ditentukan dari tinggi tinta konservatif dan lebar punggung tiap ukuran.
+- Minimal 1,5 mm area kosong antar tulisan serta tepi aman 0,9 mm terhadap masing-masing garis lipatan.
+- Judul, tahun, cover depan, logo dan semua jenis cover selain warna tetap sama.
+- Belum ada uji cetak fisik/Chrome end-to-end.

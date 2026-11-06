@@ -40,7 +40,7 @@ export function categorize(lines, hints=[]){
  }
  titleCandidates=titleCandidates.filter(s=> !/^UNIVERSITAS|^UIN |^KEMENTERIAN |^OLEH\b/iu.test(s));
  const judul=compact(titleCandidates.join(' '));
- const missing=[['judul',judul],['nama',nama],['nim',nim],['prodi',prodi],['fakultas',fakultas],['universitas',universitas],['jenis_dokumen',kind],['bulan_tahun',date]].filter(([,v])=>!v).map(([k])=>k);
+ const missing=[['judul',judul],['nama',nama],['nim',nim],['prodi',prodi],['universitas',universitas],['jenis_dokumen',kind],['bulan_tahun',date]].filter(([,v])=>!v).map(([k])=>k);
  if(missing.length)warnings.push('Periksa kolom belum terdeteksi: '+missing.join(', ')+'. Ekstraksi lokal tidak menebak isinya.');
  warnings.push('Teks PDF/Word dibaca tanpa Gemini. Periksa italic dan ejaan pada editor sebelum ekspor.');
  return {judul,nama,nim,prodi,fakultas,universitas,jenis_dokumen:kind,bulan_tahun:date,bulan:(date.match(new RegExp(MONTHS,'iu'))||[])[0]||'',tahun:(date.match(/\d{4}/u)||[])[0]||'',title_segments:judul?[{text:judul,italic:false}]:[],warnings};

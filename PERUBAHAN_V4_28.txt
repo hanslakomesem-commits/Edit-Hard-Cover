@@ -1,0 +1,7 @@
+ZAIN.NET COVER V4.28 — FAKULTAS OPSIONAL
+- Formulir: fakultas tidak wajib untuk semua jenis cover.
+- Validator PDF: tidak menolak fakultas kosong.
+- Klasifikasi OCR: ketiadaan fakultas bukan data hilang.
+- Generator: tidak pernah mencetak awalan FAKULTAS tanpa nama.
+- Identitas bawah: jika tanpa fakultas, baris prodi digeser turun satu baris agar tetap rapi.
+- Template lama dan jarak punggung tidak diubah.

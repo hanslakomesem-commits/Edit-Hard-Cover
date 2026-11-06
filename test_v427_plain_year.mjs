@@ -16,6 +16,6 @@ for(let mm=10;mm<=28;mm++){
  verified++;
 }
 const engine=fs.readFileSync(new URL('../pdf-engine.js',import.meta.url),'utf8');
-assert.match(engine,/variant===PLAIN_V1\?plainSpineYearLayout\(mm,conf\)/);
-assert.match(engine,/variant===PLAIN_V1\?yearPlacement.size:6/);
+assert.match(engine,/\(variant===PLAIN_V1\|\|variant===PLAIN_V11\)\?plainSpineYearLayout\(mm,conf\)/);
+assert.match(engine,/\(variant===PLAIN_V1\|\|variant===PLAIN_V11\)\?yearPlacement.size:6/);
 console.log(`PASS V4.27: ${verified} calibrated plain V1 spine years: 10.5/11/12pt; safe x margins; original Y retained`);

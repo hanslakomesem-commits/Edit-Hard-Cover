@@ -8,14 +8,17 @@
  */
 export const PLAIN_V1='polos';
 export const PLAIN_V2='poloslogoatas';
-export const PLAIN_VARIANTS=Object.freeze([PLAIN_V1,PLAIN_V2]);
+export const PLAIN_V11='polosv11';
+export const PLAIN_V22='polosv22';
+export const PLAIN_VARIANTS=Object.freeze([PLAIN_V1,PLAIN_V2,PLAIN_V11,PLAIN_V22]);
+export const PLAIN_215_VARIANTS=Object.freeze([PLAIN_V11,PLAIN_V22]);
 const MM_PT=72/25.4;
 const INSET_X=4*MM_PT;
 const INSET_Y=5*MM_PT;
 export function plainFrontLayout(variant,calibration){
  if(!PLAIN_VARIANTS.includes(variant))throw Error('Varian Polos tidak dikenal');
  if(!calibration?.front_cx)throw Error('Kalibrasi depan Polos hilang');
- if(variant===PLAIN_V1){
+ if(variant===PLAIN_V1||variant===PLAIN_V11){
   return {
    variant,frontCX:calibration.front_cx,
    titleY:calibration.front_title_y,titlePitch:calibration.front_title_pitch,

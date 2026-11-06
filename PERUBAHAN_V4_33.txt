@@ -1,0 +1,5 @@
+V4.33
+Hanya Polos V1.1 (215mm) dan Polos V2.1 (215mm) yang diperbaiki:
+semua tulisan depan benar-benar terpusat 107.5mm dari tepi kiri/kanan bidang depan.
+Polos V1 & V2 217mm tetap. Mode Polos tidak memakai logo.
+Tampilan V2.1 memakai ID internal polosv22 demi kompatibilitas pesanan V4.32.

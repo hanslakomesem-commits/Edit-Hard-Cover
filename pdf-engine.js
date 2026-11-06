@@ -1,5 +1,5 @@
 /**
- * ZAIN.NET PDF engine, static-browser GitHub Pages edition V4.31.
+ * ZAIN.NET PDF engine, static-browser GitHub Pages edition V4.33.
  * Each page begins with the already cleaned ORIGINAL PDF vector master.
  * No template lines, crop marks, or cover geometry are re-created here.
  * Important: Tinos is not the commercial Times New Roman face used in the
@@ -13,7 +13,7 @@ import {DUMMY_SIZES,DUMMY_PAGE,dummySpineGeometry,chooseDummyBackText} from './d
 import {IPS_SIZES,IPS_REFERENCE,ipsSpineGeometry} from './soft-ips-layout.js';
 import {CD_PAGE_MM,CD_PAGE_PT,CD_LAYOUT,assertCDData,computeCDTitle} from './cover-cd-layout.js';
 import {canonicalUniversity} from './classifier.js';
-import {PLAIN_V1,PLAIN_V2,plainFrontLayout,plainFrontFits} from './plain-variant-layout.js';
+import {PLAIN_V1,PLAIN_V2,PLAIN_V11,PLAIN_V22,PLAIN_VARIANTS,PLAIN_215_VARIANTS,plainFrontLayout,plainFrontFits} from './plain-variant-layout.js';
 const {PDFDocument, StandardFonts, degrees, rgb}=globalThis.PDFLib||{};
 const ALL=Array.from({length:19},(_,i)=>i+10);
 let LAYOUT=null,MASTER=null,COLOR_MASTERS=null,COLOR_TRANSPARENT=null,UNIRA_MASTER=null,UNIRA_LOGO=null,DUMMY_MASTER=null,IPS_MASTER=null;
@@ -354,6 +354,17 @@ async function generatePlainPDF(data,mm,variant=PLAIN_V1){
  const fonts=await getFonts(doc,warnings);
  for(const c of [...String(data.judul),...segs.map(s=>s.text)].join(''))if(LATIN_CHECK.test(c))fail('Aksara Arab belum mendukung shaping RTL.');
  const placement=plainFrontLayout(variant,conf);
+ // V4.33: ONLY the additional 215mm Polos variants are re-centered.
+ // Use the ACTUAL printed fold-to-trim interval, not the old 217mm
+ // template's text anchor nor a relative shift calculated from old trim.
+ // Source 483mm coordinates are converted to printed 480mm in resizePlainToPrint.
+ if(PLAIN_215_VARIANTS.includes(variant)){
+  const g=plain215TrimGeometry(mm,conf);
+  const trueCenterPrinted=(g.foldRight+g.newRight)/2;
+  const trueCenterSource=trueCenterPrinted/(480/483);
+  placement.frontCX=trueCenterSource;
+  placement.typeCX=trueCenterSource;
+ }
  if(!plainFrontFits(placement))fail('Tata letak teks Polos akan saling menimpa. Periksa kalibrasi template.');
  const front=frontTitle(fonts,segs,conf,data,warnings);
  for(let i=0;i<front.lines.length;i++)renderLine(page,fonts,front.lines[i],front.size,placement.frontCX,placement.titleY+i*placement.titlePitch);
@@ -374,13 +385,13 @@ async function generatePlainPDF(data,mm,variant=PLAIN_V1){
  for(let i=0;i<spine.result.length;i++)renderLine(page,fonts,spine.result[i],spine.size,spine.xs[i],spine.cy??conf.spine_title_center_y,true);
  single(page,fonts,upper(data.jenis_dokumen),conf.spine_type_pt,conf.spine_type_x,conf.spine_type_y,135,'Jenis dokumen punggung',warnings,6,true);
  single(page,fonts,upper(data.nama),conf.spine_name_pt,conf.spine_name_x,conf.spine_name_y,175,'Nama punggung',warnings,6,true);
- const yearPlacement=variant===PLAIN_V1?plainSpineYearLayout(mm,conf):
+ const yearPlacement=(variant===PLAIN_V1||variant===PLAIN_V11)?plainSpineYearLayout(mm,conf):
    {size:conf.spine_year_pt,x:conf.spine_year_x,y:conf.spine_year_y};
  // Untuk V1 jangan mengecilkan tahun 12 pt secara diam-diam. Jika tulisan
  // terlalu panjang, minta koreksi manual daripada merusak standar cetak.
  single(page,fonts,upper(data.bulan_tahun),yearPlacement.size,yearPlacement.x,yearPlacement.y,
-   variant===PLAIN_V1?145:115,'Tanggal punggung',warnings,
-   variant===PLAIN_V1?yearPlacement.size:6,true);
+   (variant===PLAIN_V1||variant===PLAIN_V11)?145:115,'Tanggal punggung',warnings,
+   (variant===PLAIN_V1||variant===PLAIN_V11)?yearPlacement.size:6,true);
  const bytes=await doc.save({useObjectStreams:true});
  // This is a structural preflight, NOT a substitute for a pixel-perfect print proof.
  const reopened=await PDFDocument.load(bytes);
@@ -404,9 +415,42 @@ async function resizePlainToPrint(bytes) {
  return new Uint8Array(await d.save({useObjectStreams:true}));
 }
 
+/** Additional Polos trims: keep the existing fold guides and print canvas,
+ * move ONLY the two outer full-height trim marks inward so the distance
+ * from outer trim to the nearest spine fold is exactly 215mm on BOTH sides.
+ * Original source trim measured x=60.5pt (10mm) and 1320.12pt (all),
+ * source master 483mm shrinks to 480mm in resizePlainToPrint.
+ * 217mm ORIGINAL output remains byte-for-byte unchanged for V1/V2.
+ */
+export function plain215TrimGeometry(mm,conf){
+ const scale=480/483;
+ const originalLeft=(60.50-(mm-10)*mmPt(1))*scale;
+ const originalRight=1320.12*scale;
+ const foldLeft=conf.left*scale, foldRight=conf.right*scale;
+ const newLeft=foldLeft-mmPt(215),newRight=foldRight+mmPt(215);
+ if(newLeft<2||newRight>mmPt(480)-2||newLeft<=originalLeft||newRight>=originalRight)
+  throw new PDFPreflightError(`Garis potong 215mm pada Polos ${mm}mm melewati batas kertas atau master tidak sesuai.`);
+ return {originalLeft,originalRight,newLeft,newRight,foldLeft,foldRight,
+  leftPanelMM:(foldLeft-newLeft)/mmPt(1),rightPanelMM:(newRight-foldRight)/mmPt(1)};
+}
+async function adjustPlain215Trim(bytes,mm,conf){
+ const pdf=await PDFDocument.load(bytes);
+ const page=pdf.getPage(0),g=plain215TrimGeometry(mm,conf);
+ // Remove ONLY original outer trim guide strokes. White paper, no logos.
+ // The guide marks run from source top 15.33pt to bottom 920.94pt.
+ const ink=rgb(0.1358,0.12105,0.1243);
+ const yBottom=page.getHeight()-920.94, yTop=page.getHeight()-15.33;
+ for(const x of [g.originalLeft,g.originalRight]){
+  page.drawRectangle({x:x-1.7,y:yBottom-1.0,width:3.4,height:yTop-yBottom+2,color:rgb(1,1,1)});
+ }
+ for(const x of [g.newLeft,g.newRight]){
+  page.drawLine({start:{x,y:yBottom},end:{x,y:yTop},thickness:.55,color:ink});
+ }
+ return {bytes:new Uint8Array(await pdf.save({useObjectStreams:true})),geometry:g};
+}
 const COLOR_TYPES=['merah','maroon','custom'];
-export const coverTypes=['polos','poloslogoatas',...COLOR_TYPES,'unira','dummybook','softips','covercd'];
-export const printSizes={polos:PLAIN_PRINT_MM,poloslogoatas:PLAIN_PRINT_MM,merah:COLOR_PRINT_MM,maroon:COLOR_PRINT_MM,custom:COLOR_PRINT_MM,unira:UNIRA_PRINT_MM,dummybook:DUMMY_PRINT_MM,softips:IPS_PRINT_MM,covercd:CD_PRINT_MM};
+export const coverTypes=[...PLAIN_VARIANTS,...COLOR_TYPES,'unira','dummybook','softips','covercd'];
+export const printSizes={polos:PLAIN_PRINT_MM,poloslogoatas:PLAIN_PRINT_MM,polosv11:PLAIN_PRINT_MM,polosv22:PLAIN_PRINT_MM,merah:COLOR_PRINT_MM,maroon:COLOR_PRINT_MM,custom:COLOR_PRINT_MM,unira:UNIRA_PRINT_MM,dummybook:DUMMY_PRINT_MM,softips:IPS_PRINT_MM,covercd:CD_PRINT_MM};
 export function validateCoverMode(mode,customColor) {
  const type=String(mode||'polos').toLowerCase();
  if(!coverTypes.includes(type))fail('Pilihan jenis cover tidak dikenal.');
@@ -1014,10 +1058,15 @@ export async function generatePDF(data,mm,mode='polos',customColor=null){
  if(c.type==='dummybook')return generateDummyPDF(data,mm);
  if(c.type==='softips')return generateSoftIPSPDF(data,mm);
  if(c.type==='unira')return generateUniraPDF(data,mm);
- if(c.type!==PLAIN_V1&&c.type!==PLAIN_V2)return generateColorPDF(data,mm,c.type,c.color);
+ if(!PLAIN_VARIANTS.includes(c.type))return generateColorPDF(data,mm,c.type,c.color);
  const plain=await generatePlainPDF(data,mm,c.type);
- const out=await resizePlainToPrint(plain.bytes);
+ let out=await resizePlainToPrint(plain.bytes);
+ let trim215=null;
+ if(PLAIN_215_VARIANTS.includes(c.type)){
+  const adjusted=await adjustPlain215Trim(out,Number(mm),LAYOUT[Number(mm)]);
+  out=adjusted.bytes;trim215=adjusted.geometry;
+ }
  const reopened=await PDFDocument.load(out);
  if(Math.abs(reopened.getPage(0).getWidth()-mmPt(480))>.3||Math.abs(reopened.getPage(0).getHeight()-mmPt(330))>.3)fail('PDF polos gagal validasi ukuran 480 × 330 mm.');
- return {...plain,bytes:out,details:{...plain.details,mode:c.type,paper_mm:PLAIN_PRINT_MM}};
+ return {...plain,bytes:out,details:{...plain.details,mode:c.type,paper_mm:PLAIN_PRINT_MM,side_trim_mm:trim215?215:217,trim_geometry:trim215}};
 }

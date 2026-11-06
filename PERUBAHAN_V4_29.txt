@@ -1,0 +1,3 @@
+ZAIN.NET COVER V4.29 — Koreksi jarak SKRIPSI dan Nama pada warna Merah/Maroon/Custom.
+Ukuran tulisan metadata punggung mengikuti ukuran judul dan jarak antar kolom mengikuti pitch 1.11 × ukuran font. Cover depan dan semua menu lainnya tidak diubah.
+PERHATIAN: Belum diuji cetak fisik dan ekspor browser end-to-end; lakukan pemeriksaan PDF sebelum produksi.

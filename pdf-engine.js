@@ -1,5 +1,5 @@
 /**
- * ZAIN.NET PDF engine, static-browser GitHub Pages edition V4.28.
+ * ZAIN.NET PDF engine, static-browser GitHub Pages edition V4.29.
  * Each page begins with the already cleaned ORIGINAL PDF vector master.
  * No template lines, crop marks, or cover geometry are re-created here.
  * Important: Tinos is not the commercial Times New Roman face used in the
@@ -527,32 +527,26 @@ export function drawPrecisionColorGuides(page,mm,background){
  }
  return geom;
 }
-/** Physically separated vertical lanes for colored spine metadata.
- * V4.25 used a fixed 8.9pt pitch for both 9pt lanes, causing glyphs to touch.
- * Use conservative text ink height (1.108*font size; Tinos ascent/descent)
- * and an explicitly empty 1.5mm band between the two printed lanes.
- * If the spine is too narrow, reduce the font; never let labels collide.
+/** Colored spine metadata mirrors the actual title's font size and pitch.
+ * This deliberately replaces V4.26's extra-wide metadata gap.
+ * No silent change in size: fail if the two metadata lanes cannot physically fit.
  */
 export function colorSpineMetadataLanes(mm, fontSize=Math.max(6,Math.min(9,Number(mm)-2))){
  const geom=colorGuideGeometry(mm);
  const spanPt=geom.right-geom.left;
- const gapPt=mmPt(1.5);
- const edgePt=mmPt(0.9);
  const inkRatio=1.108;
- for(let size=fontSize;size>=6;size-=0.5){
-  const inkWidth=inkRatio*size;
-  const pitch=inkWidth+gapPt;
-  const total=2*inkWidth+gapPt;
-  if(total+2*edgePt<=spanPt+1e-5){
-   const nameX=geom.center-pitch/2;
-   const typeX=geom.center+pitch/2;
-   const actualGap=typeX-inkWidth/2-(nameX+inkWidth/2);
-   return {typeX,nameX,size,pitch,gapPt:actualGap,inkWidth,
-     leftPrinted:nameX-inkWidth/2,rightPrinted:typeX+inkWidth/2,
-     foldLeft:geom.left,foldRight:geom.right,marginPt:edgePt};
-  }
+ const pitch=fontSize*1.11;
+ const inkWidth=inkRatio*fontSize;
+ const total=(2-1)*pitch+inkWidth;
+ if(total<=spanPt+1e-5){
+  const nameX=geom.center-pitch/2;
+  const typeX=geom.center+pitch/2;
+  const actualGap=typeX-inkWidth/2-(nameX+inkWidth/2);
+  return {typeX,nameX,size:fontSize,pitch,gapPt:actualGap,inkWidth,
+    leftPrinted:nameX-inkWidth/2,rightPrinted:typeX+inkWidth/2,
+    foldLeft:geom.left,foldRight:geom.right,marginPt:0};
  }
- throw new PDFPreflightError(`Dua tulisan identitas punggung warna ${mm} mm tidak muat dengan jarak minimum 1,5 mm. Hasil PDF dibatalkan agar tulisan tidak bertabrakan.`);
+ throw new PDFPreflightError(`Tulisan identitas punggung warna ${mm} mm tidak muat bila disamakan dengan font/jarak judul ${fontSize} pt. Periksa ketebalan atau judul sebelum mencetak.`);
 }
 async function generateColorPDF(data,mm,mode,customColor){
  mm=Number(mm);
@@ -612,9 +606,9 @@ async function generateColorPDF(data,mm,mode,customColor){
  for(let i=0;i<spine.lines.length;i++)renderLine(page,fonts,spine.lines[i],spine.size,spine.x[i],spine.fromTop[i],true,YELLOW);
  // Two vertical lanes for document type and name, and a separate year below.
  // These are calculated from the ACTUAL available width for each order.
- const metadata=colorSpineMetadataLanes(mm);
- if(metadata.size<Math.max(6,Math.min(9,mm-2)))
-  warnings.push(`Font nama/jenis dokumen punggung warna disesuaikan ke ${metadata.size} pt untuk menjaga jarak minimum 1,5 mm.`);
+ const metadata=colorSpineMetadataLanes(mm,spine.size);
+ if(Math.abs(metadata.size-spine.size)>.01)
+  warnings.push(`Font nama/jenis dokumen punggung warna disesuaikan ke ${metadata.size} pt.`);
  single(page,fonts,upper(data.jenis_dokumen),metadata.size,metadata.typeX,661,100,'Jenis dokumen punggung warna',warnings,6,true,YELLOW);
  single(page,fonts,upper(data.nama),metadata.size,metadata.nameX,661,175,'Nama punggung warna',warnings,6,true,YELLOW);
  single(page,fonts,year,Math.min(8,metadata.size),spine.middle,798,75,'Tahun punggung warna',warnings,6,true,YELLOW);

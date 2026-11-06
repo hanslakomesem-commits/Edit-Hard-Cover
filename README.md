@@ -1,3 +1,7 @@
+# ZAIN.NET COVER V4.31 — Italic dan transliterasi judul
+
+Berdasarkan V4.30, semua template tetap ada. Source judul Word dengan penanda italic disalin sesuai run/style DOCX; PDF teks mencoba memakai font name/family yang secara eksplisit menunjukkan Italic/Oblique. Untuk foto atau scan, OCR lokal tidak memiliki deteksi italic andal: karakter tidak dibuang tetapi status italic harus diperiksa lewat editor manual. Font PDF Tinos Bold Italic Unicode menghindari hilangnya diakritik yang didukung. Jangan membuat klaim deteksi italic foto 100%.
+
 # ZAIN.NET COVER V4.28 — Fakultas Opsional
 
 Kampus yang tidak memiliki fakultas (contoh Sekolah Tinggi Agama Islam) boleh membiarkan kolom Fakultas kosong.

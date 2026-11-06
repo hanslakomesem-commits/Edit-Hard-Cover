@@ -1,0 +1,6 @@
+ZAIN.NET COVER V4.30 - OCR IDENTITAS KAMPUS
+- Nama kampus multiline dapat digabungkan jika sambungan terdeteksi secara eksplisit (contoh STAI + AL MUJTAMA).
+- Pembacaan OCR tambahan bagian bawah dan zona logo sebagai pembanding.
+- Kota/Lokasi Kampus opsional di form dan layout (Polos, Warna, UNIRA, Dummybook, IPS).
+- Fakultas tetap opsional, dan tanpa kota semua koordinat existing dijaga.
+- OCR tidak menjamin 100%; periksa data sebelum export.

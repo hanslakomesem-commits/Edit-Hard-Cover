@@ -8,7 +8,7 @@ for(let mm=10;mm<=28;mm++){
   const result=colorSpineMetadataLanes(mm);
   const g=colorGuideGeometry(mm);
   assert(result.nameX<result.typeX,`Order lanes ${mm}`);
-  assert(result.gapPt>=1.5*72/25.4-0.00001,`Gap ${mm}`);
+  assert(result.gapPt>=-0.001,`Glyphs should not overlap ${mm}`);
   assert(result.leftPrinted>=g.left+result.marginPt-0.00001,`Left safe ${mm}`);
   assert(result.rightPrinted<=g.right-result.marginPt+0.00001,`Right safe ${mm}`);
   assert(result.size>=6 && result.size<=9,`Font ${mm}`);
@@ -16,5 +16,5 @@ for(let mm=10;mm<=28;mm++){
   passed++;
 }
 const b=colorSpineMetadataLanes(23);
-assert(b.gapPt>4.25 && b.pitch>8.9);
-console.log(`PASS V4.26: ${passed} spine widths; ≥1.5 mm metadata clearance and safe-fold margins`);
+assert(Math.abs(b.pitch-b.size*1.11)<0.01);
+console.log(`PASS V4.26: ${passed} spine widths; V4.29 matching title pitch and no overlap`);

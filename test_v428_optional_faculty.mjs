@@ -21,8 +21,8 @@ const {generatePDF,setUserFonts}=await import('../pdf-engine.js');
 setUserFonts(new Uint8Array([1,2,3]),new Uint8Array([4,5,6]));
 const record={judul:'PENDEKATAN PEDAGOGIS GURU DALAM MENANGANI PERILAKU TANTRUM PADA ANAK USIA DINI DI RA AS-SAKINAH',nama:'DINIA NAILUL FARAH',nim:'202215935021',prodi:'PENDIDIKAN ISLAM ANAK USIA DINI',universitas:'SEKOLAH TINGGI AGAMA ISLAM (STAI) AL MUJTAMA',jenis_dokumen:'SKRIPSI',bulan_tahun:'2026'};
 let cases=0;
-for(let mm=10;mm<=28;mm++)for(let variant of [PLAIN_V1,PLAIN_V2])for(const withFaculty of [false,true]){
- const data={...record,fakultas:withFaculty?'TARBIYAH':''};
+for(let mm=10;mm<=28;mm++)for(let variant of [PLAIN_V1,PLAIN_V2])for(const withFaculty of [false,true])for(const withCity of [false,true]){
+ const data={...record,fakultas:withFaculty?'TARBIYAH':'',kota:withCity?'PAMEKASAN':''};
  generated=[];const out=await generatePDF(data,mm,variant);
  const first=generated.find(g=>g.pages[0]?.ops?.some(o=>o.type==='text'));assert(first);
  const ops=first.pages[0].ops.filter(o=>o.type==='text');
@@ -31,16 +31,18 @@ for(let mm=10;mm<=28;mm++)for(let variant of [PLAIN_V1,PLAIN_V2])for(const withF
  const prodi=ops.find(o=>o.text.startsWith('PROGRAM STUDI '));
  const university=ops.find(o=>o.text.includes('SEKOLAH TINGGI AGAMA ISLAM (STAI) AL MUJTAMA'));
  assert(prodi&&university,`institution and program ${mm}/${variant}`);
+ const cityRows=ops.filter(o=>o.text==='PAMEKASAN');
+ assert.equal(cityRows.length,Number(withCity),`city output ${mm}/${variant}/${withCity}`);
  const placement=plainFrontLayout(variant,layout[mm]);
- assert(Math.abs(prodi.y-(330*72/25.4-(withFaculty?placement.prodiY:placement.fakultasY)))<.01,`compact prodi position ${mm}/${variant}`);
+ assert(Math.abs(prodi.y-(330*72/25.4-((withFaculty?placement.prodiY:placement.fakultasY)-(withCity?13.29:0))))<.01,`compact prodi position ${mm}/${variant}`);
  cases++;
 }
 const src=await readFile(new URL('../pdf-engine.js',import.meta.url),'utf8');
 for(const tag of ['Fakultas warna','Fakultas UNIRA','Fakultas Dummybook','Fakultas IPS']){
- assert(src.split('\n').some(line=>line.includes(tag)&&line.includes('if(norm(data.fakultas))')),`${tag} must be conditional`);
+ assert(src.split('\n').some(line=>line.includes(tag)&&line.includes('if(hasFaculty)')||line.includes('if(norm(data.fakultas))')),`${tag} must be conditional`);
 }
 const app=await readFile(new URL('../app.js',import.meta.url),'utf8');
 const html=await readFile(new URL('../index.html',import.meta.url),'utf8');
-assert(app.includes("FIELDS.filter(name=>name!=='fakultas')"));
+assert(app.includes("!['fakultas','kota'].includes(name)"));
 assert(html.includes('Fakultas (opsional)'));
 console.log(`PASS V4.28: ${cases} mocked Polos exports with/without faculty; institution preserved; all other modes conditionally skip faculty.`);

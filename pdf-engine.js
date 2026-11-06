@@ -1,5 +1,5 @@
 /**
- * ZAIN.NET PDF engine, static-browser GitHub Pages edition V4.29.
+ * ZAIN.NET PDF engine, static-browser GitHub Pages edition V4.31.
  * Each page begins with the already cleaned ORIGINAL PDF vector master.
  * No template lines, crop marks, or cover geometry are re-created here.
  * Important: Tinos is not the commercial Times New Roman face used in the
@@ -69,7 +69,11 @@ function validate(data,thickness){
   if(String(data[name]).includes('\u00ad'))fail(`Kolom ${name} mengandung soft hyphen (U+00AD). Koreksi manual sebelum ekspor.`);
   if(LATIN_CHECK.test(String(data[name])))fail('Aksara Arab langsung belum didukung engine PDF Node ini. Transliterasi Arab-Latin dapat digunakan.');
  }
- // Fakultas opsional; tetap periksa karakter jika kolom diisi.
+ // Kota dan fakultas opsional; tetap periksa karakter jika diisi.
+ if(norm(data.kota)){
+  if(String(data.kota).length>100)fail('Kolom kota terlalu panjang.');
+  if(LATIN_CHECK.test(String(data.kota)))fail('Aksara Arab pada kolom kota belum didukung.');
+ }
  if(norm(data.fakultas)){
   if(String(data.fakultas).length>2000)fail('Kolom fakultas terlalu panjang.');
   if(String(data.fakultas).includes('\u00ad'))fail('Kolom fakultas mengandung soft hyphen (U+00AD).');
@@ -357,9 +361,12 @@ async function generatePlainPDF(data,mm,variant=PLAIN_V1){
  single(page,fonts,'Oleh:',12,placement.frontCX,placement.labelY,180,'Label Oleh',warnings,12);
  single(page,fonts,upper(data.nama),12,placement.frontCX,placement.nameY,400,'Nama depan',warnings,9);
  single(page,fonts,`${conf.front_nim_prefix} ${norm(data.nim)}`,12,placement.frontCX,placement.nimY,390,'NIM',warnings,9);
- single(page,fonts,`PROGRAM STUDI ${upper(data.prodi)}`,12,placement.frontCX,norm(data.fakultas)?placement.prodiY:placement.fakultasY,395,'Prodi',warnings,9);
- if(norm(data.fakultas))single(page,fonts,`FAKULTAS ${upper(data.fakultas)}`,12,placement.frontCX,placement.fakultasY,395,'Fakultas',warnings,9);
- single(page,fonts,upper(canonicalUniversity(data.universitas)),12,placement.frontCX,placement.universitasY,395,'Universitas',warnings,9);
+ const hasCity=!!norm(data.kota),hasFaculty=!!norm(data.fakultas),lineGap=13.29;
+ const shift=hasCity?lineGap:0;
+ single(page,fonts,`PROGRAM STUDI ${upper(data.prodi)}`,12,placement.frontCX,(hasFaculty?placement.prodiY:placement.fakultasY)-shift,395,'Prodi',warnings,9);
+ if(hasFaculty)single(page,fonts,`FAKULTAS ${upper(data.fakultas)}`,12,placement.frontCX,placement.fakultasY-shift,395,'Fakultas',warnings,9);
+ single(page,fonts,upper(canonicalUniversity(data.universitas)),12,placement.frontCX,placement.universitasY-shift,395,'Universitas',warnings,9);
+ if(hasCity)single(page,fonts,upper(data.kota),12,placement.frontCX,placement.universitasY,395,'Kota kampus',warnings,9);
  single(page,fonts,upper(data.bulan_tahun),12,placement.frontCX,placement.tahunY,395,'Tanggal',warnings,9.5);
  // Polos V1 dan Polos V2 harus TIDAK menampilkan gambar logo.
  // Logo aset UIN/UNIRA tetap tersedia untuk Cover CD, Warna, dan UNIRA.
@@ -595,9 +602,11 @@ async function generateColorPDF(data,mm,mode,customColor){
  single(page,fonts,'Oleh',12,1000.7,614.8,165,'Label Oleh',warnings,12,false,YELLOW);
  single(page,fonts,norm(data.nama),12,1000.7,628.1,330,'Nama warna',warnings,8,false,YELLOW);
  single(page,fonts,`NIM. ${norm(data.nim)}`,12,1000.7,641.4,330,'NIM warna',warnings,9,false,YELLOW);
- single(page,fonts,`PROGRAM STUDI ${upper(data.prodi)}`,12,1000.7,norm(data.fakultas)?767.1:780.4,395,'Prodi warna',warnings,9,false,YELLOW);
- if(norm(data.fakultas))single(page,fonts,`FAKULTAS ${upper(data.fakultas)}`,12,1000.7,780.4,395,'Fakultas warna',warnings,9,false,YELLOW);
- single(page,fonts,upper(canonicalUniversity(data.universitas)),12,1000.7,793.7,395,'Universitas warna',warnings,9,false,YELLOW);
+ const hasCity=!!norm(data.kota),hasFaculty=!!norm(data.fakultas),cityShift=hasCity?13.3:0;
+ single(page,fonts,`PROGRAM STUDI ${upper(data.prodi)}`,12,1000.7,(hasFaculty?767.1:780.4)-cityShift,395,'Prodi warna',warnings,9,false,YELLOW);
+ if(hasFaculty)single(page,fonts,`FAKULTAS ${upper(data.fakultas)}`,12,1000.7,780.4-cityShift,395,'Fakultas warna',warnings,9,false,YELLOW);
+ single(page,fonts,upper(canonicalUniversity(data.universitas)),12,1000.7,793.7-cityShift,395,'Universitas warna',warnings,9,false,YELLOW);
+ if(hasCity)single(page,fonts,upper(data.kota),12,1000.7,793.7,395,'Kota warna',warnings,9,false,YELLOW);
  // Original colored samples print the YEAR only, not the month name.
  const yearMatch=norm(data.bulan_tahun).match(/\b\d{4}\b/u);
  const year=yearMatch?yearMatch[0]:norm(data.bulan_tahun);
@@ -712,7 +721,7 @@ async function generateUniraPDF(data,mm){
  const institution=upper(canonicalUniversity(data.universitas));
  if(institution!=='UNIVERSITAS MADURA')warnings.push('Mode UNIRA dipilih tetapi nama universitas bukan UNIVERSITAS MADURA. Periksa sebelum cetak.');
  single(page,fonts,institution,12,cx,807.8,390,'Universitas UNIRA',warnings,9,false,BLACK);
- single(page,fonts,'PAMEKASAN',12,cx,821.1,390,'Kota UNIRA',warnings,12,false,BLACK);
+ single(page,fonts,upper(norm(data.kota)||'PAMEKASAN'),12,cx,821.1,390,'Kota UNIRA',warnings,12,false,BLACK);
  const yearMatch=norm(data.bulan_tahun).match(/\b\d{4}\b/u),year=yearMatch?.[0]||norm(data.bulan_tahun);
  single(page,fonts,year,12,cx,834.4,150,'Tahun UNIRA',warnings,9,false,BLACK);
  // In the UNIRA reference, the spine type is at the top, title in the middle,
@@ -814,9 +823,11 @@ async function generateDummyPDF(data,mm){
  single(page,fonts,'Oleh:',16,cx,579,300,'Oleh Dummybook',warnings,13,false,BLACK);
  single(page,fonts,upper(data.nama),16,cx,595,370,'Nama Dummybook',warnings,9,false,BLACK);
  single(page,fonts,`NIM. ${norm(data.nim)}`,14,cx,611,340,'NIM Dummybook',warnings,9,false,BLACK);
- single(page,fonts,`PROGRAM STUDI ${upper(data.prodi)}`,14,cx,norm(data.fakultas)?707:722.6,420,'Prodi Dummybook',warnings,9,false,BLACK);
- if(norm(data.fakultas))single(page,fonts,`FAKULTAS ${upper(data.fakultas)}`,14,cx,722.6,420,'Fakultas Dummybook',warnings,9,false,BLACK);
- single(page,fonts,upper(canonicalUniversity(data.universitas)),14,cx,738.2,420,'Universitas Dummybook',warnings,9,false,BLACK);
+ const hasCity=!!norm(data.kota),hasFaculty=!!norm(data.fakultas),cityShift=hasCity?15.6:0;
+ single(page,fonts,`PROGRAM STUDI ${upper(data.prodi)}`,14,cx,(hasFaculty?707:722.6)-cityShift,420,'Prodi Dummybook',warnings,9,false,BLACK);
+ if(hasFaculty)single(page,fonts,`FAKULTAS ${upper(data.fakultas)}`,14,cx,722.6-cityShift,420,'Fakultas Dummybook',warnings,9,false,BLACK);
+ single(page,fonts,upper(canonicalUniversity(data.universitas)),14,cx,738.2-cityShift,420,'Universitas Dummybook',warnings,9,false,BLACK);
+ if(hasCity)single(page,fonts,upper(data.kota),14,cx,738.2,420,'Kota Dummybook',warnings,9,false,BLACK);
  single(page,fonts,upper(data.bulan_tahun),14,cx,753.8,300,'Tanggal Dummybook',warnings,9,false,BLACK);
  // Spine text: centered inside the two ORIGINAL fold marks (no guessed shift).
  for(let i=0;i<spine.lines.length;i++)renderLine(page,fonts,spine.lines[i],spine.size,spine.xs[i],spine.fromTop,true,BLACK);
@@ -935,9 +946,11 @@ async function generateSoftIPSPDF(data,mm){
  single(page,fonts,'Oleh:',8.35,cx,234.8,160,'Label Oleh IPS',warnings,8,false,BLACK);
  single(page,fonts,norm(data.nama),8.35,cx,243.8,270,'Nama depan IPS',warnings,7,false,BLACK);
  single(page,fonts,`NIM. ${norm(data.nim)}`,8.35,cx,252.9,270,'NIM depan IPS',warnings,7,false,BLACK);
- single(page,fonts,`PROGRAM STUDI ${upper(data.prodi)}`,8.35,cx,norm(data.fakultas)?512.1:521.2,350,'Prodi IPS',warnings,6.5,false,BLACK);
- if(norm(data.fakultas))single(page,fonts,`FAKULTAS ${upper(data.fakultas)}`,8.35,cx,521.2,350,'Fakultas IPS',warnings,6.5,false,BLACK);
- single(page,fonts,upper(canonicalUniversity(data.universitas)),8.35,cx,530.3,350,'Universitas IPS',warnings,6.5,false,BLACK);
+ const hasCity=!!norm(data.kota),hasFaculty=!!norm(data.fakultas),cityShift=hasCity?9.1:0;
+ single(page,fonts,`PROGRAM STUDI ${upper(data.prodi)}`,8.35,cx,(hasFaculty?512.1:521.2)-cityShift,350,'Prodi IPS',warnings,6.5,false,BLACK);
+ if(hasFaculty)single(page,fonts,`FAKULTAS ${upper(data.fakultas)}`,8.35,cx,521.2-cityShift,350,'Fakultas IPS',warnings,6.5,false,BLACK);
+ single(page,fonts,upper(canonicalUniversity(data.universitas)),8.35,cx,530.3-cityShift,350,'Universitas IPS',warnings,6.5,false,BLACK);
+ if(hasCity)single(page,fonts,upper(data.kota),8.35,cx,530.3,350,'Kota IPS',warnings,6.5,false,BLACK);
  const year=norm(data.bulan_tahun).match(/\b(?:19|20)\d{2}\b/u)?.[0]||norm(data.bulan_tahun);
  single(page,fonts,year,8.35,cx,539.3,160,'Tahun IPS',warnings,7,false,BLACK);
  const spine=ipsTitleSpine(fonts,segs,mm,warnings);

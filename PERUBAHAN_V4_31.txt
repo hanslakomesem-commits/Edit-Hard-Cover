@@ -1,0 +1,7 @@
+ZAIN.NET COVER V4.31
+- Membaca italic judul dari run/style Word DOCX bila ditemukan.
+- Membaca italic judul pada PDF teks bila nama/font-family mendukung.
+- Melindungi transliterasi Unicode dan campuran kata miring dalam editor dan generator PDF.
+- Menyambung teks lintas run PDF berdasarkan posisi untuk menghindari spasi hilang.
+- Foto/scan: tidak menebak italic tanpa bukti; menampilkan peringatan pemeriksaan manual.
+- Layout/master Polos/Warna/UNIRA/Dummybook/IPS/CD serta aturan lainnya tetap.

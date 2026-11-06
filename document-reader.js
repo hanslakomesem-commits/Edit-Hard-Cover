@@ -1,7 +1,8 @@
 /* ZAIN.NET • pembaca PDF & DOCX di perangkat pengguna. Tidak ada layanan OCR berbayar. */
-import {categorize} from './classifier.js';
+import {categorize,institutionLooksIncomplete} from './classifier.js';
 import {recognizeLocalResult, prepareOCRZones, setOCRProgress} from './ocr-fast.js';
 import {normalizedLines, mergeZones} from './ocr-zones.js';
+import {alignTitleFormatting,pdfFontLooksItalic,titleHasTransliteration} from './title-format.js';
 export {setOCRProgress} from './ocr-fast.js';
 
 export function withTimeout(promise,ms,label){
@@ -11,18 +12,46 @@ const clean=s=>String(s||'').replace(/[\u00a0\u2000-\u200b]/gu,' ').replace(/\s+
 function normalizedResult(lines,warnings=[],rich=null){
  const data=categorize(lines,warnings);
  if(rich?.length && data.judul){
-  const plain=rich.map(x=>x.text).join('');
-  if(clean(plain)===clean(data.judul))data.title_segments=rich;
+  const aligned=alignTitleFormatting(data.judul,rich);
+  if(aligned.length && aligned.map(x=>x.text).join('')===data.judul){
+   data.title_segments=aligned;
+   if(aligned.some(s=>s.italic))data.warnings.push('Italic judul ditemukan dari format font sumber. Periksa kembali sebelum cetak.');
+  }else data.warnings.push('Format italic judul belum dapat dicocokkan dengan teks sumber; gunakan editor untuk memeriksa bagian miring.');
  }
+ if(data.judul&&titleHasTransliteration(data.judul))data.warnings.push('Karakter transliterasi terdeteksi. Cocokkan setiap diakritik dengan dokumen asli.');
  return data;
 }
-function pdfLines(items){
+function pdfLines(items,styles={}){
  const spans=[];
- for(const item of items||[]){const text=clean(item.str);if(!text)continue;const x=item.transform?.[4]||0,y=item.transform?.[5]||0;spans.push({x,y,text});}
+ for(const item of items||[]){const text=String(item.str||'').replace(/[\u00a0\u2000-\u200b]/gu,' ');if(!text.trim())continue;
+  const x=item.transform?.[4]||0,y=item.transform?.[5]||0;
+  spans.push({x,y,text,width:Number(item.width)||0,height:Number(item.height)||10,italic:pdfFontLooksItalic(item.fontName,styles[item.fontName]||{})});
+ }
  spans.sort((a,b)=>b.y-a.y||a.x-b.x);
  const groups=[];
  for(const item of spans){let group=groups.find(g=>Math.abs(g.y-item.y)<2.3);if(!group){group={y:item.y,items:[]};groups.push(group);}group.items.push(item);}
- return groups.sort((a,b)=>b.y-a.y).map(g=>clean(g.items.sort((a,b)=>a.x-b.x).map(i=>i.text).join(' '))).filter(Boolean);
+ const lines=[];const rich=[];
+ for(const group of groups.sort((a,b)=>b.y-a.y)){
+  const items=group.items.sort((a,b)=>a.x-b.x);
+  const row=[];
+  for(const [index,item] of items.entries()){
+   if(index){
+    const prev=items[index-1];
+    // Text layers may split a single word into different styled runs.
+    // Only insert a space when geometry or explicit spaces justify it.
+    const delta=item.x-(prev.x+prev.width);
+    const needsSpace=/\s$/u.test(prev.text)||/^\s/u.test(item.text)||delta>Math.max(1.5,Math.min(3,prev.height*.18));
+    if(needsSpace)row.push({text:' ',italic:false});
+   }
+   row.push({text:item.text,italic:item.italic});
+  }
+  const line=clean(row.map(i=>i.text).join(''));
+  if(!line)continue;
+  lines.push(line);
+  if(rich.length)rich.push({text:' ',italic:false});
+  rich.push(...row);
+ }
+ return {lines,rich};
 }
 // Baca foto sekali pada mode Cepat; bila judul/NIM hilang atau pengguna memilih Teliti,
 // ulangi hanya area yang relevan dengan resolusi lebih besar. Semua proses di browser.
@@ -32,14 +61,15 @@ async function localOCR(blob, tag='Foto', options={}) {
  stage('OCR penuh: menyiapkan teks seluruh halaman');
  const full=await recognizeLocalResult(blob,{lang:'ind',psm:'3',maxSide:detail?2400:2100});
  const lines=normalizedLines(full.text);
- const base=normalizedResult(lines,[`OCR ${tag} diproses lokal tanpa token. Selalu cocokkan setiap karakter dengan sumber.`]);
+ const base=normalizedResult(lines,[`OCR ${tag} diproses lokal tanpa token. Selalu cocokkan setiap karakter dengan sumber.`, 'Foto/scan: OCR tidak membuktikan kata yang dicetak miring. Periksa Italic pada judul di editor sebelum ekspor.']);
  const confidence=Number.isFinite(full.confidence)?Math.round(full.confidence):null;
  if(confidence!==null && confidence>=0 && confidence<60)base.warnings.push(`Keyakinan OCR penuh ${confidence}% (rendah). Cek judul, nama, dan NIM.`);
  if(!lines.length)base.warnings.push('OCR keseluruhan belum menemukan teks; mode Teliti mencoba membaca zona.');
  const essentialMissing=!base.judul||!base.nama||!base.nim;
  // Mode Cepat: hanya satu percobaan jika lengkap, pembacaan identitas tambahan jika belum lengkap.
- // Mode Teliti: judul, identitas, dan bagian bawah dibaca ulang secara terpisah.
- const zonesNeeded=detail||!lines.length?['judul','identitas','kampus']:(essentialMissing?['judul','identitas','kampus'].filter(k=>k==='judul'?!base.judul:k==='identitas'?!base.nama||!base.nim:false):[]);
+ // Mode Teliti: judul, identitas, bagian bawah, dan teks logo sebagai pembanding.
+ const needsCampus=(!base.universitas||institutionLooksIncomplete(base.universitas)||!base.kota);
+ const zonesNeeded=detail||!lines.length?['judul','identitas','kampus','logo']:[...new Set([... (essentialMissing?['judul','identitas','kampus'].filter(k=>k==='judul'?!base.judul:k==='identitas'?!base.nama||!base.nim:false):[]),...(needsCampus?['kampus','logo']:[])])];
  if(!zonesNeeded.length)return base;
  stage(detail?'Mode Teliti: membaca ulang tiga zona':'Memulihkan kolom yang belum terbaca');
  let blobs={};
@@ -57,7 +87,7 @@ async function localOCR(blob, tag='Foto', options={}) {
  }
  const merged=mergeZones(base,zoneText,{full:full.confidence});
  merged.warnings=merged.warnings.filter(w=>!w.startsWith('Periksa kolom belum terdeteksi:'));
- const remaining=['judul','nama','nim','prodi','fakultas','universitas','jenis_dokumen','bulan_tahun'].filter(k=>!merged[k]);
+ const remaining=['judul','nama','nim','prodi','universitas','jenis_dokumen','bulan_tahun'].filter(k=>!merged[k]);
  if(remaining.length)merged.warnings.push(`Kolom yang masih perlu diisi: ${remaining.join(', ')}.`);
  if(detail)merged.warnings.push('Hasil zona harus diverifikasi. Deteksi italic dan ejaan/transliterasi dari foto belum dijamin oleh OCR lokal.');
  stage('Selesai menggabungkan hasil OCR dan pemeriksaan zona');
@@ -77,9 +107,10 @@ export async function readPDF(file,options={}){
   const first=await withTimeout(doc.getPage(1),12000,'Membaca halaman 1 PDF');
   stage('Mengambil text layer PDF halaman 1 (tanpa OCR)');
   const content=await withTimeout(first.getTextContent(),20000,'Ekstraksi halaman 1 PDF');
-  const lines=pdfLines(content.items);
+  const extracted=pdfLines(content.items,content.styles);
+  const {lines}=extracted;
   const found=lines.join(' ').replace(/\s/g,'');
-  if(found.length>=35 && (lines.some(line => /\b(SKRIPSI|TESIS|THESIS|DISERTASI|NIM|FAKULTAS|UNIVERSITAS)\b/iu.test(line)) || found.length>90)){stage('Teks PDF halaman 1 berhasil dibaca tanpa OCR');return normalizedResult(lines,[`Hanya halaman 1 dari ${doc.numPages} halaman PDF yang dibaca. Periksa urutan baris.`]);}
+  if(found.length>=35 && (lines.some(line => /\b(SKRIPSI|TESIS|THESIS|DISERTASI|NIM|FAKULTAS|UNIVERSITAS)\b/iu.test(line)) || found.length>90)){stage('Teks PDF halaman 1 berhasil dibaca tanpa OCR');return normalizedResult(lines,[`Hanya halaman 1 dari ${doc.numPages} halaman PDF yang dibaca. Periksa urutan baris.`, 'PDF: Italic hanya dipulihkan jika nama font pada text layer menyebut Italic/Oblique; font dengan nama internal anonim perlu pemeriksaan manual.'],extracted.rich);}
   stage('Halaman 1 berupa scan/gambar; menjalankan OCR lokal');
   const base=first.getViewport({scale:1});
   const scale=Math.min(1.55,1800/Math.max(base.width,base.height),Math.sqrt(2500000/(base.width*base.height)));
@@ -111,7 +142,24 @@ function xmlDecode(value) {
   return point > 0 && point <= 0x10ffff ? String.fromCodePoint(point) : m;
  });
 }
-function parseEarlyParagraph(xml) {
+function parseStyleItalics(stylesXml){
+ const map=new Map();
+ for(const m of String(stylesXml||'').matchAll(/<w:style\b([^>]*)>([\s\S]*?)<\/w:style>/gu)){
+  const id=m[1].match(/\bw:styleId=["']([^"']+)["']/u)?.[1];
+  if(id){const rPr=m[2].match(/<w:rPr\b[^>]*>([\s\S]*?)<\/w:rPr>/u)?.[1]||'';
+   map.set(id,{italic:hasItalic(rPr),basedOn:m[2].match(/<w:basedOn\b[^>]*w:val=["']([^"']+)/u)?.[1]||''});
+  }
+ }
+ return map;
+}
+function hasItalic(xml){const tags=[...String(xml).matchAll(/<w:i\b([^>]*)\/?>(?:<\/w:i>)?/gu)];
+ return tags.length? !/\bw:val=["'](?:0|false|off)["']/iu.test(tags.at(-1)[1]):null;
+}
+function styleItalic(id,styles,seen=new Set()){
+ if(!id||seen.has(id))return false;seen.add(id);
+ const style=styles.get(id);return style?.italic ?? styleItalic(style?.basedOn,styles,seen);
+}
+function parseEarlyParagraph(xml,styles=new Map()) {
  const segments = [];
  function push(text, italic) {
   if (!text) return;
@@ -120,13 +168,17 @@ function parseEarlyParagraph(xml) {
  }
  const breakAt = xml.search(/<w:(?:lastRenderedPageBreak\b|br\b[^>]*w:type=["']page["'])/u);
  const limited = breakAt >= 0 ? xml.slice(0, breakAt) : xml;
+ const pPr=limited.match(/<w:pPr\b[^>]*>([\s\S]*?)<\/w:pPr>/u)?.[1]||'';
+ const pStyle=pPr.match(/<w:pStyle\b[^>]*w:val=["']([^"']+)/u)?.[1]||'';
+ const paraItalic=hasItalic(pPr.match(/<w:rPr\b[^>]*>([\s\S]*?)<\/w:rPr>/u)?.[1]||'') ?? styleItalic(pStyle,styles);
  const runPattern = /<w:r\b[^>]*>([\s\S]*?)<\/w:r>/gu;
  let run, found = false;
  while ((run = runPattern.exec(limited)) !== null) {
   found = true;
   const body = run[1];
-  const italicTag = body.match(/<w:i\b([^>]*)\/?>(?:<\/w:i>)?/u);
-  const italic = !!(italicTag && !/\bw:val=["'](?:0|false|off)["']/iu.test(italicTag[1]));
+  const rPr=body.match(/<w:rPr\b[^>]*>([\s\S]*?)<\/w:rPr>/u)?.[1]||'';
+  const rStyle=rPr.match(/<w:rStyle\b[^>]*w:val=["']([^"']+)/u)?.[1]||'';
+  const italic=hasItalic(rPr) ?? (rStyle?styleItalic(rStyle,styles):paraItalic);
   const text = [...body.matchAll(/<w:t(?:\s[^>]*)?>([\s\S]*?)<\/w:t>/gu)].map(m=>xmlDecode(m[1])).join('');
   push(text, italic);
  }
@@ -148,12 +200,14 @@ export async function readWord(file,options={}) {
  const bodyStart=raw.search(/<w:body\b/u);
  if (bodyStart<0) throw Error('Isi dokumen Word tidak ditemukan.');
  const body=raw.slice(bodyStart);
+ const stylesXml=zip.file('word/styles.xml')?await zip.file('word/styles.xml').async('string'):'';
+ const styles=parseStyleItalics(stylesXml);
  const iterator=body.matchAll(/<w:p(?:\s[^>]*)?>([\s\S]*?)<\/w:p>/gu);
  const lines=[],pars=[];let explicit=false,approx=false,seenUniversity=false,paragraphs=0;
  const stopTitle=/^(?:ABSTRAK|ABSTRACT|KATA\s+PENGANTAR|DAFTAR\s+ISI|BAB\s+I\b|LEMBAR\s+PENGESAHAN|HALAMAN\s+PERSETUJUAN)/iu;
  for (const result of iterator) {
   if (++paragraphs>90) {approx=true;break;}
-  const p=parseEarlyParagraph(result[0]);
+  const p=parseEarlyParagraph(result[0],styles);
   if (p.before && lines.length) {explicit=true;break;}
   const value=p.content;
   if (value) {
@@ -171,7 +225,11 @@ export async function readWord(file,options={}) {
  const typeIndex=lines.findIndex(t=>/^(SKRIPSI|TESIS|THESIS|DISERTASI|MAKALAH|LAPORAN(?:\s+AKHIR)?|TUGAS AKHIR)$/iu.test(t));
  if (typeIndex>0) {
   const rich=pars.slice(0,typeIndex).flatMap((p,i)=>i?[{text:' ',italic:false},...p.segments]:p.segments);
-  if (clean(rich.map(x=>x.text).join(''))===clean(result.judul)) result.title_segments=rich;
+  const aligned=alignTitleFormatting(result.judul,rich);
+  if(aligned.length&&aligned.map(x=>x.text).join('')===result.judul){
+   result.title_segments=aligned;
+   if(aligned.some(x=>x.italic))result.warnings.push('Italic dipulihkan dari properti run/style DOCX pada bagian judul.');
+  }else result.warnings.push('Bagian italic Word belum dapat dicocokkan sepenuhnya ke judul; periksa di editor.');
  }
  stage(`Word selesai: ${lines.length} baris awal dibaca tanpa token`);
  return result;

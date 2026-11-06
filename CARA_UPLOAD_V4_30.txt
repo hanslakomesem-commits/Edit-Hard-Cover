@@ -1,0 +1,6 @@
+1. Ekstrak ZIP V4.30.
+2. Buka https://github.com/hanslakomesem-commits/Edit-Hard-Cover/upload/main dalam akun pemilik.
+3. Pilih seluruh isi folder ekstrak, bukan folder pembungkus atau ZIP.
+4. Drag/drop ke GitHub; pertahankan folder assets/ dan vendor/.
+5. Commit changes. Setelah deployment hijau buka https://hanslakomesem-commits.github.io/Edit-Hard-Cover/?v=4.30
+6. Uji foto STAI Al Mujtama. Pastikan fakultas kosong, kampus lengkap, kota PAMEKASAN, dan hasil PDF sebelum cetak.

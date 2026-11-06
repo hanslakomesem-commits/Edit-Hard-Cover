@@ -4,7 +4,8 @@
 export const COVER_ZONES = Object.freeze([
   {id:'judul', label:'Judul atas', x:0.035, y:0.025, width:0.93, height:0.255},
   {id:'identitas', label:'Nama, jenis dokumen, NIM', x:0.09, y:0.205, width:0.82, height:0.38},
-  {id:'kampus', label:'Prodi, fakultas, universitas, tanggal', x:0.035, y:0.705, width:0.93, height:0.29}
+  {id:'kampus', label:'Prodi, nama kampus lengkap dan kota', x:0.035, y:0.715, width:0.93, height:0.28},
+  {id:'logo', label:'Teks dalam logo kampus (pembanding)', x:0.16, y:0.435, width:0.68, height:0.40}
 ]);
 export function normalizedLines(text){
   return String(text||'').replace(/\r/gu,'').split('\n').map(s=>s.replace(/[\t\u00a0]+/gu,' ').replace(/\s+/gu,' ').trim()).filter(Boolean);
@@ -63,20 +64,22 @@ export function nameFromZone(text){
 export function typeFromZone(text){
   return normalizedLines(text).find(line=>TYPE.test(line.toLocaleUpperCase('id-ID')))||'';
 }
+import {campusIdentity,institutionLooksIncomplete} from './classifier.js';
 export function footerFromZone(text){
   const lines=normalizedLines(text);const result={};
+  const identified=campusIdentity(lines);if(identified.universitas)result.universitas=identified.universitas;if(identified.kota)result.kota=identified.kota;
   for(let i=0;i<lines.length;i++){
     const v=lines[i];
     for(const [key,regex] of [
       ['prodi',/^(?:PROGRAM\s+STUDI|PRODI|JURUSAN)\s*[:.]?\s*(.*)$/iu],
       ['fakultas',/^FAKULTAS\s*[:.]?\s*(.*)$/iu],
-      ['universitas',/^(UNIVERSITAS\s+.+|INSTITUT\s+.+|UIN\s+.+|IAIN\s+.+)$/iu],
+      
     ]){
       const m=v.match(regex);if(!m)continue;
-      let val=key==='universitas'?m[1]:m[1]||(lines[i+1]||'');
+      let val=m[1]||(lines[i+1]||'');
       val=normalize(val);
       if(val && !LABEL.test(val))result[key]=val;
-      else if (key==='universitas')result[key]=val;
+
     }
     const date=v.match(/\b(?:JANUARI|FEBRUARI|MARET|APRIL|MEI|JUNI|JULI|AGUSTUS|SEPTEMBER|OKTOBER|NOVEMBER|DESEMBER)\s+\d{4}\b/iu);
     if(date)result.bulan_tahun=date[0];
@@ -96,6 +99,7 @@ export function mergeZones(base,zoneText={},confidences={}){
     const existing=normalize(result[key]);
     if(!existing){result[key]=value;recovered++;continue;}
     if(existing.toLocaleUpperCase('id-ID')!==normalize(value).toLocaleUpperCase('id-ID')){
+      if(key==='universitas'&&institutionLooksIncomplete(existing)&&normalize(value).toLocaleUpperCase('id-ID').startsWith(existing.toLocaleUpperCase('id-ID')+' ')){result.universitas=value;recovered++;continue;}
       // Jika judul penuh terpotong tetapi 75%+ kata sebelumnya muncul lagi pada zona,
       // zona dapat melengkapinya. Perbedaan tetap wajib ditandai untuk diperiksa.
       if(key==='judul'){
@@ -108,6 +112,12 @@ export function mergeZones(base,zoneText={},confidences={}){
       }
       inconsistent.push(key);
     }
+  }
+  const logoLines=normalizedLines(zoneText.logo||'');
+  if(logoLines.length){
+    const readable=logoLines.join(' ').toLocaleUpperCase('id-ID');
+    if(institutionLooksIncomplete(result.universitas))result.warnings.push('Nama kampus belum lengkap. Teks logo yang terbaca sebagai pembanding: '+readable.slice(0,110)+'. Periksa manual, jangan otomatis diganti.');
+    else if(/AL\s+MUJTAMA/iu.test(readable)&&!/AL\s+MUJTAMA/iu.test(result.universitas))result.warnings.push('Tulisan logo AL MUJTAMA berbeda dari kolom kampus. Periksa foto asli.');
   }
   if(improvedTitle)result.warnings.push('Judul utama tampak terpotong; diganti dengan pembacaan zona yang lebih lengkap. WAJIB periksa foto asli.');
   if(recovered)result.warnings.push(`${recovered} kolom kosong berhasil diisi dari OCR per zona. Mohon verifikasi.`);

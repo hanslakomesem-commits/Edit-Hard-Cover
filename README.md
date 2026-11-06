@@ -108,3 +108,8 @@ Semua template terdahulu disertakan dalam ZIP tanpa perubahan sumber master mere
 ## Update V4.26 — Jarak punggung Merah/Maroon/Custom
 
 Posisi `SKRIPSI` (jenis dokumen) dan nama pada punggung warna kini mengikuti lebar punggung aktual. Tidak lagi memakai jarak tetap 8,9 pt. Jarak kosong di antara dua jalur minimal 1,5 mm, dengan margin 0,9 mm dari garis lipatan. Font 9 pt tetap dipakai jika ada ruang. Tata letak judul, tahun, muka, dan jenis cover lain tidak diubah. Lihat `HASIL_UJI_V4_26.md`.
+
+
+## V4.34 — Tanda potong pendek Polos V1.1/V2.1
+
+Hapus garis panjang vertikal luar pada kedua versi 215mm. Hanya tanda potong pendek (18 pt) di bagian atas dan bawah yang dicetak; koordinat garis potong tetap 215mm dari lipatan, isi dan punggung tidak berubah. Polos V1/V2 dan tipe lainnya tidak berubah.

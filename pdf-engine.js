@@ -443,8 +443,13 @@ async function adjustPlain215Trim(bytes,mm,conf){
  for(const x of [g.originalLeft,g.originalRight]){
   page.drawRectangle({x:x-1.7,y:yBottom-1.0,width:3.4,height:yTop-yBottom+2,color:rgb(1,1,1)});
  }
+ // V4.34: Polos V1.1/V2.1 must show only short top/bottom trim ticks,
+ // exactly like the original Polos templates: NEVER draw a full-height line.
+ // The 215mm trim coordinates and the centered front text stay unchanged.
+ const tickLengthPt=18;
  for(const x of [g.newLeft,g.newRight]){
-  page.drawLine({start:{x,y:yBottom},end:{x,y:yTop},thickness:.55,color:ink});
+  page.drawLine({start:{x,y:yTop},end:{x,y:yTop-tickLengthPt},thickness:.55,color:ink});
+  page.drawLine({start:{x,y:yBottom},end:{x,y:yBottom+tickLengthPt},thickness:.55,color:ink});
  }
  return {bytes:new Uint8Array(await pdf.save({useObjectStreams:true})),geometry:g};
 }

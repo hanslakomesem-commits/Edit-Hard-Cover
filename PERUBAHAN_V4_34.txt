@@ -1,0 +1,1 @@
+V4.34: hanya Polos V1.1 & V2.1 (internal polosv11/polosv22). Hilangkan garis panjang vertikal kiri/kanan, ganti dengan tanda potong pendek 18pt di atas/bawah. 215mm/sisi, posisi teks, semua template lama tetap.

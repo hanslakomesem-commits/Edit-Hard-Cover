@@ -1,0 +1,10 @@
+ZAIN.NET COVER V4.36 - dukungan Bahasa Inggris seluruh Polos
+
+1. OCR foto/scan menggunakan bahasa Indonesia + Inggris.
+2. Pembaca otomatis mengenali THESIS, Written by:, nama, NIM, English Program, Faculty, University.
+3. Generator Polos tidak lagi mengubah label identitas Inggris ke Bahasa Indonesia.
+4. Pilihan bahasa Otomatis / Indonesia / English ditambahkan ke form.
+5. Posisi dan garis Polos V1 / V2 / V1.1 / V2.1 tidak diubah; V4.35 tetap.
+6. Template Warna/UNIRA/Dummybook/IPS/CD tetap menggunakan layout sebelumnya.
+
+CATATAN: Polos tidak menggunakan logo seperti versi sebelumnya. OCR gambar nyata dan cetak printer perlu diperiksa.

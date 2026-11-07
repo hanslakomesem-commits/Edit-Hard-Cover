@@ -1,7 +1,7 @@
 /* ZAIN.NET V4.6 — OCR statis, tanpa Gemini atau token.
  * Cepat: satu pembacaan seluruh foto.
  * Teliti: satu pembacaan + tiga zona yang diproses di resolusi lebih tinggi.
- * Worker Indonesia dipakai ulang sepanjang sesi, juga untuk PDF scan.
+ * Worker bilingual Indonesia + Inggris dipakai ulang sepanjang sesi, juga untuk PDF scan.
  */
 import {COVER_ZONES,zoneBounds} from './ocr-zones.js';
 let worker=null,workerLanguage=null,loadingPromise=null;
@@ -25,7 +25,7 @@ export async function resetOCR(){
   const old=worker;worker=null;workerLanguage=null;loadingPromise=null;
   if(old)try{await deadline(old.terminate(),6000,'Menutup worker OCR');}catch{}
 }
-export async function getOCRWorker(lang='ind'){
+export async function getOCRWorker(lang='ind+eng'){
   if(!globalThis.Tesseract?.createWorker)throw Error('Tesseract gagal dimuat. Periksa internet pertama kali dan refresh situs (tidak membutuhkan token).');
   if(worker && workerLanguage===lang)return worker;
   if(loadingPromise){try{await loadingPromise;}catch{}if(worker && workerLanguage===lang)return worker;}
@@ -116,7 +116,7 @@ export async function prepareOCRZones(blob,{threshold=false}={}){
   }finally{if(typeof bitmap.close==='function')bitmap.close();}
   return output;
 }
-export async function recognizeLocalResult(blob,{lang='ind',isPrepared=false,psm='3',maxSide=2200}={}){
+export async function recognizeLocalResult(blob,{lang='ind+eng',isPrepared=false,psm='3',maxSide=2200}={}){
   const prepared=isPrepared?blob:await prepareOCRImage(blob,{maxSide});
   const reader=await getOCRWorker(lang);
   try{
@@ -128,7 +128,7 @@ export async function recognizeLocalResult(blob,{lang='ind',isPrepared=false,psm
 }
 export async function recognizeLocal(blob,{detail=false,isPrepared=false}={}){
   // Kontrak lama dipertahankan untuk kompatibilitas.
-  const result=await recognizeLocalResult(blob,{lang:detail?'ind+eng':'ind',isPrepared});
+  const result=await recognizeLocalResult(blob,{lang:'ind+eng',isPrepared});
   if(!result.text.trim())throw Error('Tidak ada teks terdeteksi. Gunakan mode Teliti atau periksa foto.');
   return result.text;
 }

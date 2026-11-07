@@ -57,3 +57,6 @@
 
 /* Cover CD: label media square, without a hard-cover spine */
 .swatch-cd{background:linear-gradient(90deg,#087e5e 0 36%,#fff 36% 64%,#d2a34b 64% 100%)!important;border:1px solid #c9d3db;border-radius:50%!important;}
+
+/* V4.36: bahasa cover select matches editable form fields on Android and PC. */
+.field select{width:100%;border:1px solid #d5e1ee;border-radius:9px;padding:11px 12px;font:600 13px/1.5 system-ui,Arial;color:var(--text);background:#fff;outline:none;min-width:0}.field select:focus{border-color:#6daee8;box-shadow:0 0 0 3px #e6f3ff}

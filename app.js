@@ -1,6 +1,6 @@
 import {readPDF,readWord,readPhoto,withTimeout,setOCRProgress} from './document-reader.js';
 import {resetOCR} from './ocr-fast.js';
-import {generatePDF,checkAssets,setUserFonts} from './pdf-engine.js?v=4.35';
+import {generatePDF,checkAssets,setUserFonts} from './pdf-engine.js?v=4.36';
 import {canonicalUniversity} from './classifier.js';
 import {readAbstractFromFile,isAbstractMetadata} from './abstract-reader.js';
 import {chooseDummyBackText,DUMMY_PAGE} from './dummybook-layout.js';
@@ -9,10 +9,10 @@ import {DUMMY_SIZES} from './dummybook-layout.js';
 import {IPS_SIZES} from './soft-ips-layout.js';
 
 'use strict';
-// V4.35: unggahan otomatis diproses + status yang tidak menggantung; semua input lokal tanpa API.
+// V4.36: unggahan otomatis diproses + status yang tidak menggantung; semua input lokal tanpa API.
 const $ = id => document.getElementById(id);
-const FIELDS=['nama','nim','prodi','fakultas','universitas','kota','jenis_dokumen','bulan_tahun'];
-const REQUIRED=['judul',...FIELDS.filter(name=>!['fakultas','kota'].includes(name))];
+const FIELDS=['nama','nim','prodi','fakultas','universitas','kota','jenis_dokumen','bulan_tahun','bahasa'];
+const REQUIRED=['judul',...FIELDS.filter(name=>!['fakultas','kota','bahasa'].includes(name))];
 const COVER_TYPES=['polos','poloslogoatas','polosv11','polosv22','merah','maroon','custom','unira','dummybook','softips','covercd'];
 const sizesForStyle=style=>style==='covercd'?[]:style==='dummybook'?DUMMY_SIZES:style==='softips'?IPS_SIZES:availableMM;
 const validThickness=o=>o?.style==='covercd'||(sizesForStyle(o?.style).includes(Number(o?.thickness))&&o.thickness!==null);
@@ -22,7 +22,7 @@ const isWord=f=>!!f&&/\.docx$/iu.test(f.name);
 const isPhoto=f=>!!f&&(['image/jpeg','image/png','image/webp'].includes(f.type)||/\.(jpg|jpeg|png|webp)$/iu.test(f.name));
 const isAccepted=f=>isPhoto(f)||isPdf(f)||isWord(f);
 const MAX_ORDERS=40, MAX_IMAGE_SIZE=25*1024*1024, MAX_TOTAL_SIZE=200*1024*1024;
-const SAMPLE={judul:'KEMASLAHATAN DALAM SISTEM BAGI HASIL NELAYAN DI DESA BRANTA PESISIR KECAMATAN TLANAKAN KABUPATEN PAMEKASAN',nama:'SERLI ISTIQLALIA WAHDANIYAH',nim:'22383032023',prodi:'EKONOMI SYARIAH',fakultas:'EKONOMI DAN BISNIS ISLAM',universitas:'UNIVERSITAS ISLAM NEGERI MADURA',kota:'',jenis_dokumen:'SKRIPSI',bulan_tahun:'AGUSTUS 2026',title_segments:[{text:'KEMASLAHATAN DALAM SISTEM BAGI HASIL NELAYAN DI DESA BRANTA PESISIR KECAMATAN TLANAKAN KABUPATEN PAMEKASAN',italic:false}]};
+const SAMPLE={judul:'KEMASLAHATAN DALAM SISTEM BAGI HASIL NELAYAN DI DESA BRANTA PESISIR KECAMATAN TLANAKAN KABUPATEN PAMEKASAN',nama:'SERLI ISTIQLALIA WAHDANIYAH',nim:'22383032023',prodi:'EKONOMI SYARIAH',fakultas:'EKONOMI DAN BISNIS ISLAM',universitas:'UNIVERSITAS ISLAM NEGERI MADURA',kota:'',jenis_dokumen:'SKRIPSI',bulan_tahun:'AGUSTUS 2026',bahasa:'id',title_segments:[{text:'KEMASLAHATAN DALAM SISTEM BAGI HASIL NELAYAN DI DESA BRANTA PESISIR KECAMATAN TLANAKAN KABUPATEN PAMEKASAN',italic:false}]};
 const escapeHTML=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let orders=[],nextId=1,activeId=null,availableMM=Array.from({length:19},(_,i)=>i+10);
 let pdfURL=null,painting=false,ocrBatchRunning=false,zipRunning=false;
@@ -46,7 +46,7 @@ function offerDownload(blob,name,which){
  return link;
 }
 function active(){return orders.find(o=>o.id===activeId)||null;}
-function newData(){return {judul:'',title_segments:[],nama:'',nim:'',prodi:'',fakultas:'',universitas:'',kota:'',jenis_dokumen:'',bulan_tahun:'',abstract_text:''};}
+function newData(){return {judul:'',title_segments:[],nama:'',nim:'',prodi:'',fakultas:'',universitas:'',kota:'',jenis_dokumen:'',bulan_tahun:'',bahasa:'auto',abstract_text:''};}
 function notice(message,type='info'){
  const n=$('notice');n.textContent=message;n.className='notice '+type;
  const near=$('batchFeedback');
@@ -471,6 +471,7 @@ $('titleEditor').addEventListener('input',markDirty);
 $('abstractText').addEventListener('input',()=>{markDirty();updateDummyParagraphPreview();});
 $('titleEditor').addEventListener('paste',event=>{event.preventDefault();document.execCommand('insertText',false,(event.clipboardData||window.clipboardData).getData('text/plain'));});
 document.querySelectorAll('#dataForm input').forEach(input=>input.addEventListener('input',markDirty));
+ document.querySelectorAll('#dataForm select').forEach(input=>input.addEventListener('change',markDirty));
 document.querySelector('[name="universitas"]').addEventListener('blur',event=>{
  const value=canonicalUniversity(event.target.value);
  if(value!==event.target.value){event.target.value=value;markDirty();notice('Nama perguruan tinggi ditulis lengkap: '+value,'info');}
@@ -503,7 +504,7 @@ $('downloadButton').addEventListener('click',()=>{
   notice('PDF telah disiapkan. Jika browser tidak langsung mengunduh, gunakan tombol hijau "Download" di bawah pratinjau.','success');
 });
 async function loadStatus(){
- $('connection').textContent='GitHub Pages V4.35 • Dummybook spread A3 5–10 mm • Tanpa token';
+ $('connection').textContent='GitHub Pages V4.36 • Dummybook spread A3 5–10 mm • Tanpa token';
  $('serverDot').classList.add('online');
  notice('Mode lokal: Word dan PDF teks dibaca di browser tanpa OCR lokal. Foto dan PDF scan memakai OCR Tesseract lokal (model bahasa mungkin perlu diunduh).','info');
  // JANGAN menunggu template saat memuat UI; tidak membuat tombol membaca macet.

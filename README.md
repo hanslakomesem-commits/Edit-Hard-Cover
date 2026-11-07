@@ -123,3 +123,16 @@ Hapus garis panjang vertikal luar pada kedua versi 215mm. Hanya tanda potong pen
 - Perubahan hanya terjadi pada kedua varian Polos 215 mm, bukan seluruh template.
 
 Tetap lakukan pratinjau PDF skala 100% sebelum cetak massal.
+
+
+## V4.36 — COVER BAHASA INGGRIS (SELURUH POLOS)
+
+- **Polos V1, V2, V1.1 dan V2.1** menerima THESIS / Written by: / ENGLISH TEACHING LEARNING PROGRAM / TARBIYAH FACULTY / MADURA ISLAMIC STATE UNIVERSITY, tanpa awalan bahasa Indonesia pada label penulis, program studi, dan fakultas.
+- Pengenalan data `classifier.js`, OCR zona `ocr-zones.js`, dan pembaca PDF/Word `document-reader.js` mendukung program studi/fakultas/kampus dengan tata bahasa Inggris.
+- Model Tesseract foto/scan menjadi **ind+eng** (bilingual) dalam mode Cepat maupun Teliti; pada penggunaan pertama memerlukan akses internet untuk mengunduh data bahasa dan mungkin memerlukan memori ekstra. Tidak memakai token API.
+- Form menyediakan **Bahasa penulisan cover (Polos)**: otomatis, Bahasa Indonesia, atau English. Jika pengenalan otomatis salah, pengguna dapat memilih secara manual.
+- Teks Inggris dipertahankan sesuai dokumen, bukan diterjemahkan ke Bahasa Indonesia. Kolom fakultas dan kota tetap opsional; italic & transliterasi tetap tersedia.
+- Mode **Polos V1 dan V2 lama tetap 217 mm per sisi**; V1.1/V2.1 tetap 215 mm dengan perbaikan garis V4.35. Varian Polos sengaja tidak menyertakan logo, termasuk jika sumber foto berlogo.
+- Uji di `tests/test_v436_english_cover.mjs` mengukur **76 kombinasi ekspor simulasi** (4 varian × 19 ketebalan). Uji pembacaan PDF/Word mensimulasikan text layer dan paragraf. **Belum** diuji sebagai PDF nyata di browser atau dengan OCR foto nyata menggunakan Tesseract pada HP.
+
+Sampel sumber pada uji bahasa Inggris: judul `THE EFFECT OF PROBLEM-BASED LEARNINGS ON RECOUNT TEXT LEARNING OUTCOMES OF GRADE X STUDENTS AT SMAN 3 SAMPANG`, `THESIS`, penulis `EKA MAULIDYA PUTRI`, NIM `20381032059`, prodi `ENGLISH TEACHING LEARNING PROGRAM`, fakultas `TARBIYAH FACULTY`, universitas `MADURA ISLAMIC STATE UNIVERSITY`, tahun `2026`.

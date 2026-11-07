@@ -43,6 +43,6 @@ for(const tag of ['Fakultas warna','Fakultas UNIRA','Fakultas Dummybook','Fakult
 }
 const app=await readFile(new URL('../app.js',import.meta.url),'utf8');
 const html=await readFile(new URL('../index.html',import.meta.url),'utf8');
-assert(app.includes("!['fakultas','kota'].includes(name)"));
+assert(app.includes("!['fakultas','kota','bahasa'].includes(name)"));
 assert(html.includes('Fakultas (opsional)'));
 console.log(`PASS V4.28: ${cases} mocked Polos exports with/without faculty; institution preserved; all other modes conditionally skip faculty.`);

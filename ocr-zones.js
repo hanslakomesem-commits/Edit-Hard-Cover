@@ -16,7 +16,7 @@ export function zoneBounds(zone,width,height){
   return {x,y,width:Math.max(1,Math.min(width-x,Math.round(zone.width*width))),height:Math.max(1,Math.min(height-y,Math.round(zone.height*height)))};
 }
 const TYPE=/^(?:SKRIPSI|TESIS|THESIS|DISERTASI|DISSERTATION|MAKALAH|TUGAS\s+AKHIR|LAPORAN(?:\s+AKHIR)?)$/iu;
-const LABEL=/^(?:SKRIPSI|TESIS|THESIS|OLEH|NIM|N\.?I\.?M|FAKULTAS|PRODI|PROGRAM\s+STUDI|UNIVERSITAS|UIN|IAIN|AGUSTUS|JUNI|JULI|202\d)\b/iu;
+const LABEL=/^(?:SKRIPSI|TESIS|THESIS|OLEH|WRITTEN\s+BY|NIM|N\.?I\.?M|FAKULTAS|FACULTY|PRODI|PROGRAM\s+STUDI|UNIVERSITAS|UNIVERSITY|UIN|IAIN|AGUSTUS|JUNI|JULI|202\d)\b/iu;
 const AMBIGUOUS = /[|{}<>]/u;
 const normalize=s=>String(s||'').replace(/\s+/gu,' ').trim();
 function goodTitle(text){
@@ -52,7 +52,7 @@ export function nameFromZone(text){
   const lines=normalizedLines(text);
   for (let i=0;i<lines.length;i++){
     const line=lines[i];
-    const match=line.match(/^OLEH\s*[:.]?\s*(.*)$/iu);
+    const match=line.match(/^(?:OLEH|WRITTEN\s+BY|PREPARED\s+BY|SUBMITTED\s+BY)\s*[:.]?\s*(.*)$/iu);
     if (!match)continue;
     let value=(match[1]||'').trim();
     if(!value)value=lines[i+1]||'';
@@ -64,7 +64,7 @@ export function nameFromZone(text){
 export function typeFromZone(text){
   return normalizedLines(text).find(line=>TYPE.test(line.toLocaleUpperCase('id-ID')))||'';
 }
-import {campusIdentity,institutionLooksIncomplete} from './classifier.js';
+import {campusIdentity,institutionLooksIncomplete,coverLanguage} from './classifier.js';
 export function footerFromZone(text){
   const lines=normalizedLines(text);const result={};
   const identified=campusIdentity(lines);if(identified.universitas)result.universitas=identified.universitas;if(identified.kota)result.kota=identified.kota;
@@ -73,7 +73,6 @@ export function footerFromZone(text){
     for(const [key,regex] of [
       ['prodi',/^(?:PROGRAM\s+STUDI|PRODI|JURUSAN)\s*[:.]?\s*(.*)$/iu],
       ['fakultas',/^FAKULTAS\s*[:.]?\s*(.*)$/iu],
-      
     ]){
       const m=v.match(regex);if(!m)continue;
       let val=m[1]||(lines[i+1]||'');
@@ -81,7 +80,10 @@ export function footerFromZone(text){
       if(val && !LABEL.test(val))result[key]=val;
 
     }
-    const date=v.match(/\b(?:JANUARI|FEBRUARI|MARET|APRIL|MEI|JUNI|JULI|AGUSTUS|SEPTEMBER|OKTOBER|NOVEMBER|DESEMBER)\s+\d{4}\b/iu);
+    if(!result.prodi && (/^(?:DEPARTMENT\s+OF|STUDY\s+PROGRAM\s+(?:OF|IN)|PROGRAM\s+OF)\s+\S/iu.test(v)||
+      /\b(?:STUDY\s+PROGRAM|TEACHING\s+LEARNING\s+PROGRAM|EDUCATION\s+PROGRAM|LANGUAGE\s+PROGRAM|DEPARTMENT)$/iu.test(v)))result.prodi=v;
+    if(!result.fakultas && (/^FACULTY\s+OF\s+\S/iu.test(v)||/\bFACULTY$/iu.test(v)))result.fakultas=v;
+    const date=v.match(/\b(?:JANUARI|FEBRUARI|MARET|APRIL|MEI|JUNI|JULI|AGUSTUS|SEPTEMBER|OKTOBER|NOVEMBER|DESEMBER|JANUARY|FEBRUARY|MARCH|MAY|JUNE|JULY|AUGUST|SEPTEMBER|OCTOBER|NOVEMBER|DECEMBER)\s+\d{4}\b/iu);
     if(date)result.bulan_tahun=date[0];
     else if(!result.bulan_tahun && /^20\d{2}$/u.test(v))result.bulan_tahun=v;
   }
@@ -124,6 +126,7 @@ export function mergeZones(base,zoneText={},confidences={}){
   if(inconsistent.length)result.warnings.push(`Perbedaan pembacaan halaman vs zona (${inconsistent.join(', ')}). Periksa foto asli; aplikasi tidak menebak versi mana yang benar.`);
   const confidence=Number(confidences.full);
   if(Number.isFinite(confidence) && confidence>=0 && confidence<60)result.warnings.push(`OCR halaman memiliki tingkat keyakinan rendah (${Math.round(confidence)}%). Periksa setiap huruf.`);
+  result.bahasa=coverLanguage({...result,bahasa:'auto'});
   result.title_segments=result.judul?[{text:result.judul,italic:false}]:[];
   // Jangan melakukan normalisasi NIM berdasar jumlah digit kampus karena bisa mengubah data.
   return result;

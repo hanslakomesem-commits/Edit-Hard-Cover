@@ -1,5 +1,5 @@
 /**
- * ZAIN.NET PDF engine, static-browser GitHub Pages edition V4.35.
+ * ZAIN.NET PDF engine, static-browser GitHub Pages edition V4.36.
  * Each page begins with the already cleaned ORIGINAL PDF vector master.
  * No template lines, crop marks, or cover geometry are re-created here.
  * Important: Tinos is not the commercial Times New Roman face used in the
@@ -12,7 +12,7 @@ import {getDummyArialFontBytes} from './font-arial-compatible.js';
 import {DUMMY_SIZES,DUMMY_PAGE,dummySpineGeometry,chooseDummyBackText} from './dummybook-layout.js';
 import {IPS_SIZES,IPS_REFERENCE,ipsSpineGeometry} from './soft-ips-layout.js';
 import {CD_PAGE_MM,CD_PAGE_PT,CD_LAYOUT,assertCDData,computeCDTitle} from './cover-cd-layout.js';
-import {canonicalUniversity} from './classifier.js';
+import {canonicalUniversity,plainCoverIdentity} from './classifier.js';
 import {PLAIN_V1,PLAIN_V2,PLAIN_V11,PLAIN_V22,PLAIN_VARIANTS,PLAIN_215_VARIANTS,plainFrontLayout,plainFrontFits} from './plain-variant-layout.js';
 const {PDFDocument, StandardFonts, degrees, rgb}=globalThis.PDFLib||{};
 const ALL=Array.from({length:19},(_,i)=>i+10);
@@ -354,6 +354,7 @@ async function generatePlainPDF(data,mm,variant=PLAIN_V1){
  const fonts=await getFonts(doc,warnings);
  for(const c of [...String(data.judul),...segs.map(s=>s.text)].join(''))if(LATIN_CHECK.test(c))fail('Aksara Arab belum mendukung shaping RTL.');
  const placement=plainFrontLayout(variant,conf);
+ const identity=plainCoverIdentity(data);
  // V4.33: ONLY the additional 215mm Polos variants are re-centered.
  // Use the ACTUAL printed fold-to-trim interval, not the old 217mm
  // template's text anchor nor a relative shift calculated from old trim.
@@ -369,13 +370,13 @@ async function generatePlainPDF(data,mm,variant=PLAIN_V1){
  const front=frontTitle(fonts,segs,conf,data,warnings);
  for(let i=0;i<front.lines.length;i++)renderLine(page,fonts,front.lines[i],front.size,placement.frontCX,placement.titleY+i*placement.titlePitch);
  single(page,fonts,upper(data.jenis_dokumen),17.8998,placement.typeCX,placement.typeY,240,'Jenis dokumen',warnings,13);
- single(page,fonts,'Oleh:',12,placement.frontCX,placement.labelY,180,'Label Oleh',warnings,12);
+ single(page,fonts,identity.authorLabel,12,placement.frontCX,placement.labelY,180,'Label penulis',warnings,12);
  single(page,fonts,upper(data.nama),12,placement.frontCX,placement.nameY,400,'Nama depan',warnings,9);
  single(page,fonts,`${conf.front_nim_prefix} ${norm(data.nim)}`,12,placement.frontCX,placement.nimY,390,'NIM',warnings,9);
  const hasCity=!!norm(data.kota),hasFaculty=!!norm(data.fakultas),lineGap=13.29;
  const shift=hasCity?lineGap:0;
- single(page,fonts,`PROGRAM STUDI ${upper(data.prodi)}`,12,placement.frontCX,(hasFaculty?placement.prodiY:placement.fakultasY)-shift,395,'Prodi',warnings,9);
- if(hasFaculty)single(page,fonts,`FAKULTAS ${upper(data.fakultas)}`,12,placement.frontCX,placement.fakultasY-shift,395,'Fakultas',warnings,9);
+ single(page,fonts,identity.prodiLine,12,placement.frontCX,(hasFaculty?placement.prodiY:placement.fakultasY)-shift,395,'Prodi',warnings,9);
+ if(hasFaculty)single(page,fonts,identity.fakultasLine,12,placement.frontCX,placement.fakultasY-shift,395,'Fakultas',warnings,9);
  single(page,fonts,upper(canonicalUniversity(data.universitas)),12,placement.frontCX,placement.universitasY-shift,395,'Universitas',warnings,9);
  if(hasCity)single(page,fonts,upper(data.kota),12,placement.frontCX,placement.universitasY,395,'Kota kampus',warnings,9);
  single(page,fonts,upper(data.bulan_tahun),12,placement.frontCX,placement.tahunY,395,'Tanggal',warnings,9.5);

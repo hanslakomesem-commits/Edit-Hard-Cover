@@ -59,13 +59,13 @@ async function localOCR(blob, tag='Foto', options={}) {
  const stage=message=>{try{options.onProgress?.(message);}catch{}};
  const detail=!!options.detail;
  stage('OCR penuh: menyiapkan teks seluruh halaman');
- const full=await recognizeLocalResult(blob,{lang:'ind',psm:'3',maxSide:detail?2400:2100});
+ const full=await recognizeLocalResult(blob,{lang:'ind+eng',psm:'3',maxSide:detail?2400:2100});
  const lines=normalizedLines(full.text);
  const base=normalizedResult(lines,[`OCR ${tag} diproses lokal tanpa token. Selalu cocokkan setiap karakter dengan sumber.`, 'Foto/scan: OCR tidak membuktikan kata yang dicetak miring. Periksa Italic pada judul di editor sebelum ekspor.']);
  const confidence=Number.isFinite(full.confidence)?Math.round(full.confidence):null;
  if(confidence!==null && confidence>=0 && confidence<60)base.warnings.push(`Keyakinan OCR penuh ${confidence}% (rendah). Cek judul, nama, dan NIM.`);
  if(!lines.length)base.warnings.push('OCR keseluruhan belum menemukan teks; mode Teliti mencoba membaca zona.');
- const essentialMissing=!base.judul||!base.nama||!base.nim;
+ const essentialMissing=!base.judul||!base.nama||!base.nim||!base.jenis_dokumen||!base.prodi;
  // Mode Cepat: hanya satu percobaan jika lengkap, pembacaan identitas tambahan jika belum lengkap.
  // Mode Teliti: judul, identitas, bagian bawah, dan teks logo sebagai pembanding.
  const needsCampus=(!base.universitas||institutionLooksIncomplete(base.universitas)||!base.kota);
@@ -79,7 +79,7 @@ async function localOCR(blob, tag='Foto', options={}) {
  for(const key of zonesNeeded){
    stage(`OCR zona ${key} (${zonesNeeded.indexOf(key)+1}/${zonesNeeded.length})`);
    try{
-     const result=await recognizeLocalResult(blobs[key],{lang:'ind',isPrepared:true,psm:'6'});
+     const result=await recognizeLocalResult(blobs[key],{lang:'ind+eng',isPrepared:true,psm:'6'});
      zoneText[key]=result.text;
    }catch(error){
      base.warnings.push(`Zona ${key}: ${error.message}. Koreksi lewat editor bila perlu.`);
@@ -110,7 +110,7 @@ export async function readPDF(file,options={}){
   const extracted=pdfLines(content.items,content.styles);
   const {lines}=extracted;
   const found=lines.join(' ').replace(/\s/g,'');
-  if(found.length>=35 && (lines.some(line => /\b(SKRIPSI|TESIS|THESIS|DISERTASI|NIM|FAKULTAS|UNIVERSITAS)\b/iu.test(line)) || found.length>90)){stage('Teks PDF halaman 1 berhasil dibaca tanpa OCR');return normalizedResult(lines,[`Hanya halaman 1 dari ${doc.numPages} halaman PDF yang dibaca. Periksa urutan baris.`, 'PDF: Italic hanya dipulihkan jika nama font pada text layer menyebut Italic/Oblique; font dengan nama internal anonim perlu pemeriksaan manual.'],extracted.rich);}
+  if(found.length>=35 && (lines.some(line => /\b(SKRIPSI|TESIS|THESIS|DISERTASI|DISSERTATION|NIM|FAKULTAS|FACULTY|UNIVERSITAS|UNIVERSITY|WRITTEN)\b/iu.test(line)) || found.length>90)){stage('Teks PDF halaman 1 berhasil dibaca tanpa OCR');return normalizedResult(lines,[`Hanya halaman 1 dari ${doc.numPages} halaman PDF yang dibaca. Periksa urutan baris.`, 'PDF: Italic hanya dipulihkan jika nama font pada text layer menyebut Italic/Oblique; font dengan nama internal anonim perlu pemeriksaan manual.'],extracted.rich);}
   stage('Halaman 1 berupa scan/gambar; menjalankan OCR lokal');
   const base=first.getViewport({scale:1});
   const scale=Math.min(1.55,1800/Math.max(base.width,base.height),Math.sqrt(2500000/(base.width*base.height)));
@@ -213,8 +213,8 @@ export async function readWord(file,options={}) {
   if (value) {
    if (lines.length>=2 && stopTitle.test(value)) {approx=true;break;}
    lines.push(value);pars.push(p);
-   if (/\b(?:UNIVERSITAS|INSTITUT|UIN|IAIN|STAIN)\b/iu.test(value)) seenUniversity=true;
-   if (seenUniversity && lines.length>=5 && /^(?:(?:JANUARI|FEBRUARI|MARET|APRIL|MEI|JUNI|JULI|AGUSTUS|SEPTEMBER|OKTOBER|NOVEMBER|DESEMBER)\s+)?\d{4}$/iu.test(value)) {approx=true;break;}
+   if (/\b(?:UNIVERSITAS|INSTITUT|UIN|IAIN|STAIN|UNIVERSITY|COLLEGE|INSTITUTE)\b/iu.test(value)) seenUniversity=true;
+   if (seenUniversity && lines.length>=5 && /^(?:(?:JANUARI|FEBRUARI|MARET|APRIL|MEI|JUNI|JULI|AGUSTUS|SEPTEMBER|OKTOBER|NOVEMBER|DESEMBER|JANUARY|FEBRUARY|MARCH|MAY|JUNE|JULY|AUGUST|SEPTEMBER|OCTOBER|NOVEMBER|DECEMBER)\s+)?\d{4}$/iu.test(value)) {approx=true;break;}
   }
   if (p.pageBreak) {explicit=true;break;}
   if (lines.length>=48) {approx=true;break;}

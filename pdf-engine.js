@@ -1,5 +1,5 @@
 /**
- * ZAIN.NET PDF engine, static-browser GitHub Pages edition V4.33.
+ * ZAIN.NET PDF engine, static-browser GitHub Pages edition V4.35.
  * Each page begins with the already cleaned ORIGINAL PDF vector master.
  * No template lines, crop marks, or cover geometry are re-created here.
  * Important: Tinos is not the commercial Times New Roman face used in the
@@ -433,26 +433,74 @@ export function plain215TrimGeometry(mm,conf){
  return {originalLeft,originalRight,newLeft,newRight,foldLeft,foldRight,
   leftPanelMM:(foldLeft-newLeft)/mmPt(1),rightPanelMM:(newRight-foldRight)/mmPt(1)};
 }
+/** Original small center marks on the LEFT/RIGHT panel come from the
+ * Serli master at x=366.62 and 997.77 source pt, independently of spine mm.
+ * They are NOT the spine folds (conf.left/right), which must remain visible.
+ * All x coordinates below are scaled with the 483 -> 480 mm master conversion.
+ */
+export function plain215MarkCleanupGeometry(mm,conf){
+ const g=plain215TrimGeometry(mm,conf),scale=480/483;
+ return {...g,centerBack:366.62*scale,centerFront:997.77*scale,
+   topTickEndFromTop:47.5,bottomTickStartFromTop:887.0,
+   originalRightHorizontalLength:37.3*scale,originalLeftHorizontalLength:30.4*scale};
+}
 async function adjustPlain215Trim(bytes,mm,conf){
  const pdf=await PDFDocument.load(bytes);
- const page=pdf.getPage(0),g=plain215TrimGeometry(mm,conf);
- // Remove ONLY original outer trim guide strokes. White paper, no logos.
- // The guide marks run from source top 15.33pt to bottom 920.94pt.
- const ink=rgb(0.1358,0.12105,0.1243);
- const yBottom=page.getHeight()-920.94, yTop=page.getHeight()-15.33;
+ const page=pdf.getPage(0),g=plain215MarkCleanupGeometry(mm,conf);
+ const paper=rgb(1,1,1),ink=rgb(0.1358,0.12105,0.1243);
+ const pageHeight=page.getHeight(),pageWidth=page.getWidth();
+ const yBottom=pageHeight-920.94,yTop=pageHeight-15.33;
+ const cover=(x,y,width,height)=>page.drawRectangle({x,y,width,height,color:paper});
+ // Clear the OLD two outer ticks (10-28mm). The new 215mm ticks are added
+ // at the correct fold-to-trim coordinates. No full-height strokes are added.
  for(const x of [g.originalLeft,g.originalRight]){
-  page.drawRectangle({x:x-1.7,y:yBottom-1.0,width:3.4,height:yTop-yBottom+2,color:rgb(1,1,1)});
+   cover(x-2.3,yBottom-2,4.6,yTop-yBottom+4);
  }
- // V4.34: Polos V1.1/V2.1 must show only short top/bottom trim ticks,
- // exactly like the original Polos templates: NEVER draw a full-height line.
- // The 215mm trim coordinates and the centered front text stay unchanged.
+ // Remove exactly four unwanted center-panel marks: 2 top + 2 bottom.
+ // NEVER erase g.foldLeft/g.foldRight (genuine folding marks).
+ // Original source center marks are around 31-33pt tall and 1.5pt wide.
+ for(const x of [g.centerBack,g.centerFront]){
+   cover(x-2.5,yTop-35,5,38);
+   cover(x-2.5,yBottom-3,5,54);
+ }
+ // Existing horizontal edge strokes point to ORIGINAL 217mm cut ticks.
+ // Remove the old short horizontal strokes at BOTH edges before redrawing
+ // aligned to the NEW 215mm cut coordinates. Upper strokes at source y~46pt;
+ // lower strokes at source y~888pt. Keep all print text and folds intact.
+ for(const [x0,x1] of [
+    [g.originalLeft-g.originalLeftHorizontalLength-2,g.originalLeft+3],
+    [g.originalRight-3,Math.min(pageWidth,g.originalRight+g.originalRightHorizontalLength+3)]
+ ]){
+   const left=Math.max(0,x0),right=Math.min(pageWidth,x1);
+   if(right>left){
+     cover(left,yTop-35,right-left,7.5);
+     cover(left,yBottom+27.5,right-left,8);
+   }
+ }
+ // Four short vertical cut ticks at x=215mm fold-to-trim distance.
+ // Source Serli has an offset in Y between vertical and horizontal crop lines;
+ // preserve that design while matching their X coordinates precisely.
  const tickLengthPt=18;
  for(const x of [g.newLeft,g.newRight]){
-  page.drawLine({start:{x,y:yTop},end:{x,y:yTop-tickLengthPt},thickness:.55,color:ink});
-  page.drawLine({start:{x,y:yBottom},end:{x,y:yBottom+tickLengthPt},thickness:.55,color:ink});
+   page.drawLine({start:{x,y:yTop},end:{x,y:yTop-tickLengthPt},thickness:.55,color:ink});
+   page.drawLine({start:{x,y:yBottom},end:{x,y:yBottom+tickLengthPt},thickness:.55,color:ink});
+ }
+ // Short edge horizontal ticks meet the SAME X as the new vertical marks,
+ // without the 1mm leftover from the old 217mm reference.
+ const upperHorizontalY=yTop-31.2,lowerHorizontalY=yBottom+32.4;
+ const segments=[
+   [Math.max(0,g.newLeft-g.originalLeftHorizontalLength),g.newLeft],
+   [g.newRight,Math.min(pageWidth,g.newRight+g.originalRightHorizontalLength)]
+ ];
+ for(const [left,right] of segments){
+   if(right>left){
+     page.drawLine({start:{x:left,y:upperHorizontalY},end:{x:right,y:upperHorizontalY},thickness:.55,color:ink});
+     page.drawLine({start:{x:left,y:lowerHorizontalY},end:{x:right,y:lowerHorizontalY},thickness:.55,color:ink});
+   }
  }
  return {bytes:new Uint8Array(await pdf.save({useObjectStreams:true})),geometry:g};
 }
+
 const COLOR_TYPES=['merah','maroon','custom'];
 export const coverTypes=[...PLAIN_VARIANTS,...COLOR_TYPES,'unira','dummybook','softips','covercd'];
 export const printSizes={polos:PLAIN_PRINT_MM,poloslogoatas:PLAIN_PRINT_MM,polosv11:PLAIN_PRINT_MM,polosv22:PLAIN_PRINT_MM,merah:COLOR_PRINT_MM,maroon:COLOR_PRINT_MM,custom:COLOR_PRINT_MM,unira:UNIRA_PRINT_MM,dummybook:DUMMY_PRINT_MM,softips:IPS_PRINT_MM,covercd:CD_PRINT_MM};

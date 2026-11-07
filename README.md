@@ -113,3 +113,13 @@ Posisi `SKRIPSI` (jenis dokumen) dan nama pada punggung warna kini mengikuti leb
 ## V4.34 — Tanda potong pendek Polos V1.1/V2.1
 
 Hapus garis panjang vertikal luar pada kedua versi 215mm. Hanya tanda potong pendek (18 pt) di bagian atas dan bawah yang dicetak; koordinat garis potong tetap 215mm dari lipatan, isi dan punggung tidak berubah. Polos V1/V2 dan tipe lainnya tidak berubah.
+
+## V4.35 — Hilangkan tanda tengah atas/bawah, khusus Polos V1.1 dan V2.1
+
+- Menghapus empat garis/tanda potong tambahan pada tengah sampul belakang dan depan (masing-masing atas dan bawah).
+- Tidak menghapus tanda garis lipatan punggung; tetap aman untuk panduan penjilidan.
+- Menyelaraskan tanda horizontal luar kiri/kanan ke batas potong baru 215 mm, menggantikan garis horizontal lama.
+- Mempertahankan kanvas 480 × 330 mm, pusat teks 107,5 mm, punggung 10–28 mm, dan versi Polos V1/V2 (217 mm).
+- Perubahan hanya terjadi pada kedua varian Polos 215 mm, bukan seluruh template.
+
+Tetap lakukan pratinjau PDF skala 100% sebelum cetak massal.

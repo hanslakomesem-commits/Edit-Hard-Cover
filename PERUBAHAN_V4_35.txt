@@ -1,0 +1,1 @@
+V4.35: Hapus tanda tengah atas/bawah pada cover depan dan belakang khusus Polos V1.1/V2.1; posisi horizontal tanda potong tepi disesuaikan 215mm. V1/V2 lama tidak diubah.

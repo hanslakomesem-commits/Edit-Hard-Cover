@@ -60,3 +60,7 @@
 
 /* V4.36: bahasa cover select matches editable form fields on Android and PC. */
 .field select{width:100%;border:1px solid #d5e1ee;border-radius:9px;padding:11px 12px;font:600 13px/1.5 system-ui,Arial;color:var(--text);background:#fff;outline:none;min-width:0}.field select:focus{border-color:#6daee8;box-shadow:0 0 0 3px #e6f3ff}
+
+/* V4.37: name underline option (not a required field). */
+.check-row{display:flex;align-items:center;gap:10px;font-size:14px;font-weight:600;min-height:45px}
+.check-row input[type="checkbox"]{width:19px;height:19px;flex:none;accent-color:#0f467e}

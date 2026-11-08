@@ -1,0 +1,13 @@
+import fs from 'node:fs';
+import assert from 'node:assert/strict';
+const source=fs.readFileSync(new URL('../pdf-engine.js',import.meta.url),'utf8');
+const start=source.indexOf('async function adjustPlain215Trim(');
+const end=source.indexOf('\nconst COLOR_TYPES=',start);
+assert(start>=0 && end>start);
+const fn=source.slice(start,end);
+assert.match(fn,/const tickLengthPt=18;/);
+assert.match(fn,/end:\{x,y:yTop-tickLengthPt\}/);
+assert.match(fn,/end:\{x,y:yBottom\+tickLengthPt\}/);
+assert(!fn.includes('end:{x,y:yTop},thickness'), 'old full-height stroke must be gone');
+assert.match(source,/if\(PLAIN_215_VARIANTS.includes\(c.type\)\)/);
+console.log('PASS V4.34: only short trim ticks for 215mm additional variants');

@@ -123,7 +123,7 @@ export async function recognizeLocalResult(blob,{lang='ind+eng',isPrepared=false
     // Layout seluruh cover dan zona teks memiliki segmentasi halaman berbeda.
     if(typeof reader.setParameters==='function')await deadline(reader.setParameters({tessedit_pageseg_mode:String(psm),preserve_interword_spaces:'1'}),6000,'Mengatur mode OCR');
     const result=await deadline(reader.recognize(prepared),42000,'Pengenalan tulisan');
-    return {text:String(result?.data?.text||''),confidence:Number(result?.data?.confidence),data:result?.data||{}};
+    return {text:String(result?.data?.text||''),confidence:Number(result?.data?.confidence),data:result?.data||{},preparedImage:prepared};
   }catch(error){await resetOCR();throw Error(`OCR gagal: ${error.message}`);}
 }
 export async function recognizeLocal(blob,{detail=false,isPrepared=false}={}){

@@ -1,0 +1,23 @@
+ZAIN.NET COVER V4.37 — GARIS BAWAH NAMA MAHASISWA
+
+1. Semua template: nama depan bisa diberi garis bawah sesuai dokumen asli.
+   Termasuk Polos V1, V2, V1.1, V2.1, Merah, Maroon, Custom, UNIRA,
+   Dummybook, Soft Cover IPS, dan Cover CD.
+2. DOCX: otomatis membaca <w:u> pada run maupun style nama (juga menghormati none).
+3. Foto/PDF scan: cek bukti garis horizontal visual dekat kotak OCR nama;
+   hanya dicentang otomatis jika bukti kuat. Foto buram harus diperiksa manual.
+4. PDF teks: coba cek area nama pada render visual halaman pertama. Jika tidak
+   dapat diidentifikasi, pengguna memilih manual.
+5. Form pesanan: kotak "Garis bawah nama" (boleh diedit, tidak wajib).
+6. Ukuran garis bawah tepat selebar nama yang tercetak pada ukuran font aktual;
+   tidak mengikuti lebar kotak kosong. Warna garis sama dengan warna tulisan.
+7. Punggung tidak digarisbawahi karena contoh sumber menunjukkan garis hanya
+   pada nama di cover depan. Tanda potong, garis lipatan, ukuran, dan teks lain
+   tidak diubah.
+8. V4.36 bahasa Inggris, V4.35 tanda potong 215 mm, serta perbaikan lainnya
+   dipertahankan.
+
+BATAS UJI:
+- Pengujian generator dilakukan dengan runtime PDF simulasi, bukan cetak fisik.
+- Algoritme OCR garis bawah pada foto/scan adalah heuristik konservatif.
+- Uji nyata browser/print wajib sebelum produksi.

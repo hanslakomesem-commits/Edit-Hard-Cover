@@ -1,5 +1,5 @@
 /**
- * ZAIN.NET PDF engine, static-browser GitHub Pages edition V4.36.
+ * ZAIN.NET PDF engine, static-browser GitHub Pages edition V4.37.
  * Each page begins with the already cleaned ORIGINAL PDF vector master.
  * No template lines, crop marks, or cover geometry are re-created here.
  * Important: Tinos is not the commercial Times New Roman face used in the
@@ -313,14 +313,19 @@ export function chooseSpine(fonts,segs,mm,warnings,layout=LAYOUT?.[mm]){
  }
  fail(`Judul tidak muat dalam zona aman punggung POLOS ${mm} mm (minimal 6 pt, maksimal 3 baris). Periksa judul sebelum dicetak.`);
 }
-function single(page,fonts,text,size,cx,y,maxWidth,label,warnings,minFont=size,rotated=false,ink=BLACK){
+export function nameUnderlineEnabled(data){return data?.nama_garis_bawah===true || data?.nama_garis_bawah==='true';}
+function single(page,fonts,text,size,cx,y,maxWidth,label,warnings,minFont=size,rotated=false,ink=BLACK,underline=false){
  text=String(text).trim();
  let final=size;const natural=measure(fonts,[{text,italic:false}],size);
  if(natural>maxWidth){final=Math.floor((size*maxWidth/natural*.994)*100)/100;
    if(final<minFont)fail(`${label} terlalu panjang untuk area yang tersedia. Diperlukan ${final} pt; batas aman ${minFont} pt.`);
    warnings.push(`${label} disesuaikan dari ${size} menjadi ${final} pt.`);
  }
- renderLine(page,fonts,[{text,italic:false}],final,cx,y,rotated,ink);
+ const width=renderLine(page,fonts,[{text,italic:false}],final,cx,y,rotated,ink);
+ if(underline&&!rotated){
+  const uy=page.getHeight()-y-Math.max(.95,final*.135);
+  page.drawLine({start:{x:cx-width/2,y:uy},end:{x:cx+width/2,y:uy},thickness:Math.max(.5,final*.052),color:ink});
+ }
 }
 
 /** V4.27: Font TAHUN/BULAN-TAHUN untuk punggung Polos V1.
@@ -371,7 +376,7 @@ async function generatePlainPDF(data,mm,variant=PLAIN_V1){
  for(let i=0;i<front.lines.length;i++)renderLine(page,fonts,front.lines[i],front.size,placement.frontCX,placement.titleY+i*placement.titlePitch);
  single(page,fonts,upper(data.jenis_dokumen),17.8998,placement.typeCX,placement.typeY,240,'Jenis dokumen',warnings,13);
  single(page,fonts,identity.authorLabel,12,placement.frontCX,placement.labelY,180,'Label penulis',warnings,12);
- single(page,fonts,upper(data.nama),12,placement.frontCX,placement.nameY,400,'Nama depan',warnings,9);
+ single(page,fonts,upper(data.nama),12,placement.frontCX,placement.nameY,400,'Nama depan',warnings,9,false,BLACK,nameUnderlineEnabled(data));
  single(page,fonts,`${conf.front_nim_prefix} ${norm(data.nim)}`,12,placement.frontCX,placement.nimY,390,'NIM',warnings,9);
  const hasCity=!!norm(data.kota),hasFaculty=!!norm(data.fakultas),lineGap=13.29;
  const shift=hasCity?lineGap:0;
@@ -698,7 +703,7 @@ async function generateColorPDF(data,mm,mode,customColor){
  for(let i=0;i<front.lines.length;i++)renderLine(page,fonts,front.lines[i],front.size,1000.7,120.2+i*13.29,false,YELLOW);
  single(page,fonts,upper(data.jenis_dokumen),17.9,1000.7,248.4,230,'Jenis dokumen warna',warnings,14,false,YELLOW);
  single(page,fonts,'Oleh',12,1000.7,614.8,165,'Label Oleh',warnings,12,false,YELLOW);
- single(page,fonts,norm(data.nama),12,1000.7,628.1,330,'Nama warna',warnings,8,false,YELLOW);
+ single(page,fonts,norm(data.nama),12,1000.7,628.1,330,'Nama warna',warnings,8,false,YELLOW,nameUnderlineEnabled(data));
  single(page,fonts,`NIM. ${norm(data.nim)}`,12,1000.7,641.4,330,'NIM warna',warnings,9,false,YELLOW);
  const hasCity=!!norm(data.kota),hasFaculty=!!norm(data.fakultas),cityShift=hasCity?13.3:0;
  single(page,fonts,`PROGRAM STUDI ${upper(data.prodi)}`,12,1000.7,(hasFaculty?767.1:780.4)-cityShift,395,'Prodi warna',warnings,9,false,YELLOW);
@@ -812,7 +817,7 @@ async function generateUniraPDF(data,mm){
  for(let i=0;i<front.lines.length;i++)renderLine(page,fonts,front.lines[i],front.size,cx,134.4+13.29*i,false,BLACK);
  single(page,fonts,upper(data.jenis_dokumen),15.9,cx,265,240,'Jenis dokumen UNIRA',warnings,11,false,BLACK);
  single(page,fonts,'Oleh :',12,cx,570,170,'Label Oleh UNIRA',warnings,12,false,BLACK);
- single(page,fonts,upper(data.nama),12,cx,583.3,330,'Nama UNIRA',warnings,8,false,BLACK);
+ single(page,fonts,upper(data.nama),12,cx,583.3,330,'Nama UNIRA',warnings,8,false,BLACK,nameUnderlineEnabled(data));
  single(page,fonts,`NPM. ${norm(data.nim)}`,12,cx,596.6,330,'NPM UNIRA',warnings,8,false,BLACK);
  single(page,fonts,`PRODI ${upper(data.prodi)}`,12,cx,norm(data.fakultas)?781.3:794.6,390,'Prodi UNIRA',warnings,9,false,BLACK);
  if(norm(data.fakultas))single(page,fonts,`FAKULTAS ${upper(data.fakultas)}`,12,cx,794.6,390,'Fakultas UNIRA',warnings,9,false,BLACK);
@@ -919,7 +924,7 @@ async function generateDummyPDF(data,mm){
  const pitch=Math.min(15.7,(DUMMY_PAGE.titleBottomPt-DUMMY_PAGE.titleTopPt)/Math.max(1,front.lines.length));
  for(let i=0;i<front.lines.length;i++)renderLine(page,fonts,front.lines[i],front.size,cx,118+i*pitch,false,BLACK);
  single(page,fonts,'Oleh:',16,cx,579,300,'Oleh Dummybook',warnings,13,false,BLACK);
- single(page,fonts,upper(data.nama),16,cx,595,370,'Nama Dummybook',warnings,9,false,BLACK);
+ single(page,fonts,upper(data.nama),16,cx,595,370,'Nama Dummybook',warnings,9,false,BLACK,nameUnderlineEnabled(data));
  single(page,fonts,`NIM. ${norm(data.nim)}`,14,cx,611,340,'NIM Dummybook',warnings,9,false,BLACK);
  const hasCity=!!norm(data.kota),hasFaculty=!!norm(data.fakultas),cityShift=hasCity?15.6:0;
  single(page,fonts,`PROGRAM STUDI ${upper(data.prodi)}`,14,cx,(hasFaculty?707:722.6)-cityShift,420,'Prodi Dummybook',warnings,9,false,BLACK);
@@ -1042,7 +1047,7 @@ async function generateSoftIPSPDF(data,mm){
  for(let i=0;i<front.lines.length;i++)renderLine(page,fonts,front.lines[i],front.size,cx,firstTitleTop+i*titlePitch,false,BLACK);
  single(page,fonts,upper(data.jenis_dokumen),12.4,cx,153,250,'Jenis dokumen depan IPS',warnings,9,false,BLACK);
  single(page,fonts,'Oleh:',8.35,cx,234.8,160,'Label Oleh IPS',warnings,8,false,BLACK);
- single(page,fonts,norm(data.nama),8.35,cx,243.8,270,'Nama depan IPS',warnings,7,false,BLACK);
+ single(page,fonts,norm(data.nama),8.35,cx,243.8,270,'Nama depan IPS',warnings,7,false,BLACK,nameUnderlineEnabled(data));
  single(page,fonts,`NIM. ${norm(data.nim)}`,8.35,cx,252.9,270,'NIM depan IPS',warnings,7,false,BLACK);
  const hasCity=!!norm(data.kota),hasFaculty=!!norm(data.fakultas),cityShift=hasCity?9.1:0;
  single(page,fonts,`PROGRAM STUDI ${upper(data.prodi)}`,8.35,cx,(hasFaculty?512.1:521.2)-cityShift,350,'Prodi IPS',warnings,6.5,false,BLACK);
@@ -1080,15 +1085,17 @@ async function generateCoverCDPDF(data){
  const logo=await doc.embedPng(logoBytes);
  const l=CD_LAYOUT;
  const bold=fonts.bold[0].font;
- function line(txt,size,top,maxWidth,minimum=7){
+ function line(txt,size,top,maxWidth,minimum=7,underline=false){
   const value=upper(txt);if(!value)return;
   let adjusted=size;
   while(adjusted>=minimum && bold.widthOfTextAtSize(value,adjusted)>maxWidth)adjusted-=.25;
   if(adjusted<minimum)fail('Teks Cover CD terlalu panjang: '+value.slice(0,75));
-  page.drawText(value,{x:l.centerX-bold.widthOfTextAtSize(value,adjusted)/2,y:page.getHeight()-top-adjusted*.84,size:adjusted,font:bold,color:BLACK});
+  const width=bold.widthOfTextAtSize(value,adjusted),baseline=page.getHeight()-top-adjusted*.84;
+  page.drawText(value,{x:l.centerX-width/2,y:baseline,size:adjusted,font:bold,color:BLACK});
+  if(underline)page.drawLine({start:{x:l.centerX-width/2,y:baseline-Math.max(.95,adjusted*.135)},end:{x:l.centerX+width/2,y:baseline-Math.max(.95,adjusted*.135)},thickness:Math.max(.5,adjusted*.052),color:BLACK});
   if(adjusted<size)warnings.push('Cover CD: teks '+value.slice(0,25)+' disesuaikan menjadi '+adjusted+' pt.');
  }
- line(data.nama,9,l.nameTop,l.maxTextWidth,7);
+ line(data.nama,9,l.nameTop,l.maxTextWidth,7,nameUnderlineEnabled(data));
  line('NIM: '+data.nim,9,l.nimTop,l.maxTextWidth,7);
  if(norm(data.prodi))line(data.prodi,9,l.studyTop,l.maxTextWidth,7);
  if(norm(data.bulan_tahun))line(data.bulan_tahun,9,l.dateTop,l.maxTextWidth,7);

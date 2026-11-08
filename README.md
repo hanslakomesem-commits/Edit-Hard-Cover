@@ -136,3 +136,18 @@ Tetap lakukan pratinjau PDF skala 100% sebelum cetak massal.
 - Uji di `tests/test_v436_english_cover.mjs` mengukur **76 kombinasi ekspor simulasi** (4 varian × 19 ketebalan). Uji pembacaan PDF/Word mensimulasikan text layer dan paragraf. **Belum** diuji sebagai PDF nyata di browser atau dengan OCR foto nyata menggunakan Tesseract pada HP.
 
 Sampel sumber pada uji bahasa Inggris: judul `THE EFFECT OF PROBLEM-BASED LEARNINGS ON RECOUNT TEXT LEARNING OUTCOMES OF GRADE X STUDENTS AT SMAN 3 SAMPANG`, `THESIS`, penulis `EKA MAULIDYA PUTRI`, NIM `20381032059`, prodi `ENGLISH TEACHING LEARNING PROGRAM`, fakultas `TARBIYAH FACULTY`, universitas `MADURA ISLAMIC STATE UNIVERSITY`, tahun `2026`.
+
+## V4.37 — Format Garis Bawah Nama Mahasiswa
+
+- Form `Nama mahasiswa` dilengkapi pilihan opsional **Garis bawah nama**.
+- Semua mode produksi (Polos V1, V2, V1.1, V2.1, Warna, UNIRA,
+  Dummybook, Soft Cover IPS, Cover CD) menghormati pilihan ini.
+- Pada DOCX format garis bawah dari properti run/style dicoba dipulihkan.
+- Pada foto dan PDF scan, OCR dipadukan dengan pencarian garis horizontal
+  di dekat kotak nama; hasil tidak otomatis dijamin benar.
+- PDF teks menggunakan pemeriksaan visual jika geometri font tersedia.
+- Garis dicetak tepat sepanjang lebar nama yang sebenarnya dengan warna tinta
+  yang sama. Tidak menambahkan garis pada nama punggung.
+- Perubahan tidak menyentuh geometri 215/217 mm, versi lama, atau setting logo.
+- Sesudah upload GitHub, refresh browser, periksa versi `V4.37`, unggah satu
+  sampel nama bergaris bawah, konfirmasi kotak centang, dan cetak proof 100%.

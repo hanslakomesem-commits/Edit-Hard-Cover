@@ -1,0 +1,494 @@
+@import "tailwindcss";
+
+:root {
+  --ink: #10213f;
+  --muted: #64748b;
+  --navy: #0b1735;
+  --blue: #2563eb;
+  --cyan: #06b6d4;
+  --mint: #10b981;
+  --paper: #ffffff;
+  --soft: #f4f7fb;
+  --line: #e5eaf2;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0;
+  background:
+    radial-gradient(circle at 8% 0%, rgba(37,99,235,.10), transparent 28rem),
+    radial-gradient(circle at 95% 8%, rgba(6,182,212,.09), transparent 26rem),
+    #f5f7fb;
+  color: var(--ink);
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+button, input, select { font: inherit; }
+button { cursor: pointer; }
+
+/* Header */
+.site-header {
+  position: sticky; top: 0; z-index: 40; overflow: hidden;
+  background: linear-gradient(110deg, #08142f 0%, #102451 55%, #123a63 100%);
+  color: #fff; box-shadow: 0 12px 35px rgba(8,20,47,.20);
+}
+.header-glow { position:absolute; width:420px; height:180px; right:8%; top:-100px; border-radius:50%; background:rgba(6,182,212,.18); filter:blur(45px); }
+.header-top {
+  min-height: 32px; display:flex; justify-content:space-between; align-items:center; gap:16px;
+  color:#b9c8df; font-size:10px; letter-spacing:.04em; text-transform:uppercase;
+  border-bottom:1px solid rgba(255,255,255,.08);
+}
+.status-dot { width:7px; height:7px; border-radius:50%; background:#34d399; box-shadow:0 0 0 4px rgba(52,211,153,.12); }
+.header-main { min-height:86px; display:flex; align-items:center; justify-content:space-between; gap:24px; }
+.brand-lockup { display:flex; align-items:center; gap:13px; min-width:0; }
+.brand-mark {
+  width:46px; height:46px; border-radius:14px; display:grid; place-items:center;
+  background:linear-gradient(145deg,#22d3ee,#2563eb); box-shadow:0 8px 24px rgba(37,99,235,.30);
+}
+.brand-name { font-weight:900; font-size:19px; letter-spacing:-.03em; }
+.brand-sub { color:#aebdd6; font-size:10px; margin-top:2px; }
+.header-nav { display:flex; gap:7px; overflow:auto; padding:4px; }
+.nav-pill {
+  border:1px solid transparent; background:rgba(255,255,255,.055); color:#cbd7ea;
+  padding:9px 12px; border-radius:11px; display:flex; align-items:center; gap:7px; white-space:nowrap;
+  font-size:12px; font-weight:800; transition:.2s;
+}
+.nav-pill:hover { background:rgba(255,255,255,.10); color:#fff; }
+.nav-pill.active { background:#fff; color:#0b1735; box-shadow:0 8px 20px rgba(0,0,0,.16); }
+.nav-count { background:#2563eb; color:#fff; min-width:20px; padding:2px 5px; border-radius:99px; font-size:9px; text-align:center; }
+
+/* Form / history shell */
+.order-page, .history-page { padding-top:28px; padding-bottom:42px; }
+.order-page > form { align-items:start; }
+.order-page .bg-white, .history-page .bg-white {
+  border-color: rgba(219,226,238,.9) !important;
+  box-shadow: 0 12px 34px rgba(15,35,70,.055) !important;
+}
+.order-page .bg-white.rounded-2xl, .history-page .bg-white.rounded-2xl {
+  border-radius:20px !important;
+}
+.order-page input, .order-page select, .history-page input, .history-page select {
+  transition:.2s; outline:none;
+}
+.order-page input:focus, .order-page select:focus, .history-page input:focus, .history-page select:focus {
+  border-color:#3b82f6 !important; box-shadow:0 0 0 4px rgba(59,130,246,.10) !important;
+}
+.order-page .text-slate-900, .history-page .text-slate-900 { color:#132443 !important; }
+
+/* Intro */
+.order-page > div:first-child > div {
+  background:linear-gradient(135deg,#0c1c3e,#12335b 58%,#075985) !important;
+  border:0 !important; color:#fff; position:relative; overflow:hidden;
+  box-shadow:0 18px 45px rgba(13,39,77,.18) !important;
+}
+.order-page > div:first-child > div:after {
+  content:""; position:absolute; width:220px; height:220px; right:-60px; top:-100px;
+  background:rgba(34,211,238,.18); border-radius:50%; filter:blur(8px);
+}
+.order-page > div:first-child .text-slate-900 { color:#fff !important; }
+.order-page > div:first-child .text-slate-500 { color:#c2d1e5 !important; }
+.order-page > div:first-child .bg-emerald-50 { background:rgba(255,255,255,.09) !important; border-color:rgba(255,255,255,.14) !important; }
+.order-page > div:first-child .text-emerald-800, .order-page > div:first-child .text-emerald-950 { color:#b8f5e2 !important; }
+
+/* Section headers */
+.order-page .border-b { border-color:#edf1f6 !important; }
+.order-page .rounded-lg.bg-emerald-100 {
+  background:linear-gradient(135deg,#dbeafe,#cffafe) !important; color:#075985 !important;
+}
+.order-page .text-emerald-600 { color:#0e7490 !important; }
+.order-page .text-emerald-700 { color:#047857 !important; }
+
+/* Services */
+.order-page .bg-gradient-to-r.from-amber-500 {
+  background:linear-gradient(100deg,#f59e0b,#fbbf24) !important;
+}
+
+/* Right calculator */
+.order-page .bg-gradient-to-br.from-slate-950 {
+  background:linear-gradient(145deg,#08142f,#10264c 60%,#0f766e) !important;
+  box-shadow:0 20px 42px rgba(8,20,47,.20) !important;
+  border:1px solid rgba(255,255,255,.10) !important;
+}
+
+/* History table */
+.history-page table thead { background:#f7f9fc !important; }
+.history-page tbody tr { transition:.18s; }
+.history-page tbody tr:hover { background:#f1f7ff !important; }
+.history-page .font-mono { letter-spacing:-.02em; }
+
+/* Invoice */
+.invoice-overlay {
+  position:fixed; inset:0; z-index:100; display:flex; align-items:center; justify-content:center;
+  padding:18px; background:rgba(4,13,31,.78); backdrop-filter:blur(14px);
+}
+/* V9.11.4: beri tinggi pasti agar pratinjau yang panjang tidak mendorong tombol keluar layar. */
+.invoice-shell {
+  width:min(100%,760px);
+  height:min(820px, calc(100vh - 24px));
+  max-height:calc(100vh - 16px);
+  display:flex; flex-direction:column; overflow:hidden;
+  border-radius:24px; background:#eef2f8; box-shadow:0 30px 90px rgba(0,0,0,.35);
+}
+.invoice-toolbar {
+  padding:15px 18px; display:flex; justify-content:space-between; align-items:center;
+  color:#fff; background:linear-gradient(110deg,#091735,#143767);
+}
+.toolbar-kicker { font-size:9px; letter-spacing:.18em; color:#8fd9e9; font-weight:900; }
+.toolbar-title { font-size:15px; font-weight:900; margin-top:2px; }
+.icon-close { border:0; color:#d9e5f5; background:rgba(255,255,255,.08); width:34px; height:34px; border-radius:10px; display:grid; place-items:center; }
+.icon-close:hover { background:rgba(255,255,255,.16); }
+/* Hanya konten nota dan voucher yang dapat digulir. Header dan tombol unduh tetap terlihat. */
+.invoice-toolbar, .zc-nota-alert { flex:0 0 auto; }
+.invoice-stage {
+  flex:1 1 auto; min-height:0;
+  overflow-y:auto; overflow-x:hidden;
+  overscroll-behavior:contain;
+  padding:18px;
+}
+.invoice-stage .zc-status-area { margin:18px auto 16px; scroll-margin-top:12px; }
+.receipt-card {
+  width:min(100%,540px); margin:auto; background:#fff; color:#17233d; padding:28px;
+  border-radius:18px; box-shadow:0 15px 35px rgba(18,36,70,.10); position:relative; overflow:hidden;
+}
+.receipt-card:before {
+  content:""; position:absolute; inset:0 0 auto; height:5px;
+  background:linear-gradient(90deg,#2563eb,#06b6d4,#10b981);
+}
+.receipt-brand { display:flex; align-items:center; gap:11px; }
+.receipt-logo { width:42px; height:42px; border-radius:12px; display:grid; place-items:center; color:#fff; background:linear-gradient(145deg,#2563eb,#06b6d4); }
+.receipt-shop { font-weight:950; font-size:17px; letter-spacing:-.03em; }
+.receipt-tagline { color:#7a8aa5; font-size:8px; font-weight:900; letter-spacing:.14em; margin-top:2px; }
+.receipt-paid { margin-left:auto; color:#047857; background:#ecfdf5; border:1px solid #a7f3d0; border-radius:999px; padding:5px 8px; font-size:8px; font-weight:900; }
+.receipt-divider { border-top:1px dashed #d9e1ec; margin:18px 0; }
+.receipt-meta { display:grid; grid-template-columns:1fr 1fr; gap:15px; }
+.receipt-meta span,.customer-panel span,.receipt-section-title,.receipt-pickup span { display:block; color:#8492a8; font-size:8px; letter-spacing:.13em; font-weight:900; }
+.receipt-meta strong { display:block; margin-top:4px; font-size:11px; }
+.customer-panel {
+  margin-top:17px; padding:12px; display:flex; gap:10px; align-items:center;
+  border-radius:13px; background:#f5f8fc; border:1px solid #e8edf4;
+}
+.customer-icon { width:34px; height:34px; border-radius:10px; display:grid; place-items:center; color:#2563eb; background:#e0edff; }
+.customer-panel strong { display:block; margin-top:3px; font-size:12px; }
+.customer-panel small { color:#718096; font-size:9px; display:block; margin-top:2px; }
+.receipt-section-title { margin-top:22px; padding-bottom:8px; border-bottom:1px solid #e8edf4; color:#52627b; }
+.receipt-lines > div { display:flex; justify-content:space-between; gap:12px; padding:9px 0; border-bottom:1px dashed #edf1f6; font-size:10px; }
+.receipt-lines strong { font-size:10px; }
+.receipt-total { margin-top:13px; padding:13px 0; display:flex; justify-content:space-between; align-items:end; border-bottom:1px dashed #dce4ef; }
+.receipt-total span { font-size:9px; color:#52627b; font-weight:900; }
+.receipt-total strong { font-size:21px; letter-spacing:-.04em; color:#0b1735; }
+.receipt-pickup { margin-top:15px; display:flex; align-items:center; gap:10px; padding:12px; background:linear-gradient(135deg,#eff6ff,#ecfeff); border:1px solid #cfe5ff; border-radius:13px; }
+.pickup-icon { width:34px; height:34px; border-radius:10px; display:grid; place-items:center; color:#2563eb; background:#fff; }
+.receipt-pickup strong { display:block; margin-top:4px; font-size:11px; }
+.receipt-note { margin-top:14px; padding:11px; border-radius:11px; text-align:center; background:#fff7ed; border:1px solid #fed7aa; }
+.receipt-note strong { display:block; color:#9a3412; font-size:9px; }
+.receipt-note span { display:block; color:#9a6b52; font-size:8px; margin-top:3px; }
+.receipt-footer { text-align:center; color:#9aa7ba; font-size:8px; margin-top:14px; line-height:1.5; }
+/* Tombol utama selalu di bagian bawah popup, tidak ikut ter-scroll dengan kupon. */
+.invoice-actions {
+  flex:0 0 auto; position:relative; z-index:2;
+  display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px;
+  padding:11px 16px; padding-bottom:max(11px,env(safe-area-inset-bottom));
+  background:#fff; border-top:1px solid #dde4ee;
+  box-shadow:0 -6px 15px rgba(18,36,70,.06);
+}
+.invoice-actions .action-btn { min-width:0; min-height:38px; white-space:normal; text-align:center; }
+.invoice-actions .action-btn.primary { grid-column:1/-1; min-height:44px; font-size:13px; }
+.invoice-actions .action-btn.whatsapp { margin-left:0; }
+.action-btn { border:0; border-radius:11px; padding:10px 13px; display:flex; align-items:center; justify-content:center; gap:7px; font-size:11px; font-weight:900; transition:.2s; }
+.action-btn svg { width:15px; height:15px; }
+.action-btn.primary { color:#fff; background:#2563eb; box-shadow:0 6px 16px rgba(37,99,235,.20); }
+.action-btn.primary:hover { background:#1d4ed8; }
+.action-btn.ghost { color:#203352; background:#eef2f7; }
+.action-btn.ghost:hover { background:#e2e8f0; }
+.action-btn.whatsapp { color:#fff; background:#059669; margin-left:auto; }
+.action-btn.whatsapp:hover { background:#047857; }
+.spin { animation:spin 1s linear infinite; }
+@keyframes spin { to { transform:rotate(360deg); } }
+
+/* Footer */
+.app-shell > footer { background:#0b1735 !important; border:0 !important; color:#8fa3c1 !important; }
+.app-shell > footer .text-slate-700 { color:#e5edf8 !important; }
+
+@media (max-width: 800px) {
+  .header-main { flex-direction:column; align-items:stretch; padding:13px 0; gap:11px; }
+  .header-nav { width:100%; }
+  .header-top { padding:5px 0; }
+  .order-page, .history-page { padding-top:16px; }
+}
+@media (max-width: 560px) {
+  .invoice-overlay { padding:0; align-items:stretch; }
+  .invoice-shell {
+    width:100%; height:100vh; height:100dvh;
+    max-height:100vh; max-height:100dvh;
+    border-radius:0;
+  }
+  .invoice-stage { padding:14px; }
+  .receipt-card { padding:20px; }
+  .invoice-actions { grid-template-columns:repeat(2,minmax(0,1fr)); padding:9px 12px; }
+  .invoice-actions .action-btn { font-size:10px; padding:9px 6px; }
+  .invoice-actions .action-btn.primary { grid-column:1/-1; font-size:12px; }
+}
+
+/* Printing */
+@media print {
+  body { background:#fff !important; }
+  .app-shell.invoice-open > :not(.invoice-overlay) { display:none !important; }
+  .no-print, .invoice-toolbar, .invoice-actions { display:none !important; }
+  .invoice-overlay { position:static !important; background:#fff !important; padding:0 !important; display:block !important; }
+  .invoice-shell { height:auto !important; max-height:none !important; box-shadow:none !important; background:#fff !important; width:100% !important; }
+  .invoice-stage { padding:0 !important; overflow:visible !important; }
+  .printable-invoice { box-shadow:none !important; margin:auto !important; }
+}
+
+/* Nomor pesanan Supabase (UUID) tetap rapi di layar HP. */
+.font-mono{overflow-wrap:anywhere;word-break:break-word;}
+button:disabled{opacity:.5;cursor:not-allowed;}
+
+/* === ZAIN.NET ADMIN WORKSPACE V9.4 - responsive progressive disclosure === */
+.zain-admin {--a-ink:#1d304a;--a-muted:#718096;--a-border:#e4eaf0;--a-primary:#087a77;color:var(--a-ink);}
+.admin-layout{display:grid;grid-template-columns:262px minmax(0,1fr);max-width:1760px;margin:0 auto;min-height:calc(100vh - 160px);}
+.admin-sidebar{align-self:start;position:sticky;top:116px;height:calc(100vh - 116px);min-height:540px;display:flex;flex-direction:column;background:#fff;border-right:1px solid var(--a-border);padding:24px 15px 16px;overflow:auto;}
+.admin-sidebar-brand{display:flex;gap:11px;align-items:center;margin:0 9px 26px;}
+.admin-side-icon{background:#def4ef;border:1px solid #c7e8e2;border-radius:15px;width:46px;height:46px;display:grid;place-items:center;color:#087a77;}
+.admin-sidebar-brand strong{font-size:17px;font-weight:900;letter-spacing:-.035em;display:block;}
+.admin-sidebar-brand span{font-size:10px;color:#78879d;font-weight:700;}
+.admin-sidebar-groups{flex:1;}.admin-nav-group{margin-bottom:19px;}.admin-nav-group>p{color:#9ba8b8;font-size:10px;font-weight:900;letter-spacing:.12em;margin:0 12px 9px;}
+.admin-side-link{display:flex;gap:11px;align-items:center;width:100%;text-align:left;padding:11px 12px;border-radius:11px;margin:2px 0;color:#59677c;font-size:12px;font-weight:750;transition:background .15s;}
+.admin-side-link:hover{background:#f3f9f8;color:#087a77;}.admin-side-link.is-current{background:#e5f5f2;color:#076d69;font-weight:900;box-shadow:inset 3px 0 #11a194;}
+.admin-side-link>span{flex:1;}.admin-side-link>b{font-size:10px;min-width:23px;padding:3px 5px;text-align:center;border-radius:7px;background:#edf2f6;color:#53617a;}.admin-side-link.is-current>b{background:#fff;color:#087a77;}
+.admin-sidebar-footer{border-top:1px solid var(--a-border);padding:12px 8px 0;display:grid;gap:5px;}.admin-sidebar-footer button{display:flex;align-items:center;gap:9px;text-align:left;padding:10px;color:#53647b;font-weight:800;font-size:12px;border-radius:10px;}.admin-sidebar-footer button:hover{background:#f1f7f6;}
+.admin-main{min-width:0;padding:30px clamp(15px,3vw,42px) 48px;background:#f7fafc;}.admin-topbar{display:flex;justify-content:space-between;align-items:center;gap:20px;padding:3px 0 26px;border-bottom:1px solid #e9eff4;}
+.admin-eyebrow{display:flex;align-items:center;gap:8px;color:#079185;font-weight:900;font-size:10px;letter-spacing:.11em;}.admin-live-dot,.admin-welcome-chip>span{width:8px;height:8px;background:#22c55e;border-radius:100%;box-shadow:0 0 0 4px rgba(34,197,94,.12);display:inline-block;}
+.admin-topbar h1{margin:8px 0 4px;font-size:clamp(23px,2.5vw,30px);font-weight:950;letter-spacing:-.045em;line-height:1.1;}.admin-topbar p{font-size:12px;color:#7f8da0;}
+.admin-top-actions{display:flex;gap:9px;flex-wrap:wrap;}.admin-top-actions button{display:inline-flex;align-items:center;gap:8px;border-radius:11px;font-size:12px;font-weight:900;padding:12px 16px;white-space:nowrap;}.admin-action-outline{background:#fff;border:1px solid #dbe5ed;color:#3f596b;}.admin-action-primary{background:#087e79;color:#fff;box-shadow:0 8px 18px rgba(8,126,121,.19);}
+.admin-mobile-menu{display:none;}.admin-page-area{padding-top:25px;display:flex;flex-direction:column;gap:23px;}
+.admin-welcome{background:linear-gradient(115deg,#106c79,#0c887c 65%,#22a89a);border-radius:22px;color:#fff;padding:clamp(22px,3vw,34px);display:flex;justify-content:space-between;align-items:center;gap:20px;overflow:hidden;box-shadow:0 14px 28px rgba(12,124,123,.15);}
+.admin-welcome-chip{font-weight:900;font-size:9px;letter-spacing:.13em;display:inline-flex;align-items:center;gap:10px;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.19);padding:7px 11px;border-radius:50px;}.admin-welcome h2{font-size:clamp(21px,2.4vw,28px);font-weight:900;letter-spacing:-.04em;max-width:590px;margin:15px 0 6px;}.admin-welcome p{font-size:12px;line-height:1.75;color:#d6f8ef;max-width:520px;}.admin-welcome button{display:inline-flex;align-items:center;gap:8px;padding:11px 15px;background:#fff;color:#0a8178;border-radius:10px;font-size:12px;font-weight:900;margin-top:20px;}.admin-welcome-deco{flex:none;opacity:.18;border:2px solid rgba(255,255,255,.6);border-radius:30px;padding:25px;transform:rotate(-10deg);margin-right:23px;}
+.admin-metric-row{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:13px;}.admin-metric-row>div{background:#fff;border:1px solid var(--a-border);border-radius:15px;padding:18px;display:flex;flex-direction:column;gap:6px;}.admin-metric-row span{font-size:11px;color:#8190a1;font-weight:800;}.admin-metric-row strong{font-size:28px;font-weight:950;letter-spacing:-.05em;line-height:1.05;}.admin-metric-row small{color:#8b99ab;font-size:10px;}
+.admin-section-heading{display:flex;align-items:end;justify-content:space-between;gap:15px;}.admin-section-heading h2{font-size:18px;font-weight:950;letter-spacing:-.035em;}.admin-section-heading p{font-size:11px;color:#8793a4;margin-top:5px;}.admin-section-heading button{display:inline-flex;gap:5px;align-items:center;color:#077b73;font-size:12px;font-weight:900;white-space:nowrap;}
+.admin-day-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;}.admin-day-card{text-align:left;background:#fff;border:1px solid #e2e8ef;border-radius:18px;padding:16px;min-height:192px;display:flex;flex-direction:column;transition:transform .16s,border-color .16s,box-shadow .16s;}.admin-day-card:hover{transform:translateY(-3px);border-color:#91cfc6;box-shadow:0 13px 30px rgba(32,78,89,.09);}.admin-day-head{display:flex;justify-content:space-between;align-items:center;color:#9baab7;margin-bottom:12px;}.admin-day-head>span{width:39px;height:39px;display:grid;place-items:center;border-radius:11px;}.admin-tone-sky .admin-day-head>span{background:#e5f4fd;color:#0284c7;}.admin-tone-amber .admin-day-head>span{background:#fff5dd;color:#c58a16;}.admin-tone-violet .admin-day-head>span{background:#f0eafe;color:#8055bd;}.admin-tone-mint .admin-day-head>span{background:#dcf9ed;color:#108665;}.admin-day-card>p{font-size:12px;font-weight:850;color:#526276;}.admin-day-card>strong{font-size:28px;font-weight:950;letter-spacing:-.05em;line-height:1.45;color:#1e3047;}.admin-day-card>strong small{font-size:11px;font-weight:700;letter-spacing:0;color:#8997a7;}.admin-card-date{font-size:10px;line-height:1.4;color:#97a4b2;}.admin-card-more{display:flex;align-items:center;gap:4px;font-size:11px;font-weight:900;color:#087c75;margin-top:auto;padding-top:13px;}
+.admin-feature-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;}.admin-feature-grid>button{display:flex;align-items:center;gap:12px;text-align:left;background:#fff;border:1px solid #e2e9ef;padding:16px;border-radius:15px;min-width:0;}.admin-feature-grid>button:hover{border-color:#88c9c0;background:#fafffd;}.admin-feature-icon{background:#e7f5f3;border-radius:11px;width:42px;height:42px;flex:none;display:grid;place-items:center;color:#0d857d;}.admin-feature-grid>button>span:nth-child(2){min-width:0;flex:1;}.admin-feature-grid strong{display:block;font-size:12px;font-weight:900;}.admin-feature-grid small{font-size:10px;color:#91a0ae;display:block;margin-top:4px;}.admin-feature-grid>button>svg:last-child{color:#9baab6;flex:none;}
+.admin-content-intro,.admin-list-intro{background:#fff;border:1px solid var(--a-border);border-radius:18px;display:flex;align-items:center;gap:14px;padding:20px;}.admin-content-intro>svg{color:#12887e;}.admin-content-intro h2,.admin-list-intro h2{font-size:18px;font-weight:950;}.admin-content-intro p,.admin-list-intro p{font-size:11px;line-height:1.7;color:#8291a2;margin-top:3px;}
+.admin-list-symbol{flex:none;color:#077e75;background:#e4f6f2;padding:13px;border-radius:13px;}.admin-list-copy{min-width:0;flex:1;}.admin-list-counter{flex:none;background:#e3f5f0;color:#078176;font-size:12px;padding:9px 12px;border-radius:50px;}
+.admin-notice-bar{background:#fff6de;border:1px solid #f7db9d;border-radius:15px;padding:15px;display:flex;align-items:center;justify-content:space-between;gap:12px;}.admin-notice-bar>div{display:flex;align-items:center;gap:10px;color:#855e15;font-size:12px;font-weight:800;}.admin-notice-bar button{background:#8e630d;color:#fff;padding:10px 13px;border-radius:10px;white-space:nowrap;font-size:11px;font-weight:900;display:flex;align-items:center;gap:7px;}.admin-archive-note{display:flex;align-items:center;gap:10px;border:1px solid #dbe4ed;background:#eff6fc;padding:12px 15px;border-radius:12px;color:#536b80;font-size:11px;line-height:1.7;}
+.admin-filter-bar{display:flex;align-items:center;flex-wrap:wrap;gap:10px;background:#fff;border:1px solid var(--a-border);border-radius:15px;padding:12px;}.admin-search{flex:1 1 290px;display:flex;align-items:center;gap:10px;border:1px solid #e1e8ee;border-radius:10px;padding:0 12px;color:#90a0b1;background:#fcfdff;min-width:0;}.admin-search input{height:43px;flex:1;min-width:0;background:transparent;outline:0;font-size:12px;color:#1e3047;}.admin-filter-bar select{flex:0 1 180px;max-width:100%;border:1px solid #e1e8ee;background:#f8fafc;padding:13px;border-radius:10px;font-size:11px;font-weight:750;color:#526477;}.admin-filter-reset{display:flex;gap:7px;align-items:center;font-size:11px;padding:12px;border-radius:10px;background:#f0f5fa;}.admin-payment-summary{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}.admin-payment-summary button{display:flex;justify-content:space-between;align-items:center;padding:18px;background:#fff;border:1px solid var(--a-border);border-radius:14px;font-size:12px;font-weight:800;}.admin-payment-summary button.on{background:#e8f7f4;color:#087c73;border-color:#3bbaa7;}.admin-payment-summary strong{font-size:21px;}
+.admin-order-list{display:flex;flex-direction:column;gap:12px;}.admin-order-card{background:#fff;border:1px solid var(--a-border);border-radius:17px;overflow:hidden;box-shadow:0 3px 15px rgba(19,45,62,.025);}.admin-order-card.is-expanded{border-color:#86c6b9;}.admin-order-card.is-pending{border-left:4px solid #e8b65b;}.admin-order-head{display:flex;align-items:center;gap:13px;padding:18px 20px 12px;}.admin-order-avatar{flex:none;background:#e8f4f2;color:#13877b;display:grid;place-items:center;border-radius:12px;width:43px;height:43px;}.admin-order-ident{flex:1;min-width:0;}.admin-order-ident>strong{display:block;font-size:15px;font-weight:950;overflow-wrap:anywhere;}.admin-order-ident>small{display:block;color:#7e8c9d;font-size:11px;margin-top:4px;}.admin-order-id{font-size:9px;font-family:monospace;color:#9aa7b8;overflow-wrap:anywhere;display:block;margin-top:4px;}.admin-order-badges{display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-end;max-width:42%;}.admin-state{font-size:10px;font-weight:900;padding:6px 9px;border-radius:8px;white-space:nowrap;}.admin-state-waiting{background:#fff2ce;color:#9e6610;}.admin-state-approved{background:#e6f7ed;color:#24805d;}.admin-state-rejected{background:#fbe9eb;color:#bd4555;}.admin-state-archived{background:#e9eff6;color:#56718a;}.admin-pay-lunas{background:#e1f5ed;color:#168466;}.admin-pay-dp{background:#fff2db;color:#a46a15;}.admin-pay-belum_bayar{background:#f0f2f6;color:#596d82;}
+.admin-order-meta{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;padding:6px 20px 16px;}.admin-order-meta>div{background:#f8fafc;border-radius:10px;padding:12px;min-width:0;}.admin-order-meta span,.admin-detail-grid>div>span{display:block;font-size:9px;color:#92a0af;font-weight:950;letter-spacing:.07em;margin-bottom:7px;}.admin-order-meta strong{font-size:11px;font-weight:850;line-height:1.55;display:block;overflow-wrap:anywhere;}.admin-order-bar{border-top:1px solid #ecf0f4;padding:12px 20px;display:flex;align-items:center;gap:12px;justify-content:space-between;}.admin-order-bar>div{font-size:11px;color:#698091;font-weight:750;display:flex;align-items:center;flex-wrap:wrap;gap:5px;}.admin-order-bar>div>small{font-weight:500;}.admin-progress-dot{width:7px;height:7px;background:#16a085;border-radius:50%;display:inline-block;}.admin-order-bar>button{display:flex;align-items:center;gap:7px;border-radius:9px;background:#e9f6f3;color:#087b72;padding:10px 12px;font-weight:900;font-size:11px;white-space:nowrap;}.admin-order-expanded{border-top:1px solid #edf2f5;background:#fcfefd;padding:18px 20px;}.admin-detail-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:11px;}.admin-detail-grid>div{padding:15px;background:#fff;border:1px solid #e5eaf1;border-radius:12px;min-width:0;}.admin-detail-grid strong{font-size:12px;font-weight:900;overflow-wrap:anywhere;}.admin-detail-grid p{font-size:11px;line-height:1.6;color:#718297;margin-top:7px;overflow-wrap:anywhere;}.admin-detail-grid a{font-size:11px;font-weight:900;display:inline-flex;align-items:center;gap:7px;color:#0d8c79;margin-top:10px;overflow-wrap:anywhere;}.admin-detail-actions{display:flex;align-items:center;flex-wrap:wrap;gap:9px;margin-top:16px;}.admin-detail-actions button,.admin-dp-form button{font-size:11px;font-weight:900;border-radius:10px;padding:11px 12px;display:inline-flex;align-items:center;gap:6px;}.admin-outline-btn{color:#456276;background:#fff;border:1px solid #dce7ec;}.admin-success-btn{background:#0a897b;color:#fff;}.admin-warning-btn{background:#ffca65;color:#644414;}.admin-danger-btn{background:#ffedf0;color:#bb4057;}.admin-dp-form{margin-top:15px;border-radius:12px;border:1px solid #f6d994;background:#fff9eb;padding:12px;display:flex;align-items:end;gap:10px;flex-wrap:wrap;}.admin-dp-form label{font-size:11px;font-weight:900;color:#8b5d12;}.admin-dp-form input{display:block;padding:8px;background:#fff;border:1px solid #e5bd6f;border-radius:8px;margin-top:5px;width:160px;max-width:100%;}.admin-dp-form button:nth-of-type(1){background:#ad7612;color:#fff;}.admin-dp-form button:nth-of-type(2){background:#fff;color:#785c2a;border:1px solid #e5d2a6;}
+.admin-list-footnote{display:flex;align-items:center;gap:9px;font-size:11px;color:#8998a9;padding:2px;line-height:1.6;}.admin-empty{text-align:center;padding:55px 15px;border:1px dashed #cadbdc;border-radius:16px;color:#8c9bad;background:#fff;}.admin-empty svg{margin:auto auto 12px;color:#b1c1ce;}.admin-empty h3{font-size:16px;font-weight:900;color:#53667d;}.admin-empty p{font-size:12px;margin-top:8px;}.admin-empty button{margin-top:14px;background:#0e8b7d;color:#fff;padding:10px 15px;font-size:11px;font-weight:900;border-radius:9px;}
+@media(max-width:1150px){.admin-layout{grid-template-columns:226px minmax(0,1fr);}.admin-day-grid{grid-template-columns:repeat(2,1fr);}.admin-feature-grid{grid-template-columns:repeat(2,1fr);}.admin-metric-row{grid-template-columns:repeat(2,1fr);}.admin-order-meta{grid-template-columns:repeat(2,1fr);}}
+@media(max-width:850px){.admin-layout{display:block;min-height:unset;}.admin-sidebar{display:none;}.admin-main{padding:20px 14px 36px;}.admin-mobile-menu{display:flex;overflow-x:auto;gap:7px;margin-top:16px;padding-bottom:10px;scrollbar-width:thin;}.admin-mobile-menu button{white-space:nowrap;display:flex;gap:6px;align-items:center;padding:10px 12px;font-size:11px;font-weight:850;border-radius:9px;background:#fff;border:1px solid #e3e9ef;color:#526477;}.admin-mobile-menu button.selected{color:#087c73;background:#e3f5f1;border-color:#9acbc2;}.admin-mobile-menu small{background:#ecf0f4;border-radius:40px;padding:2px 6px;}.admin-topbar{padding-bottom:18px;}}
+@media(max-width:590px){.admin-topbar{align-items:flex-start;flex-direction:column;gap:12px;}.admin-topbar h1{font-size:24px;}.admin-top-actions button{padding:9px 12px;}.admin-page-area{gap:17px;padding-top:13px;}.admin-welcome{padding:22px;}.admin-welcome-deco{display:none;}.admin-welcome h2{font-size:21px;}.admin-day-grid{gap:9px;}.admin-day-card{min-height:177px;padding:12px;}.admin-day-card>p{font-size:11px;}.admin-day-card>strong{font-size:24px;}.admin-feature-grid{grid-template-columns:1fr;gap:9px;}.admin-metric-row{gap:9px;}.admin-metric-row>div{padding:13px;}.admin-metric-row strong{font-size:23px;}.admin-list-intro{flex-wrap:wrap;padding:14px;}.admin-list-symbol{padding:10px;}.admin-list-counter{margin-left:auto;}.admin-notice-bar{align-items:stretch;flex-direction:column;}.admin-notice-bar button{align-self:start;}.admin-filter-bar select{flex:1 1 135px;}.admin-order-head{padding:14px 13px 9px;align-items:flex-start;flex-wrap:wrap;gap:9px;}.admin-order-badges{max-width:none;justify-content:flex-start;width:100%;}.admin-order-meta{padding:5px 12px 12px;gap:6px;}.admin-order-meta>div{padding:9px;}.admin-order-meta strong{font-size:10px;}.admin-order-bar{padding:10px 12px;align-items:flex-start;}.admin-order-bar>div{flex:1;}.admin-order-bar>button{padding:9px;}.admin-order-expanded{padding:12px;}.admin-detail-grid{grid-template-columns:1fr;}.admin-section-heading h2{font-size:16px;}}
+
+/* Matching clean, bright visual identity across the public pages. */
+.site-header{background:#fff;color:#19364d;box-shadow:0 2px 22px rgba(22,55,65,.065);border-bottom:1px solid #e8eef2;}
+.header-glow{background:#ecfcf8;opacity:.8;}.header-top{border-color:#edf2f4;color:#718394;}.header-main{min-height:76px;}.brand-mark{background:#e5f7f2;color:#058578;box-shadow:none;}.brand-name{color:#173e47;}.brand-sub{color:#8293a0;}.header-nav{flex-wrap:wrap;justify-content:flex-end;}.nav-pill{background:#f4f8f9;border:1px solid #eef1f3;color:#657b8c;}.nav-pill:hover{background:#e9f7f2;color:#078578;}.nav-pill.active{background:#0d887b;color:#fff;box-shadow:0 6px 16px rgba(10,137,123,.18);border-color:#0d887b;}.app-shell>footer{background:#f5faf9!important;color:#718b91!important;border-top:1px solid #e6efed!important;}
+.order-page>div:first-child>div{background:linear-gradient(110deg,#eef9f5,#eff6ff)!important;box-shadow:0 10px 28px rgba(23,93,86,.055)!important;border:1px solid #dcefeb!important;color:#173e47!important;}
+.order-page>div:first-child .text-slate-900{color:#173e47!important;}.order-page>div:first-child .text-slate-500{color:#718799!important;}.order-page>div:first-child .bg-emerald-50{background:#e0f5ec!important;border-color:#bfebd8!important;}.order-page>div:first-child .text-emerald-800,.order-page>div:first-child .text-emerald-950{color:#146d62!important;}
+@media(max-width:800px){.header-main{gap:9px;}.header-nav{justify-content:flex-start;flex-wrap:nowrap;}.brand-name{font-size:18px;}}
+/* V9.5: kupon digital mengikuti contoh kupon fisik ZAIN.NET */
+.zc-widget{max-width:690px;margin:10px auto 22px;padding:0 10px}
+.zc-coupon{position:relative;padding:26px 24px 23px;background:#071731;color:#fff5bf;border:5px solid #0d284e;border-radius:17px;text-align:center;overflow:hidden;box-shadow:0 18px 34px #001b3b25}
+.zc-top{font-size:clamp(15px,2.3vw,25px);font-weight:900;letter-spacing:1px;line-height:1.23}
+.zc-brand{font-size:clamp(36px,8vw,68px);font-weight:1000;margin:13px 0 17px;letter-spacing:-2px}
+.zc-brand span{font-size:.7em}
+.zc-orange{background:#ff9d18;color:#09111d;border-radius:24px;padding:21px 10px 13px}
+.zc-label{font-size:clamp(26px,6vw,46px);font-weight:1000;line-height:1.1}
+.zc-title{font-size:clamp(29px,7vw,53px);font-weight:1000;line-height:1.12}
+.zc-half{font-size:clamp(90px,21vw,160px);line-height:1;font-weight:1000;letter-spacing:-7px}
+.zc-discount{font-size:clamp(28px,8vw,57px);font-weight:1000;line-height:1.02}
+.zc-price{display:flex;justify-content:space-around;align-items:center;font-size:clamp(37px,9vw,75px);font-weight:1000;line-height:1.2}
+.zc-price del{text-decoration-thickness:5px}
+.zc-sizes{font-size:clamp(12px,2.5vw,20px);font-weight:800;margin:18px 0}
+.zc-codebox{background:#fff7df;color:#09172d;padding:14px 8px;border:3px dashed #e6ad38;border-radius:13px;display:flex;flex-direction:column;gap:3px}
+.zc-codebox small{font-weight:800;font-size:13px;letter-spacing:.7px}
+.zc-codebox strong{font-family:Consolas,monospace;overflow-wrap:anywhere;letter-spacing:1px;font-size:clamp(15px,3vw,23px)}
+.zc-codebox span{font-size:13px;font-weight:700}
+.zc-notice{font-size:14px;line-height:1.4;background:#fefae9;color:#a12217;padding:11px;border-radius:9px;margin-top:12px;font-weight:750}
+.zc-used{position:absolute;top:48%;left:8%;width:84%;transform:rotate(-14deg);border:5px solid #c52830;background:#fff9;padding:14px;color:#d21f34;font-weight:1000;font-size:clamp(20px,5vw,37px)}
+.zc-actions{display:flex;gap:9px;flex-wrap:wrap;justify-content:center;padding:13px 0}
+.zc-actions p{width:100%;display:flex;align-items:center;gap:8px;justify-content:center;font-size:12px;color:#486070}
+.zc-actions a{text-decoration:none}
+
+/* V9.7 – Kupon digital mudah ditemukan tanpa mengubah tampilan nota JPG. */
+.zc-nota-alert{display:flex;align-items:center;justify-content:space-between;gap:12px;background:#fff7d6;color:#7b4c08;border-bottom:1px solid #f9d77b;padding:12px 19px;font-size:13px}
+.zc-nota-alert strong{display:block;font-size:13px}
+.zc-nota-alert small{display:block;font-size:11px;margin-top:3px}
+.zc-nota-alert button{background:#145f55;color:#fff;border:0;border-radius:11px;padding:10px 13px;font-size:12px;font-weight:800;white-space:nowrap;cursor:pointer}
+.zc-status-area{max-width:690px;margin:18px auto 0;scroll-margin-top:12px}
+.zc-status-area h3{font-size:18px;font-weight:900;text-align:center;color:#163e50;margin:16px 0}
+.zc-status-message{border:1px solid #ffda85;background:#fff9eb;color:#84520c;padding:18px 20px;border-radius:14px;font-size:14px;line-height:1.5;text-align:center}
+.zc-retry{margin:12px auto 24px}
+@media(max-width:550px){.zc-nota-alert{padding:9px 12px}.zc-nota-alert strong{font-size:11px}.zc-nota-alert small{font-size:10px}.zc-nota-alert button{padding:9px;font-size:11px}}
+@media print{.zc-nota-alert{display:none!important}}
+
+.zc-form-section{border-radius:18px;background:#f6fafc;border:1px solid #d8e5ed;padding:14px;scroll-margin-top:16px}
+.zc-form-section>h3{text-align:center;color:#163e50;font-weight:900;font-size:19px;margin:10px auto 12px}
+.zc-form-section .zc-widget{margin-top:0}
+
+/* Kode kupon ringkas mudah dibaca dan disalin */
+.zc-codebox.zc-code-short strong{font-size:clamp(29px,7vw,52px);letter-spacing:5px;text-align:center}
+
+
+/* V9.11.2 - Nota jilid: prevent clipped desktop JPG exports. */
+.receipt-card, .printable-invoice {
+  box-sizing: border-box;
+  overflow-wrap: anywhere;
+}
+.receipt-card .receipt-brand > div:nth-child(2) { flex: 1 1 0; min-width: 0; }
+.receipt-card .receipt-brand .receipt-paid { flex: 0 0 auto; max-width: 31%; text-align: center; overflow-wrap: anywhere; }
+.receipt-card .receipt-meta { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.receipt-card .receipt-meta > div, .receipt-card .receipt-total > div { min-width: 0; }
+.receipt-card .receipt-meta strong { overflow-wrap:anywhere; word-break:break-word; }
+.receipt-card .receipt-lines > div > span { flex: 1 1 0; min-width: 0; overflow-wrap: anywhere; }
+.receipt-card .receipt-lines > div > strong { flex: 0 0 auto; text-align: right; }
+.receipt-card .receipt-total { gap: 12px; }
+.receipt-card .receipt-total > div { flex: 1 1 auto; }
+.receipt-card .receipt-total > strong { flex: 0 0 auto; text-align: right; }
+.receipt-card section .flex.justify-between > span { min-width: 0; overflow-wrap: anywhere; }
+.receipt-card section .flex.justify-between > span.flex { flex-wrap: wrap; justify-content: flex-end; }
+/* A 640px clone is rendered separately for JPG without altering mobile preview. */
+.receipt-card.receipt-export { width:640px; min-width:640px; max-width:none; margin:0; overflow:visible!important; }
+.receipt-card.receipt-export .truncate { white-space:normal!important; overflow:visible!important; text-overflow:clip!important; }
+
+/* V9.11.3 — rupiah must remain on one line in both JPG and browser preview.
+   The global .font-mono has overflow-wrap:anywhere for long invoice IDs;
+   explicitly override it for monetary cells without affecting UUID wrapping. */
+.receipt-card .receipt-lines > div > strong,
+.receipt-card .receipt-total > strong,
+.receipt-card .receipt-money {
+  flex: 0 0 auto;
+  display: inline-block;
+  white-space: nowrap !important;
+  word-break: normal !important;
+  overflow-wrap: normal !important;
+  hyphens: none !important;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+.receipt-card .receipt-lines > div > span,
+.receipt-card .receipt-total > div { min-width: 0; flex: 1 1 0; }
+.receipt-card.receipt-export .receipt-lines > div > strong { min-width: 105px; }
+
+/* V9.11.6: NOTA MERAH HANYA UNTUK STATUS BELUM BAYAR.
+   Terapkan di elemen yang diekspor ke JPG agar preview dan file unduhan sama. */
+.receipt-card.receipt-unpaid {
+  background: #fff3f3 !important;
+  color: #701b1b !important;
+  border: 2px solid #dc2626 !important;
+}
+.receipt-card.receipt-unpaid::before {
+  background: linear-gradient(90deg,#991b1b,#ef4444,#991b1b) !important;
+  height: 8px !important;
+}
+.receipt-card.receipt-unpaid .receipt-logo { background: linear-gradient(135deg,#991b1b,#dc2626) !important; }
+.receipt-card.receipt-unpaid .receipt-shop,
+.receipt-card.receipt-unpaid .receipt-section-title,
+.receipt-card.receipt-unpaid .receipt-total strong,
+.receipt-card.receipt-unpaid .receipt-money,
+.receipt-card.receipt-unpaid .text-slate-900 { color: #991b1b !important; }
+.receipt-card.receipt-unpaid .customer-panel,
+.receipt-card.receipt-unpaid .bg-slate-50 { background: #ffe7e7 !important; border-color:#fca5a5 !important; }
+.receipt-card.receipt-unpaid .receipt-paid { color:#fff!important; background:#b91c1c!important; border-color:#b91c1c!important; }
+.receipt-card.receipt-unpaid .receipt-divider,
+.receipt-card.receipt-unpaid .receipt-section-title { border-color:#fca5a5!important; }
+.receipt-card.receipt-unpaid .receipt-pickup { background:#fff0f0!important; border-color:#fca5a5!important; }
+.receipt-card.receipt-unpaid .receipt-note { background:#fee2e2!important; border-color:#f87171!important; }
+.receipt-card.receipt-unpaid .receipt-note strong { color:#991b1b!important; }
+/* DP bukan lunas: beda visual, tetapi tidak disamakan dengan Belum Bayar. */
+.receipt-card.receipt-partial { border:2px solid #f59e0b!important; }
+.receipt-card.receipt-partial::before { background:linear-gradient(90deg,#b45309,#f59e0b)!important; }
+.receipt-card.receipt-partial .receipt-paid { color:#92400e!important; background:#fef3c7!important; border-color:#fcd34d!important; }
+
+.receipt-card .receipt-unpaid-warning {
+  background:#b91c1c; border:1px solid #7f1d1d; color:#fff;
+  text-align:center; padding:10px 9px; border-radius:8px;
+  margin-top:14px; font-size:11px; font-weight:950; letter-spacing:.065em;
+  page-break-inside:avoid;
+}
+
+/* V9.11.8: distinguish customer source and payment on ALL pickup/order cards. */
+.zain-admin .admin-order-card.is-direct { border-left: 5px solid #16a34a; }
+.zain-admin .admin-order-card.is-reseller { border-left: 5px solid #eab308; }
+.admin-order-card.is-direct .admin-order-avatar { background:#dcfce7; color:#166534; }
+.admin-order-card.is-reseller .admin-order-avatar { background:#fef9c3; color:#a16207; }
+.admin-source-tag {
+  display:inline-flex; max-width:100%; align-items:center; font-weight:950;
+  font-size:11px; line-height:1.4; border:1px solid transparent;
+  border-radius:8px; padding:5px 8px; margin:6px 0 2px;
+  overflow-wrap:anywhere; white-space:normal;
+}
+.admin-source-direct { color:#166534; background:#dcfce7; border-color:#86efac; }
+.admin-source-reseller { color:#854d0e; background:#fef08a; border-color:#facc15; }
+.admin-order-badges .admin-pay-signal {
+  border:2px solid; font-size:11px; font-weight:1000; line-height:1.4;
+  letter-spacing:.01em; white-space:normal; text-align:center;
+  font-variant-numeric:tabular-nums;
+}
+.admin-order-badges .admin-pay-lunas { color:#064e3b; background:#4ade80; border-color:#15803d; box-shadow:0 0 0 2px #dcfce7; }
+.admin-order-badges .admin-pay-dp { color:#713f12; background:#facc15; border-color:#d97706; box-shadow:0 0 0 2px #fef3c7; }
+.admin-order-badges .admin-pay-belum_bayar { color:#fff; background:#dc2626; border-color:#991b1b; box-shadow:0 0 0 2px #fee2e2; }
+.admin-order-meta small { font-size:10px;display:block;margin-top:5px;color:#64748b;font-weight:750; }
+.admin-side-link.admin-nav-paid { color:#166534; background:#dcfce7; }
+.admin-side-link.admin-nav-deposit { color:#92400e; background:#fef3c7; }
+.admin-side-link.admin-nav-unpaid { color:#991b1b; background:#fee2e2; }
+.admin-side-link.admin-nav-paid.is-current {box-shadow:inset 4px 0 #16a34a;}
+.admin-side-link.admin-nav-deposit.is-current {box-shadow:inset 4px 0 #d97706;}
+.admin-side-link.admin-nav-unpaid.is-current {box-shadow:inset 4px 0 #dc2626;}
+@media (max-width:590px) {
+  .admin-order-badges .admin-pay-signal { width:100%; }
+  .admin-source-tag { font-size:10px; }
+}
+
+/* Payment categories stay colored in horizontal mobile admin menu too. */
+.admin-mobile-menu button.admin-nav-paid {background:#dcfce7;color:#166534;border-color:#86efac;}
+.admin-mobile-menu button.admin-nav-deposit {background:#fef3c7;color:#92400e;border-color:#fcd34d;}
+.admin-mobile-menu button.admin-nav-unpaid {background:#fee2e2;color:#991b1b;border-color:#fca5a5;}
+
+
+/* V9.11.9 — daftar mahasiswa pada judul kartu reseller, satu baris per orang. */
+.admin-collective-students { display:flex; flex-direction:column; gap:5px; width:100%; max-width:520px; }
+.admin-collective-student { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:8px 14px; align-items:baseline; font-size:14px; line-height:1.45; }
+.admin-collective-student strong { color:#142b43; font-weight:900; overflow-wrap:anywhere; min-width:0; }
+.admin-collective-student span { white-space:nowrap; font-size:12px; font-weight:850; color:#0f766e; font-variant-numeric:tabular-nums; }
+.admin-order-card.is-reseller .admin-collective-student span { color:#854d0e; }
+@media(max-width:590px){
+  .admin-collective-student { font-size:13px; gap:8px; }
+  .admin-collective-student span { font-size:11px; }
+}
+
+
+/* ZAIN.NET V9.12.0 — active 5-day workboard and overdue settlement reminder */
+.admin-v9120-summary{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;}
+.admin-v9120-summary button{display:flex;align-items:center;gap:12px;text-align:left;background:#fff;border:1px solid #dce7e8;border-radius:15px;padding:15px;color:#156d64;}
+.admin-v9120-summary button:nth-child(2){background:#fff7ed;border-color:#fed7aa;color:#9a3412;}
+.admin-v9120-summary button span{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px;}
+.admin-v9120-summary button strong{font-size:13px;}.admin-v9120-summary button small{font-size:11px;color:#697d87;line-height:1.4;}
+.admin-overdue-inline{display:flex;align-items:center;gap:12px;background:#fff7ed;border:1px solid #fdba74;border-radius:13px;padding:14px;color:#9a3412;}
+.admin-overdue-inline div{flex:1;}.admin-overdue-inline strong{font-size:13px;}.admin-overdue-inline p{font-size:11px;margin-top:4px;line-height:1.5;}
+.admin-overdue-inline button{background:#c2410c;color:white;padding:10px 12px;font-size:11px;font-weight:800;border-radius:10px;}
+.admin-v9120-backdrop{position:fixed;inset:0;z-index:9999;background:rgba(8,22,39,.68);display:flex;align-items:center;justify-content:center;padding:14px;}
+.admin-v9120-dialog{width:min(760px,100%);max-height:min(90dvh,860px);overflow:hidden;display:flex;flex-direction:column;background:#fff;border-radius:18px;box-shadow:0 25px 75px rgba(0,0,0,.3);color:#24324a;}
+.admin-v9120-dialog-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:21px 22px 12px;}
+.admin-v9120-dialog-head h2{font-size:21px;font-weight:950;margin:7px 0 5px;}.admin-v9120-dialog-head p{font-size:12px;color:#64748b;line-height:1.5;}
+.admin-v9120-eyebrow{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:900;color:#b45309;letter-spacing:.05em;}
+.admin-v9120-dialog-head>button{flex:none;display:grid;place-items:center;padding:7px;border-radius:9px;background:#f1f5f9;color:#475569;}
+.admin-v9120-dialog-hint{padding:12px 22px;background:#fffbeb;color:#854d0e;font-size:12px;line-height:1.55;}
+.admin-v9120-dialog-list{min-height:0;overflow-y:auto;padding:8px 22px 14px;display:flex;flex-direction:column;gap:7px;}
+.admin-v9120-item{display:flex;align-items:center;gap:12px;cursor:pointer;border:1px solid #e2e8f0;padding:13px 12px;border-radius:12px;background:#fff;}
+.admin-v9120-item.is-selected{background:#ecfdf5;border-color:#34d399;}
+.admin-v9120-item input{accent-color:#047857;width:18px;height:18px;flex:none;}
+.admin-v9120-item-body{display:flex;flex-direction:column;gap:5px;min-width:0;flex:1;}
+.admin-v9120-item-body strong{font-size:13px;overflow-wrap:anywhere;line-height:1.4;}.admin-v9120-item-body small{font-size:11px;color:#64748b;line-height:1.4;}
+.admin-v9120-money{display:flex;flex-direction:column;gap:5px;align-items:flex-end;flex:none;}
+.admin-v9120-money strong{color:#b91c1c;font-size:13px;}.admin-v9120-money small{color:#92400e;font-size:10px;}
+.admin-v9120-dialog-error{margin:0 22px;padding:10px;background:#fee2e2;color:#991b1b;border-radius:9px;font-size:12px;font-weight:800;}
+.admin-v9120-dialog-foot{padding:13px 22px 18px;border-top:1px solid #e2e8f0;display:flex;flex-direction:column;gap:12px;background:#fff;}
+.admin-v9120-selected{font-size:11px;color:#64748b;font-weight:800;}.admin-v9120-dialog-actions{display:flex;align-items:center;justify-content:flex-end;gap:8px;flex-wrap:wrap;}
+.admin-v9120-dialog-actions button{padding:11px 12px;font-size:11px;font-weight:850;border-radius:10px;}
+.admin-v9120-dialog-actions button:disabled{opacity:.45;cursor:not-allowed;}
+.admin-v9120-cancel{background:#f1f5f9;color:#475569;}.admin-v9120-selected-btn{background:#0f766e;color:#fff;}.admin-v9120-all-btn{background:#166534;color:#fff;}
+@media(max-width:750px){.admin-v9120-summary{grid-template-columns:1fr;}.admin-v9120-dialog-head{padding:15px 14px 10px;}.admin-v9120-dialog-head h2{font-size:18px;}.admin-v9120-dialog-list{padding:8px 14px;}.admin-v9120-dialog-foot{padding:10px 14px 14px;}.admin-v9120-dialog-hint{padding:10px 14px;}.admin-v9120-item{flex-wrap:wrap;}.admin-v9120-money{margin-left:30px;align-items:flex-start;}.admin-overdue-inline{align-items:flex-start;flex-wrap:wrap;}}
+
+/* V9.12.2 — sorot tanggal setor saat nota dicatat menyusul. */
+.admin-order-meta .admin-backdated-date { background:#fffbeb; border:1px solid #fcd34d; }
+.admin-backdated-date strong { color:#92400e; }

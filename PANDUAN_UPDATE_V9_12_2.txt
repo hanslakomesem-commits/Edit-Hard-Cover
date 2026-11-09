@@ -1,0 +1,54 @@
+ZAIN.NET NOTA HARD COVER V9.12.2 — UPDATE RESELLER ADMIN
+========================================================
+Pembaruan dari V9.12.1. Patch tidak menggantikan seluruh repository.
+
+YANG DIPERBAIKI
+1. Admin membuat nota reseller dari akun yang sudah terdaftar dan aktif.
+2. Setiap mahasiswa memiliki pilihan Paket 1–6 atau Paket Custom:
+   - Hard Cover: 1 hari Rp35.000 / 2 hari Rp30.000 / 3 hari Rp25.000 PER JILID.
+   - CD: Rp7.000, Artikel: Rp10.000, SKEK: Rp3.000,
+     Pisah-pisah File: Rp5.000 PER PILIHAN MAHASISWA.
+   - Tambahan layanan dihitung satu kali per paket mahasiswa, bukan per jilid.
+   - Server Supabase yang menghitung ulang harga; angka browser hanya pratinjau.
+3. Admin dapat mengisi tanggal asli penyetoran sampul 0–30 hari sebelumnya.
+   Tanggal nota dibuat (created_at) tetap jam sebenarnya saat admin menyimpan.
+   Jadwal pengambilan dihitung dari tanggal setor, melewati hari Minggu.
+4. Dalam satu nota kolektif dengan durasi yang berbeda, jadwal pengambilan
+   satu nota memakai paket TERLAMA di antara mahasiswa yang dicatat.
+
+CONTOH
+Reseller Sultan Sell menyerahkan sampul Senin 9 November 2026,
+tetapi admin baru input Selasa 10 November 2026.
+Pilih TANGGAL SETOR 2026-11-09, Paket 3 hari.
+Pengambilan: Kamis 12 November 2026 pukul 08:00 WIB.
+Tanggal nota dibuat tetap Selasa 10 November, sesuai jam simpan aslinya.
+
+Contoh tarif per mahasiswa (3 HC, 3 hari):
+Paket 1 / Hard Cover saja                  = Rp75.000
+Paket 2 / Hard Cover + CD                  = Rp82.000
+Paket 3 / Hard Cover + Artikel             = Rp85.000
+Paket 4 / Hard Cover + CD + Artikel        = Rp92.000
+Paket 5 / Tambah SKEK                      = Rp95.000
+Paket 6 / Tambah Pisah-pisah File          = Rp100.000
+Custom: Hard Cover + CD + SKEK + Pisah    = Rp90.000
+
+CARA PEMASANGAN
+1. Backup database Supabase terlebih dahulu.
+2. Pastikan SQL migrasi sebelumnya hingga V9.12.1 sudah dijalankan.
+3. Buka Supabase SQL Editor dan jalankan:
+   supabase/UPDATE_NOTA_V9_12_2_HARGA_RESELLER_DAN_TANGGAL_SETOR.sql
+   Cukup sekali; jangan ubah atau hapus data nota lama.
+4. Ekstrak ZIP patch ini. Unggah isinya ke repository GitHub
+   hanslakomesem-commits/zainnet-nota-v8 (pertahankan lokasi/folder tiap file).
+   JANGAN hapus seluruh isi repository; ganti hanya file yang sama.
+5. Commit ke branch pembaruan lalu Merge ke main.
+6. Periksa deployment Cloudflare, buka https://zainnet-nota-v8.pages.dev
+   dan tekan Ctrl+F5.
+7. Uji dengan satu nota percobaan: 3 HC, 3 hari, Paket 6 = Rp100.000.
+   Coba tanggal setor kemarin dan periksa jadwal ambil serta dua tanggal pada nota.
+
+PENTING
+* Nota reseller yang SUDAH TERSIMPAN TIDAK diubah total harganya otomatis.
+  Koreksi nota lama harus diaudit terpisah bersama data pembayaran agar aman.
+* Tidak ada perubahan pada Nota Sewa Toga atau kupon pelanggan.
+* Belum diuji langsung pada Supabase produksi; uji satu nota percobaan.

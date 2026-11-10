@@ -1,6 +1,6 @@
 import {readPDF,readWord,readPhoto,withTimeout,setOCRProgress} from './document-reader.js';
 import {resetOCR} from './ocr-fast.js';
-import {generatePDF,checkAssets,setUserFonts} from './pdf-engine.js?v=4.39';
+import {generatePDF,checkAssets,setUserFonts} from './pdf-engine.js?v=4.40';
 import {canonicalUniversity} from './classifier.js';
 import {readAbstractFromFile,isAbstractMetadata} from './abstract-reader.js';
 import {chooseDummyBackText,DUMMY_PAGE} from './dummybook-layout.js';
@@ -13,10 +13,12 @@ import {IPS_SIZES} from './soft-ips-layout.js';
 const $ = id => document.getElementById(id);
 const FIELDS=['nama','nim','prodi','fakultas','universitas','kota','jenis_dokumen','bulan_tahun','bahasa'];
 const REQUIRED=['judul',...FIELDS.filter(name=>!['fakultas','kota','bahasa'].includes(name))];
-const COVER_TYPES=['polos','poloslogoatas','polosv11','polosv22','merah','maroon','custom','unira','uim','dummybook','softips','covercd'];
+const COVER_TYPES=['polos','poloslogoatas','polosv11','polosv22','merah','maroon','custom','customlogo1','customlogo2','unira','uim','dummybook','softips','covercd'];
 const sizesForStyle=style=>style==='covercd'?[]:style==='dummybook'?DUMMY_SIZES:style==='softips'?IPS_SIZES:availableMM;
 const validThickness=o=>o?.style==='covercd'||(sizesForStyle(o?.style).includes(Number(o?.thickness))&&o.thickness!==null);
 const unsafeProduction=o=>o&&['merah','maroon','custom'].includes(o.style)&&o.thickness===28;
+const isCustomLogoStyle=style=>style==='customlogo1'||style==='customlogo2';
+const hasCustomLogo=o=>!isCustomLogoStyle(o?.style)||!!o?.custom_logo?.bytes?.byteLength;
 const isPdf=f=>!!f&&(/\.pdf$/iu.test(f.name)||f.type==='application/pdf');
 const isWord=f=>!!f&&/\.docx$/iu.test(f.name);
 const isPhoto=f=>!!f&&(['image/jpeg','image/png','image/webp'].includes(f.type)||/\.(jpg|jpeg|png|webp)$/iu.test(f.name));
@@ -88,7 +90,7 @@ function addOrders(files){
     if(!isAccepted(file)){rejected.push(`${file.name}: format tidak didukung`);continue;}
     if(file.size>MAX_IMAGE_SIZE){rejected.push(`${file.name}: lebih dari 25 MB`);continue;}
     if(orders.reduce((n,o)=>n+(o.file?.size||0),0)+file.size>MAX_TOTAL_SIZE){rejected.push(`${file.name}: total unggahan melebihi 200 MB`);continue;}
-    const order={id:nextId++,file,imageURL:isPhoto(file)?URL.createObjectURL(file):null,data:newData(),thickness:null,style:'polos',custom_color:'#1458A8',status:'baru',verified:false,warnings:[],revision:0,pdfBlob:null};
+    const order={id:nextId++,file,imageURL:isPhoto(file)?URL.createObjectURL(file):null,data:newData(),thickness:null,style:'polos',custom_color:'#1458A8',custom_logo:null,custom_logo_width_mm:58.5,status:'baru',verified:false,warnings:[],revision:0,pdfBlob:null};
     orders.push(order);added++;
     if(activeId===null)activeId=order.id;
   }
@@ -104,7 +106,7 @@ function addOrders(files){
 function addManual(){
   releaseDownload('batch');
   if(orders.length>=MAX_ORDERS)return notice(`Maksimal ${MAX_ORDERS} pesanan.`,'error');
-  const order={id:nextId++,file:null,imageURL:null,data:newData(),thickness:null,style:'polos',custom_color:'#1458A8',status:'periksa',verified:false,warnings:[],revision:0,pdfBlob:null};
+  const order={id:nextId++,file:null,imageURL:null,data:newData(),thickness:null,style:'polos',custom_color:'#1458A8',custom_logo:null,custom_logo_width_mm:58.5,status:'periksa',verified:false,warnings:[],revision:0,pdfBlob:null};
   orders.push(order);selectOrder(order.id);renderOrders();notice('Pesanan manual ditambahkan. Isi identitas, pilih ketebalan, lalu verifikasi.');
 }
 function orderNumber(order){return orders.indexOf(order)+1;}
@@ -135,7 +137,7 @@ function renderOrders(){
     else select.value=o.thickness===null?'':String(o.thickness);
     select.addEventListener('change',()=>setThickness(o.id,select.value?Number(select.value):null));
     const styleChoice=document.createElement('select');styleChoice.className='order-style';styleChoice.setAttribute('aria-label',`Jenis cover pesanan ${orderNumber(o)}`);
-    for(const [v,label] of [['polos','Polos V1 (Lama, tanpa logo)'],['poloslogoatas','Polos V2 (217 mm, tanpa logo)'],['polosv11','Polos V1.1 (215 mm, tanpa logo)'],['polosv22','Polos V2.1 (215 mm, tanpa logo)'],['merah','Merah'],['maroon','Maroon'],['custom','Custom'],['unira','UNIRA'],['uim','UIM — Universitas Islam Madura'],['dummybook','Dummybook'],['softips','Soft Cover IPS'],['covercd','Cover CD']]){const opt=document.createElement('option');opt.value=v;opt.textContent=label;styleChoice.append(opt);}
+    for(const [v,label] of [['polos','Polos V1 (Lama, tanpa logo)'],['poloslogoatas','Polos V2 (217 mm, tanpa logo)'],['polosv11','Polos V1.1 (215 mm, tanpa logo)'],['polosv22','Polos V2.1 (215 mm, tanpa logo)'],['merah','Merah'],['maroon','Maroon'],['custom','Custom Warna (lama)'],['customlogo1','Custom Logo V1 — UIM'],['customlogo2','Custom Logo V2 — UIN'],['unira','UNIRA'],['uim','UIM — Universitas Islam Madura'],['dummybook','Dummybook'],['softips','Soft Cover IPS'],['covercd','Cover CD']]){const opt=document.createElement('option');opt.value=v;opt.textContent=label;styleChoice.append(opt);}
     styleChoice.value=o.style;styleChoice.addEventListener('change',()=>setStyle(o.id,styleChoice.value));
     const remove=document.createElement('button');remove.type='button';remove.className='order-remove';remove.textContent='✕';remove.title=`Hapus pesanan ${orderNumber(o)}`;remove.addEventListener('click',()=>removeOrder(o.id));
     row.append(open,styleChoice,select,remove);target.append(row);
@@ -241,12 +243,27 @@ function renderCoverStyle(){
  $('dummyAbstractPanel').classList.toggle('hidden',o?.style!=='dummybook');
  $('dummyAbstractStatus').textContent=o?.abstractStatus||'Tempel abstrak asli; pisahkan antarparagraf dengan satu baris kosong. Otomatis: 2 paragraf terakhir, atau 1/3 jika perlu.';
  updateDummyParagraphPreview();
- const show=o?.style==='custom';$('customColorRow').classList.toggle('hidden',!show);$('customColorPicker').value=o?.custom_color||'#1458A8';$('customColorCode').textContent=o?.custom_color||'#1458A8';
+ const show=['custom','customlogo1','customlogo2'].includes(o?.style);
+ $('customColorRow').classList.toggle('hidden',!show);
+ $('customColorPicker').value=o?.custom_color||'#1458A8';$('customColorCode').textContent=o?.custom_color||'#1458A8';
+ const logoMode=isCustomLogoStyle(o?.style);
+ $('customLogoPanel').classList.toggle('hidden',!logoMode);
+ $('customLogoHeading').textContent=o?.style==='customlogo1'?'Custom Logo V1 — titik logo UIM (setelah nama)':'Custom Logo V2 — titik logo UIN Maroon (sebelum nama)';
+ $('customLogoInfo').textContent=logoMode?`Titik pusat mengikuti PDF ${o.style==='customlogo1'?'UIM':'UIN Maroon'} dan tidak bergeser saat lebar logo diubah. Tinggi mengikuti rasio asli. Jika logo menimpa teks, PDF diblokir. Gunakan PNG transparan bila ada.`:'';
+ $('customLogoWidth').value=Number(o?.custom_logo_width_mm??(o?.style==='customlogo2'?75.3:58.5));
+ const preview=$('customLogoPreview');
+ if(logoMode&&o?.custom_logo?.previewUrl){preview.src=o.custom_logo.previewUrl;preview.classList.remove('hidden');}
+ else{preview.removeAttribute('src');preview.classList.add('hidden');}
+ $('customLogoStatus').textContent=o?.custom_logo?.name?`Logo pesanan ini: ${o.custom_logo.name}`:'Belum ada logo. Upload PNG/JPG/WebP dahulu.';
+ $('customLogoRemove').disabled=!o?.custom_logo;
 }
 function setStyle(id,style){
  const o=orders.find(x=>x.id===id);if(!o||!COVER_TYPES.includes(style))return;
  if(o.id===activeId)o.data=currentData();
- const previous=o.style;o.style=style;invalidateOrder(o);
+ const previous=o.style;o.style=style;
+ if(isCustomLogoStyle(style)&&previous!==style)o.custom_logo_width_mm=style==='customlogo1'?58.5:75.3;
+ if(isCustomLogoStyle(style)&&!['custom','customlogo1','customlogo2'].includes(previous)&&o.custom_color==='#1458A8')o.custom_color='#8B0000';
+ invalidateOrder(o);
  let reset=false;
  if(isCoverCD(o) && o.thickness!==null){o.thickness=null;reset=true;}
  if(!isCoverCD(o)&&o.thickness!==null&&!validThickness(o)){o.thickness=null;reset=true;}
@@ -295,6 +312,7 @@ function removeOrder(id){
   if(!confirm(`Hapus pesanan ${String(orderNumber(o)).padStart(2,'0')} (${o.data.nama||o.file?.name||'manual'})?`))return;
   releaseDownload('batch');
   if(o.imageURL)URL.revokeObjectURL(o.imageURL);
+ if(o.custom_logo?.previewUrl)URL.revokeObjectURL(o.custom_logo.previewUrl);
   if(activeId===o.id)releaseDownload('single');
   orders=orders.filter(x=>x.id!==id);
   if(activeId===id)selectOrder(orders[0]?.id||null);
@@ -368,7 +386,7 @@ async function readAll({automatic=false}={}){
 }
 function approveActive(){
   const a=active();if(!a)return notice('Pilih pesanan terlebih dahulu.','error');
-  a.data=currentData();const missing=validData(a.data,a.style);
+  a.data=currentData();const missing=[...validData(a.data,a.style),...(!hasCustomLogo(a)?['logo custom']:[])];
   if(missing.length)return notice(`Pesanan ${orderNumber(a)} belum lengkap: ${missing.join(', ')}.`,'error');
   if(!validThickness(a))return notice(`Pilih ukuran punggung untuk pesanan ${orderNumber(a)} terlebih dahulu.`,'error');
   if(unsafeProduction(a))return notice('Warna 28 mm memerlukan master baru yang tidak memotong tanda belakang.','error');
@@ -378,16 +396,17 @@ function approveActive(){
 }
 async function makeSelectedPDF({downloadAfter=false}={}){
  const a=active();if(!a)return notice('Pilih pesanan terlebih dahulu.','error');
- a.data=currentData();const missing=validData(a.data,a.style);
+ a.data=currentData();const missing=[...validData(a.data,a.style),...(!hasCustomLogo(a)?['logo custom']:[])];
  if(missing.length)return notice(`Lengkapi: ${missing.join(', ')}.`,'error');
  if(!validThickness(a))return notice('Pilih ketebalan punggung terlebih dahulu.','error');
  if(unsafeProduction(a))return notice('Warna 28 mm belum aman; garis potong terpotong.','error');
  const button=$('generateButton');btnBusy(button,true,'Membuat PDF...');
  try{
-  const result=await withTimeout(generatePDF(a.data,a.thickness,a.style,a.custom_color),90000,'Pembuatan PDF lokal');
+  const result=await withTimeout(generatePDF(a.data,a.thickness,a.style,a.custom_color,isCustomLogoStyle(a.style)?{...a.custom_logo,widthMm:a.custom_logo_width_mm}:null),90000,'Pembuatan PDF lokal');
   a.pdfBlob=new Blob([result.bytes],{type:'application/pdf'});
   $('spineFontResult').textContent=isCoverCD(a)?`Hasil Cover CD 137 × 137 mm • Judul ${result.details?.title_lines||'?'} baris • font ${result.details?.title_font_pt||'?'} pt • 2 logo`:`Hasil aktual: ${a.style.toUpperCase()} ${a.thickness} mm • ${result.details?.spine_lines??'?'} baris • font punggung ${result.details?.spine_font_pt??'?'} pt`+(a.style==='dummybook'?` • ${result.details?.back_paragraph_count} paragraf abstrak • 1 halaman 420 × 297 mm`:``)+(['polos','polosv11'].includes(a.style)&&result.details?.spine_year_font_pt?` • font tahun punggung ${result.details.spine_year_font_pt} pt`:``);
 
+  if(result.details?.logo_geometry){const g=result.details.logo_geometry;$('spineFontResult').textContent+=` • ukuran logo ${g.width_mm.toFixed(1)} × ${g.height_mm.toFixed(1)} mm (titik pusat tetap)`;}
   updatePDFPreview(a);renderOrders();step(4);
   if(downloadAfter)triggerDownload(a.pdfBlob,coverFileName(a));
   notice(`PDF ${a.data.nama} — ${coverDescriptor(a)} berhasil. ${isCoverCD(a)?'Periksa nama/NIM, dua logo, dan judul sebelum cetak.':`Judul punggung: ${result.details?.spine_lines||'?'} baris, font ${result.details?.spine_font_pt||'?'} pt. Periksa preview dan cetak uji.`}`+(result.warnings?.length?'\n'+result.warnings.join('\n'):''),result.warnings?.length?'info':'success');
@@ -405,10 +424,10 @@ async function makeOrderZIP(){
  // Never silently treat the green Download Batch button as an inert control.
  // Show actionable validation and explicit verification for every ready order.
  if(!orders.length)return notice('Tambahkan berkas atau pesanan manual terlebih dahulu.','error');
- const incomplete=orders.filter(o=>validData(o.data,o.style).length || !validThickness(o) || unsafeProduction(o));
+ const incomplete=orders.filter(o=>validData(o.data,o.style).length || !hasCustomLogo(o) || !validThickness(o) || unsafeProduction(o));
  const eligible=orders.filter(o=>!incomplete.includes(o));
  if(incomplete.length){
-  const details=incomplete.slice(0,4).map(o=>`Pesanan ${orderNumber(o)} (${o.data.nama||o.file?.name||'belum terbaca'}): ${[...validData(o.data,o.style),...(!validThickness(o)?['pilih ketebalan']:[]),...(unsafeProduction(o)?['warna 28 mm belum aman']:[])].join(', ')}`).join('\n');
+  const details=incomplete.slice(0,4).map(o=>`Pesanan ${orderNumber(o)} (${o.data.nama||o.file?.name||'belum terbaca'}): ${[...validData(o.data,o.style),...(!hasCustomLogo(o)?['logo custom']:[]),...(!validThickness(o)?['pilih ketebalan']:[]),...(unsafeProduction(o)?['warna 28 mm belum aman']:[])].join(', ')}`).join('\n');
   if(!eligible.length){
    notice(`Belum bisa ekspor batch: semua pesanan belum lengkap. Perbaiki:\n${details}${incomplete.length>4?'\n...':''}`,'error');
    selectOrder(incomplete[0].id);return;
@@ -434,7 +453,7 @@ async function makeOrderZIP(){
   for(let i=0;i<eligible.length;i++){
    const order=eligible[i],name=coverFileName(order);
    try{
-    const result=await withTimeout(generatePDF(order.data,order.thickness,order.style,order.custom_color),90000,`PDF pesanan ${i+1}`);
+    const result=await withTimeout(generatePDF(order.data,order.thickness,order.style,order.custom_color,isCustomLogoStyle(order.style)?{...order.custom_logo,widthMm:order.custom_logo_width_mm}:null),90000,`PDF pesanan ${i+1}`);
     generated.push({bytes:result.bytes,name});
     if(output!=='combined')archive.file(name,result.bytes);
    }catch(error){failures.push(`${name} : ${error.message||error}`);order.status='gagal';order.warnings=[String(error.message||error)];}
@@ -497,6 +516,50 @@ $('resetForm').addEventListener('click',()=>{
 });
 document.querySelectorAll('[data-cover-style]').forEach(b=>b.addEventListener('click',()=>{const a=active();if(a)setStyle(a.id,b.dataset.coverStyle);}));
 $('customColorPicker').addEventListener('input',e=>{const a=active();if(!a)return;a.custom_color=e.target.value.toUpperCase();invalidateOrder(a);renderCoverStyle();clearPDFPreview();renderOrders();});
+// V4.40: convert WebP locally to PNG; preserve alpha and never upload logo to a server.
+async function decodeCustomLogoFile(file){
+ if(!file||!(/\.(png|jpe?g|webp)$/i.test(file.name)||['image/png','image/jpeg','image/webp'].includes(file.type)))throw Error('Pilih logo PNG, JPG, JPEG, atau WebP.');
+ if(file.size>8*1024*1024)throw Error('File logo maksimal 8 MB.');
+ let mime=['image/png','image/jpeg','image/webp'].includes(file.type)?file.type:(/\.webp$/i.test(file.name)?'image/webp':/\.png$/i.test(file.name)?'image/png':'image/jpeg');
+ let bytes=new Uint8Array(await file.arrayBuffer());
+ if(mime==='image/webp'){
+   if(typeof createImageBitmap!=='function')throw Error('Browser belum mendukung konversi WebP. Ubah logo ke PNG terlebih dahulu.');
+   const bmp=await createImageBitmap(file);
+   try{
+    if(bmp.width>5000||bmp.height>5000)throw Error('Resolusi logo terlalu besar (maksimum 5000 piksel per sisi).');
+    const c=document.createElement('canvas');c.width=bmp.width;c.height=bmp.height;
+    const ctx=c.getContext('2d');if(!ctx)throw Error('Canvas gambar tidak tersedia.');
+    ctx.drawImage(bmp,0,0);
+    const out=await new Promise((resolve,reject)=>c.toBlob(b=>b?resolve(b):reject(Error('Konversi logo WebP gagal')),'image/png'));
+    bytes=new Uint8Array(await out.arrayBuffer());mime='image/png';
+   }finally{bmp.close?.();}
+ }
+ if(bytes.length>8*1024*1024)throw Error('Logo setelah konversi lebih dari 8 MB. Perkecil ukurannya.');
+ if(!((mime==='image/png'&&bytes[0]===137&&bytes[1]===80)||(mime==='image/jpeg'&&bytes[0]===255&&bytes[1]===216)))throw Error('Isi gambar tidak cocok dengan format PNG/JPG.');
+ return {bytes,mime,name:file.name,previewUrl:URL.createObjectURL(file)};
+}
+$('customLogoFile').addEventListener('change',async e=>{
+ const a=active(),file=e.target.files?.[0];e.target.value='';if(!a||!file)return;
+ try{
+   const logo=await decodeCustomLogoFile(file);
+   if(a.custom_logo?.previewUrl)URL.revokeObjectURL(a.custom_logo.previewUrl);
+   a.custom_logo=logo;invalidateOrder(a);
+   if(a.id===activeId){renderCoverStyle();clearPDFPreview();}
+   renderOrders();notice(`Logo custom ${file.name} siap untuk pesanan ${orderNumber(a)}. Atur lebar logo sebelum membuat PDF.`,'success');
+ }catch(err){notice('Gagal membaca logo: '+String(err.message||err),'error');}
+});
+$('customLogoWidth').addEventListener('change',e=>{
+ const a=active();if(!a)return;
+ const v=Number(e.target.value);
+ if(!Number.isFinite(v)||v<10||v>100){notice('Lebar logo harus 10–100 mm.','error');renderCoverStyle();return;}
+ a.custom_logo_width_mm=v;invalidateOrder(a);clearPDFPreview();renderCoverStyle();renderOrders();
+});
+$('customLogoRemove').addEventListener('click',()=>{
+ const a=active();if(!a||!a.custom_logo)return;
+ if(a.custom_logo.previewUrl)URL.revokeObjectURL(a.custom_logo.previewUrl);
+ a.custom_logo=null;invalidateOrder(a);clearPDFPreview();renderCoverStyle();renderOrders();
+ notice('Logo pada pesanan ini dihapus. Upload logo lain untuk membuat PDF Custom Logo.','info');
+});
 $('approveOrder').addEventListener('click',approveActive);
 $('generateButton').addEventListener('click',()=>makeSelectedPDF());
 $('batchJobsButton').addEventListener('click',makeOrderZIP);
@@ -507,7 +570,7 @@ $('downloadButton').addEventListener('click',()=>{
   notice('PDF telah disiapkan. Jika browser tidak langsung mengunduh, gunakan tombol hijau "Download" di bawah pratinjau.','success');
 });
 async function loadStatus(){
- $('connection').textContent='GitHub Pages V4.39 • Dummybook spread A3 5–10 mm • Tanpa token';
+ $('connection').textContent='GitHub Pages V4.40 • Dummybook spread A3 5–10 mm • Tanpa token';
  $('serverDot').classList.add('online');
  notice('Mode lokal: Word dan PDF teks dibaca di browser tanpa OCR lokal. Foto dan PDF scan memakai OCR Tesseract lokal (model bahasa mungkin perlu diunduh).','info');
  // JANGAN menunggu template saat memuat UI; tidak membuat tombol membaca macet.

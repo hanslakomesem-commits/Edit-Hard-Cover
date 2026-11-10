@@ -1,5 +1,5 @@
 /**
- * ZAIN.NET PDF engine, static-browser GitHub Pages edition V4.38.
+ * ZAIN.NET PDF engine, static-browser GitHub Pages edition V4.39.
  * Each page begins with the already cleaned ORIGINAL PDF vector master.
  * Plain marks are reconstructed only in the final V4.38 cleanup; layouts keep original geometry.
  * Important: Tinos is not the commercial Times New Roman face used in the
@@ -16,11 +16,12 @@ import {canonicalUniversity,plainCoverIdentity} from './classifier.js';
 import {PLAIN_V1,PLAIN_V2,PLAIN_V11,PLAIN_V22,PLAIN_VARIANTS,PLAIN_215_VARIANTS,plainFrontLayout,plainFrontFits} from './plain-variant-layout.js';
 const {PDFDocument, StandardFonts, degrees, rgb}=globalThis.PDFLib||{};
 const ALL=Array.from({length:19},(_,i)=>i+10);
-let LAYOUT=null,MASTER=null,COLOR_MASTERS=null,COLOR_TRANSPARENT=null,UNIRA_MASTER=null,UNIRA_LOGO=null,DUMMY_MASTER=null,IPS_MASTER=null;
+let LAYOUT=null,MASTER=null,COLOR_MASTERS=null,COLOR_TRANSPARENT=null,UNIRA_MASTER=null,UNIRA_LOGO=null,UIM_MASTER=null,DUMMY_MASTER=null,IPS_MASTER=null;
 const pagePt={width:483*72/25.4,height:330*72/25.4};
 const PLAIN_PRINT_MM={width:480,height:330};
 const COLOR_PRINT_MM={width:475,height:320};
 const UNIRA_PRINT_MM={width:484,height:330};
+const UIM_PRINT_MM={width:475,height:320};
 const DUMMY_PRINT_MM={width:420,height:297};
 const IPS_PRINT_MM={width:330,height:210};
 const CD_PRINT_MM={width:CD_PAGE_MM,height:CD_PAGE_MM};
@@ -569,8 +570,8 @@ async function simplifyAllPlainGuides(bytes,mm,conf,variant){
 }
 
 const COLOR_TYPES=['merah','maroon','custom'];
-export const coverTypes=[...PLAIN_VARIANTS,...COLOR_TYPES,'unira','dummybook','softips','covercd'];
-export const printSizes={polos:PLAIN_PRINT_MM,poloslogoatas:PLAIN_PRINT_MM,polosv11:PLAIN_PRINT_MM,polosv22:PLAIN_PRINT_MM,merah:COLOR_PRINT_MM,maroon:COLOR_PRINT_MM,custom:COLOR_PRINT_MM,unira:UNIRA_PRINT_MM,dummybook:DUMMY_PRINT_MM,softips:IPS_PRINT_MM,covercd:CD_PRINT_MM};
+export const coverTypes=[...PLAIN_VARIANTS,...COLOR_TYPES,'unira','uim','dummybook','softips','covercd'];
+export const printSizes={polos:PLAIN_PRINT_MM,poloslogoatas:PLAIN_PRINT_MM,polosv11:PLAIN_PRINT_MM,polosv22:PLAIN_PRINT_MM,merah:COLOR_PRINT_MM,maroon:COLOR_PRINT_MM,custom:COLOR_PRINT_MM,unira:UNIRA_PRINT_MM,uim:UIM_PRINT_MM,dummybook:DUMMY_PRINT_MM,softips:IPS_PRINT_MM,covercd:CD_PRINT_MM};
 export function validateCoverMode(mode,customColor) {
  const type=String(mode||'polos').toLowerCase();
  if(!coverTypes.includes(type))fail('Pilihan jenis cover tidak dikenal.');
@@ -912,6 +913,116 @@ async function generateUniraPDF(data,mm){
 }
 
 
+
+/** ZAIN.NET V4.39 – UIM / Universitas Islam Madura.
+ * Reconstructed from the user's UIM.pdf, EXACT physical page 475 x 320 mm.
+ * The user-supplied clean master retains the original maroon and embedded
+ * UIM emblem. The supplied reference has a 15mm spine, not 10mm.
+ * Other requested sizes shift ONLY the left four guide marks; the right
+ * front cover, original logo and text anchors do not move.
+ */
+export const UIM_REFERENCE=Object.freeze({
+  pageWidthPt:mmPt(475),pageHeightPt:mmPt(320),baseMm:15,
+  leftGuides:[37.0315,362.9616,624.1615,652.4215],
+  rightGuides:[694.9412,723.1212,988.2711,1310.6215],
+  frontCenterX:1002.1,spineTitleCenterTopPt:294.0,
+  spineSafeTopPt:94,spineSafeBottomPt:494,
+  spineTypeAndNameTopPt:673,spineYearTopPt:803
+});
+const UIM_BACKGROUND=rgb?.(139/255,0,0);
+export function uimSpineGeometry(mm){
+ mm=Number(mm);
+ if(!ALL.includes(mm))throw new PDFPreflightError('UIM: ketebalan hanya 10–28 mm.');
+ const r=UIM_REFERENCE,delta=mmPt(mm-r.baseMm);
+ const leftGuides=r.leftGuides.map(x=>x-delta),rightGuides=[...r.rightGuides];
+ const left=leftGuides.at(-1),right=rightGuides[0],center=(left+right)/2;
+ const observedMm=(right-left)/mmPt(1);
+ if(Math.abs(observedMm-mm)>.05)fail('Kalibrasi punggung UIM tidak tepat.');
+ if(leftGuides[0]<0||rightGuides.at(-1)>r.pageWidthPt)fail('Garis UIM melewati bidang cetak.');
+ return {mm,delta,leftGuides,rightGuides,left,right,center,observedMm};
+}
+export function drawUimGuides(page,mm,warnings=[]){
+ const g=uimSpineGeometry(mm),h=page.getHeight(),w=page.getWidth();
+ // Top/bottom strips are only 34pt high, safely outside every text anchor.
+ page.drawRectangle({x:0,y:h-34,width:w,height:34,color:UIM_BACKGROUND});
+ page.drawRectangle({x:0,y:0,width:w,height:34,color:UIM_BACKGROUND});
+ const ink=YELLOW,top=h-32.20,bottom=32.20;
+ for(const x of [...g.leftGuides,...g.rightGuides]){
+  page.drawLine({start:{x,y:h},end:{x,y:top},color:ink,thickness:.5});
+  page.drawLine({start:{x,y:0},end:{x,y:bottom},color:ink,thickness:.5});
+ }
+ const cornerLength=35.19;
+ const left= g.leftGuides[0],right=g.rightGuides.at(-1);
+ const cornerLeftStart=Math.max(0,left-cornerLength);
+ if(left<cornerLength)warnings.push(`UIM ${mm} mm: sudut belakang kiri dipendekkan ${(cornerLength-left).toFixed(1)} pt agar tetap masuk kertas.`);
+ for(const y of [top,bottom]){
+  page.drawLine({start:{x:cornerLeftStart,y},end:{x:left,y},color:ink,thickness:.5});
+  page.drawLine({start:{x:right,y},end:{x:w,y},color:ink,thickness:.5});
+ }
+ return g;
+}
+export function chooseUimSpine(fonts,segs,mm,warnings){
+ const g=uimSpineGeometry(mm),u=UIM_REFERENCE;
+ const base=mm<=12?8:9,maxLen=2*Math.min(u.spineTitleCenterTopPt-u.spineSafeTopPt,u.spineSafeBottomPt-u.spineTitleCenterTopPt)-4;
+ for(const {rows,size} of colorSpinePreferences(mm,base,6)){
+  try{
+   const lines=spineRows(fonts,segs,size,maxLen,rows,rows);
+   if(!withinSpine(size,lines.length,g.right-g.left,1.1))continue;
+   const pitch=size*1.11;
+   const xs=lines.map((_,i)=>g.center+(lines.length-1)*pitch/2-i*pitch);
+   if(lines.some(line=>{const len=measure(fonts,line,size);return u.spineTitleCenterTopPt-len/2<u.spineSafeTopPt||u.spineTitleCenterTopPt+len/2>u.spineSafeBottomPt;}))continue;
+   if(rows===3)warnings.push(`UIM ${mm} mm: judul punggung menggunakan tiga baris ${size} pt.`);
+   if(size<base)warnings.push(`UIM ${mm} mm: font punggung diturunkan menjadi ${size} pt.`);
+   return {lines,xs,size,centerTop:u.spineTitleCenterTopPt,geometry:g};
+  }catch(err){if(!(err instanceof PDFPreflightError))throw err;}
+ }
+ fail(`Judul terlalu panjang untuk punggung UIM ${mm} mm, meskipun tiga baris 6 pt.`);
+}
+async function generateUimPDF(data,mm){
+ if(!UIM_MASTER)UIM_MASTER=await loadAsset('./uim_clean.pdf');
+ mm=Number(mm);const segs=validate(data,mm),warnings=[];
+ const doc=await PDFDocument.create();const master=await PDFDocument.load(UIM_MASTER);
+ if(master.getPageCount()!==1)fail('Master UIM harus satu halaman.');
+ const [page]=await doc.copyPages(master,[0]);doc.addPage(page);
+ if(Math.abs(page.getWidth()-mmPt(475))>.35||Math.abs(page.getHeight()-mmPt(320))>.35)fail('Master UIM bukan 475 × 320 mm.');
+ const geom=drawUimGuides(page,mm,warnings);
+ const fonts=await getFonts(doc,warnings),cx=UIM_REFERENCE.frontCenterX;
+ // Four lines in source; allow adaptive font down to 9.8pt if more text.
+ let title;
+ for(let size=12;size>=9.8-1e-6;size=Math.round((size-.2)*10)/10){
+  const lines=greedyLines(fonts,segs,size,410);
+  if(lines.length<=5){title={lines,size};break;}
+ }
+ if(!title)fail('Judul depan UIM terlalu panjang (lebih dari 5 baris).');
+ title.lines.forEach((line,i)=>renderLine(page,fonts,line,title.size,cx,121.5+i*13.29,false,YELLOW));
+ single(page,fonts,upper(data.jenis_dokumen),17.9,cx,250.5,230,'Jenis dokumen UIM',warnings,13,false,YELLOW);
+ single(page,fonts,'Oleh',12,cx,343.8,160,'Oleh UIM',warnings,11,false,YELLOW);
+ single(page,fonts,upper(data.nama),12,cx,357.1,370,'Nama UIM',warnings,8,false,YELLOW,nameUnderlineEnabled(data));
+ single(page,fonts,`NIM. ${norm(data.nim)}`,12,cx,370.4,355,'NIM UIM',warnings,9,false,YELLOW);
+ const faculty=!!norm(data.fakultas),city=!!norm(data.kota),gap=13.29;
+ const frontStack=[`PROGRAM STUDI ${upper(data.prodi)}`];
+ if(faculty)frontStack.push(`FAKULTAS ${upper(data.fakultas)}`);
+ const institution=upper(canonicalUniversity(data.universitas));
+ if(institution!=='UNIVERSITAS ISLAM MADURA')warnings.push('Pilihan UIM digunakan dengan nama universitas lain; periksa data dan contoh sebelum cetak.');
+ frontStack.push(institution);
+ if(city)frontStack.push(upper(data.kota));
+ frontStack.push((norm(data.bulan_tahun).match(/\b\d{4}\b/u)||[])[0]||norm(data.bulan_tahun));
+ const baseTop=793.2-(frontStack.length-1)*gap;
+ for(let i=0;i<frontStack.length;i++)single(page,fonts,frontStack[i],12,cx,baseTop+i*gap,390,`Identitas depan UIM baris ${i+1}`,warnings,8.5,false,YELLOW);
+ const spine=chooseUimSpine(fonts,segs,mm,warnings);
+ spine.lines.forEach((line,i)=>renderLine(page,fonts,line,spine.size,spine.xs[i],spine.centerTop,true,YELLOW));
+ const metaSize=mm<=12?7:9,metaPitch=metaSize*1.11;
+ if(!withinSpine(metaSize,2,geom.right-geom.left,1.1))fail('Nama & jenis dokumen UIM tidak muat di punggung.');
+ single(page,fonts,upper(data.jenis_dokumen),metaSize,geom.center+metaPitch/2,673,105,'Jenis dokumen punggung UIM',warnings,6,true,YELLOW);
+ single(page,fonts,upper(data.nama),metaSize,geom.center-metaPitch/2,673,180,'Nama punggung UIM',warnings,6,true,YELLOW);
+ const year=(norm(data.bulan_tahun).match(/\b\d{4}\b/u)||[])[0]||norm(data.bulan_tahun);
+ single(page,fonts,year,mm<=11?9.5:10,geom.center,803,70,'Tahun punggung UIM',warnings,8,true,YELLOW);
+ const bytes=new Uint8Array(await doc.save({useObjectStreams:true}));
+ const check=await PDFDocument.load(bytes);
+ if(check.getPageCount()!==1||Math.abs(check.getPage(0).getWidth()-mmPt(475))>.35||Math.abs(check.getPage(0).getHeight()-mmPt(320))>.35)fail('UIM: verifikasi ukuran kertas gagal.');
+ return {bytes,warnings,details:{mode:'uim',mm,paper_mm:UIM_PRINT_MM,spine_font_pt:spine.size,spine_lines:spine.lines.length,guide_left:geom.left,guide_right:geom.right,logo:'logo UIM asli dari PDF pengguna',source_reference_mm:15}};
+}
+
 /** V4.21 Dummybook: a SINGLE 420×297mm spread (back/spine/front).
  * Each size 5–10mm is copied from its corresponding original PDF reference
  * page, preserving the original photos, logo, pink background and fold marks.
@@ -1180,6 +1291,7 @@ export async function generatePDF(data,mm,mode='polos',customColor=null){
  if(c.type==='dummybook')return generateDummyPDF(data,mm);
  if(c.type==='softips')return generateSoftIPSPDF(data,mm);
  if(c.type==='unira')return generateUniraPDF(data,mm);
+ if(c.type==='uim')return generateUimPDF(data,mm);
  if(!PLAIN_VARIANTS.includes(c.type))return generateColorPDF(data,mm,c.type,c.color);
  const plain=await generatePlainPDF(data,mm,c.type);
  let out=await resizePlainToPrint(plain.bytes);

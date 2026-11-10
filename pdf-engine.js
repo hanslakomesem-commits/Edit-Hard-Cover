@@ -1,7 +1,7 @@
 /**
- * ZAIN.NET PDF engine, static-browser GitHub Pages edition V4.37.
+ * ZAIN.NET PDF engine, static-browser GitHub Pages edition V4.38.
  * Each page begins with the already cleaned ORIGINAL PDF vector master.
- * No template lines, crop marks, or cover geometry are re-created here.
+ * Plain marks are reconstructed only in the final V4.38 cleanup; layouts keep original geometry.
  * Important: Tinos is not the commercial Times New Roman face used in the
  * supplied PDF. Production printing still requires a proof and font review.
  */
@@ -426,7 +426,7 @@ async function resizePlainToPrint(bytes) {
  * from outer trim to the nearest spine fold is exactly 215mm on BOTH sides.
  * Original source trim measured x=60.5pt (10mm) and 1320.12pt (all),
  * source master 483mm shrinks to 480mm in resizePlainToPrint.
- * 217mm ORIGINAL output remains byte-for-byte unchanged for V1/V2.
+ * Original V1/V2 side geometry remains, while V4.38 simplifies guides for ALL Polos.
  */
 export function plain215TrimGeometry(mm,conf){
  const scale=480/483;
@@ -503,6 +503,67 @@ async function adjustPlain215Trim(bytes,mm,conf){
      page.drawLine({start:{x:left,y:upperHorizontalY},end:{x:right,y:upperHorizontalY},thickness:.55,color:ink});
      page.drawLine({start:{x:left,y:lowerHorizontalY},end:{x:right,y:lowerHorizontalY},thickness:.55,color:ink});
    }
+ }
+ return {bytes:new Uint8Array(await pdf.save({useObjectStreams:true})),geometry:g};
+}
+
+
+/** ZAIN.NET V4.38 — penanda potong Polos minimalis mengikuti update(1).pdf.
+ * Berlaku untuk SEMUA empat varian Polos (217 dan 215), pada 10–28 mm.
+ * Hanya strip kosong paling atas dan bawah yang dilapisi putih; teks tidak
+ * berubah. Penanda lipatan punggung empat buah tetap ada dan berjarak benar.
+ * Semua koordinat di bawah adalah point dalam PDF hasil 480 × 330 mm.
+ * PDF acuan menampilkan garis vertikal sekitar 3,5 pt dan sudut L pendek;
+ * referensi acuan 475 × 320 mm, jadi posisinya disesuaikan dengan master 480.
+ */
+export function plainMinimalGuideGeometry(mm,conf,variant){
+ if(!PLAIN_VARIANTS.includes(variant))fail('Varian Polos penanda minimalis tidak dikenal.');
+ if(!ALL.includes(Number(mm))||!conf||!Number.isFinite(conf.left)||!Number.isFinite(conf.right))
+  fail('Ketebalan/kalibrasi penanda Polos tidak valid.');
+ const scale=480/483;
+ const trim215=PLAIN_215_VARIANTS.includes(variant)?plain215TrimGeometry(Number(mm),conf):null;
+ const originalLeft=(60.50-(Number(mm)-10)*mmPt(1))*scale;
+ const originalRight=1320.12*scale;
+ const leftTrim=trim215?trim215.newLeft:originalLeft;
+ const rightTrim=trim215?trim215.newRight:originalRight;
+ // Pada master Serli empat penanda punggung: luar-kiri, lipatan kiri,
+ // lipatan kanan, luar-kanan; keduanya tetap ada pada versi PDF fix.
+ const spineMarks=[(conf.left-mmPt(10))*scale,conf.left*scale,conf.right*scale,(conf.right+mmPt(10))*scale];
+ if(!(leftTrim>0&&rightTrim<mmPt(480)&&spineMarks.every((x,i)=>i===0||x>spineMarks[i-1])&&
+      leftTrim<spineMarks[0]&&spineMarks[3]<rightTrim))
+  fail('Penanda minimalis Polos berada di luar kertas atau saling bertumpuk.');
+ return {leftTrim,rightTrim,spineMarks,verticalPt:3.5,cornerHorizontalPt:9.5,
+  topBaselineFromTopPt:46.6,bottomBaselineFromBottomPt:46.9,
+  panelTrimMM:trim215?215:217};
+}
+async function simplifyAllPlainGuides(bytes,mm,conf,variant){
+ const g=plainMinimalGuideGeometry(mm,conf,variant);
+ const pdf=await PDFDocument.load(bytes),page=pdf.getPage(0);
+ const w=page.getWidth(),h=page.getHeight();
+ if(Math.abs(w-mmPt(480))>.3||Math.abs(h-mmPt(330))>.3)
+  fail('Penanda minimalis memerlukan master 480 × 330 mm.');
+ const white=rgb(1,1,1),ink=rgb(0.1358,0.12105,0.1243);
+ // Menghapus sekaligus 8 garis master lama per sisi atas/bawah:
+ // 2 penanda sudut, 2 garis tengah panel kiri/kanan yang DIHILANGKAN,
+ // serta 4 penanda punggung lama yang terlalu panjang. Area kosong
+ // setinggi 65pt aman dari judul dan semua identitas (mulai di bawahnya).
+ page.drawRectangle({x:0,y:h-65,width:w,height:65,color:white});
+ page.drawRectangle({x:0,y:0,width:w,height:65,color:white});
+ const top=h-g.topBaselineFromTopPt, bottom=g.bottomBaselineFromBottomPt;
+ // Empat penanda punggung pendek, masing-masing atas & bawah.
+ for(const x of g.spineMarks){
+  page.drawLine({start:{x,y:top},end:{x,y:top+g.verticalPt},thickness:.95,color:ink});
+  page.drawLine({start:{x,y:bottom},end:{x,y:bottom-g.verticalPt},thickness:.95,color:ink});
+ }
+ // Hanya dua sudut L di tepi kiri dan kanan; tidak ada tanda di tengah panel.
+ for(const [x,sign] of [[g.leftTrim,-1],[g.rightTrim,+1]]){
+  page.drawLine({start:{x,y:top},end:{x,y:top+g.verticalPt},thickness:.95,color:ink});
+  page.drawLine({start:{x,y:bottom},end:{x,y:bottom-g.verticalPt},thickness:.95,color:ink});
+  // Pada mm=28 garis luar kiri dekat tepi halaman: jangan pernah melewati kertas.
+  const horizontalPt=Math.min(g.cornerHorizontalPt,sign<0?x-1:w-x-1);
+  if(horizontalPt<3)fail('Garis sudut minimalis terlalu dekat tepi kertas.');
+  page.drawLine({start:{x:x+sign*horizontalPt,y:top},end:{x,y:top},thickness:.95,color:ink});
+  page.drawLine({start:{x:x+sign*horizontalPt,y:bottom},end:{x,y:bottom},thickness:.95,color:ink});
  }
  return {bytes:new Uint8Array(await pdf.save({useObjectStreams:true})),geometry:g};
 }
@@ -1127,7 +1188,10 @@ export async function generatePDF(data,mm,mode='polos',customColor=null){
   const adjusted=await adjustPlain215Trim(out,Number(mm),LAYOUT[Number(mm)]);
   out=adjusted.bytes;trim215=adjusted.geometry;
  }
+ // V4.38: normalisasi garis fix PDF untuk keempat varian Polos, bukan 215 saja.
+ const minimal=await simplifyAllPlainGuides(out,Number(mm),LAYOUT[Number(mm)],c.type);
+ out=minimal.bytes;
  const reopened=await PDFDocument.load(out);
  if(Math.abs(reopened.getPage(0).getWidth()-mmPt(480))>.3||Math.abs(reopened.getPage(0).getHeight()-mmPt(330))>.3)fail('PDF polos gagal validasi ukuran 480 × 330 mm.');
- return {...plain,bytes:out,details:{...plain.details,mode:c.type,paper_mm:PLAIN_PRINT_MM,side_trim_mm:trim215?215:217,trim_geometry:trim215}};
+ return {...plain,bytes:out,details:{...plain.details,mode:c.type,paper_mm:PLAIN_PRINT_MM,side_trim_mm:trim215?215:217,trim_geometry:trim215,guide_style:'minimal_update_pdf',guide_geometry:minimal.geometry}};
 }

@@ -1,6 +1,6 @@
 /**
- * ZAIN.NET PDF engine, static-browser GitHub Pages edition V4.40.
- * Each page begins with the already cleaned ORIGINAL PDF vector master.
+ * ZAIN.NET PDF engine, static-browser GitHub Pages edition V4.44.
+ * For colored covers, generate a NEW uniform DeviceRGB background and vector trim lines; never overlay the old marked PDF.
  * Plain marks are reconstructed only in the final V4.38 cleanup; layouts keep original geometry.
  * Important: Tinos is not the commercial Times New Roman face used in the
  * supplied PDF. Production printing still requires a proof and font review.
@@ -16,7 +16,7 @@ import {canonicalUniversity,plainCoverIdentity} from './classifier.js';
 import {PLAIN_V1,PLAIN_V2,PLAIN_V11,PLAIN_V22,PLAIN_VARIANTS,PLAIN_215_VARIANTS,plainFrontLayout,plainFrontFits} from './plain-variant-layout.js';
 const {PDFDocument, StandardFonts, degrees, rgb}=globalThis.PDFLib||{};
 const ALL=Array.from({length:19},(_,i)=>i+10);
-let LAYOUT=null,MASTER=null,COLOR_MASTERS=null,COLOR_TRANSPARENT=null,UNIRA_MASTER=null,UNIRA_LOGO=null,UIM_MASTER=null,DUMMY_MASTER=null,IPS_MASTER=null;
+let LAYOUT=null,MASTER=null,COLOR_LOGO=null,UNIRA_MASTER=null,UNIRA_LOGO=null,UIM_LOGO=null,DUMMY_MASTER=null,IPS_MASTER=null;
 const pagePt={width:483*72/25.4,height:330*72/25.4};
 const PLAIN_PRINT_MM={width:480,height:330};
 const COLOR_PRINT_MM={width:475,height:320};
@@ -26,7 +26,9 @@ const DUMMY_PRINT_MM={width:420,height:297};
 const IPS_PRINT_MM={width:330,height:210};
 const CD_PRINT_MM={width:CD_PAGE_MM,height:CD_PAGE_MM};
 const mmPt=(v)=>v*72/25.4;
-const YELLOW=rgb?.(1,0.9487449527,0);
+// Exact production colors. MAROON = #8B0000 (RGB 139,0,0).
+const MAROON=rgb?.(139/255,0,0);
+const YELLOW=rgb?.(1,242/255,0); // #FFF200, drawn as vector (not inherited from a PDF)
 const BLACK=rgb?.(0,0,0);
 let userFontBold=null,userFontItalic=null;
 export function setUserFonts(bold,italic){userFontBold=bold||null;userFontItalic=italic||null;}
@@ -36,11 +38,11 @@ async function loadAsset(url,kind='bytes'){
  finally{clearTimeout(id);}
 }
 async function ensureAssets(){
- if(LAYOUT&&MASTER&&COLOR_MASTERS&&COLOR_TRANSPARENT&&UNIRA_MASTER&&UNIRA_LOGO)return;
+ if(LAYOUT&&MASTER&&COLOR_LOGO&&UNIRA_MASTER&&UNIRA_LOGO&&UIM_LOGO)return;
  if(!PDFDocument)throw Error('Pustaka pdf-lib gagal dimuat. Cek internet untuk memuat pustaka statis CDN, kemudian refresh.');
- const [lo,ma,co,tr,unira,uniraLogo]=await Promise.all([
-  loadAsset('./assets/layout.json','json'),loadAsset('./assets/masters.pdf'),loadAsset('./assets/warna_clean.pdf'),loadAsset('./assets/warna_transparent_marks_logo.pdf'),loadAsset('./assets/unira_clean.pdf'),loadAsset('./assets/unira_logo_custom.png?v=4.22')]);
- LAYOUT=lo.templates;MASTER=ma;COLOR_MASTERS=co;COLOR_TRANSPARENT=tr;UNIRA_MASTER=unira;UNIRA_LOGO=uniraLogo;
+ const [lo,ma,colorLogo,uimLogo,unira,uniraLogo]=await Promise.all([
+  loadAsset('./assets/layout.json','json'),loadAsset('./assets/masters.pdf'),loadAsset('./uin_madura_logo_clean.png?v=4.44'),loadAsset('./uim_logo_clean.png?v=4.44'),loadAsset('./assets/unira_clean.pdf'),loadAsset('./assets/unira_logo_custom.png?v=4.22')]);
+ LAYOUT=lo.templates;MASTER=ma;COLOR_LOGO=colorLogo;UIM_LOGO=uimLogo;UNIRA_MASTER=unira;UNIRA_LOGO=uniraLogo;
 }
 export async function checkAssets(){await ensureAssets();return {thicknesses:ALL};}
 const NEAR=0.18;
@@ -52,6 +54,18 @@ export const calibration=LAYOUT;
 function fail(msg){throw new PDFPreflightError(msg);}
 function norm(s){return String(s??'').replace(/\s+/gu,' ').trim();}
 function upper(s){return norm(s).toLocaleUpperCase('id-ID');}
+// V4.44: Word/photo input may omit the program. Null is automatic;
+// an explicit empty string is a user's request to remove this line.
+export function resolveProgramJenjang(data,mode){
+ const institution=upper(canonicalUniversity(data?.universitas||''));
+ const isUim=institution==='UNIVERSITAS ISLAM MADURA'||institution==='UIM';
+ const defaultUim=mode==='uim'||mode==='customlogo1'||(['custom','customlogo2','merah','maroon'].includes(mode)&&isUim);
+ const entered=data?.program_jenjang;
+ const value=entered===null||entered===undefined?(defaultUim?'PROGRAM MAGISTER (S2)':''):norm(entered);
+ if(value.length>120)fail('Program/Jenjang maksimal 120 karakter.');
+ if(value.includes('\u00ad')||LATIN_CHECK.test(value))fail('Kolom Program/Jenjang berisi karakter yang belum didukung.');
+ return upper(value);
+}
 function normalizeTitleSegments(data){
  const title=String(data.judul??'');
  if(!title.trim())fail('Kolom judul kosong.');
@@ -709,27 +723,25 @@ export function colorSpine(fonts,segs,mm,warnings){
  }
  fail(`Judul punggung warna ${mm} mm tidak muat 2–3 baris pada 9/8/7/6 pt dalam batas garis kuning dan zona cetak. ${lastError} File tidak dibuat.`);
 }
-/** Original yellow crop ticks are replaced after covering only the top/bottom
- * strips of the CLEAN original master. Every LEFT tick, including the far
- * back-cover trim/hinge, shifts by the exact difference in thickness.
- * All right/front-side ticks stay fixed. Logo and full color-front layout stay.
+/** V4.43: Fresh VECTOR crop guides on a brand-new, single-color page.
+ * No source yellow guides, no old PDF, no painted rectangles to mask them.
+ * Left-side marks follow the thickness calibration, right-side marks stay fixed.
  */
 export function drawPrecisionColorGuides(page,mm,background){
  const geom=colorGuideGeometry(mm);
- const w=page.getWidth(),h=page.getHeight(), yellow=YELLOW;
- // Cover the existing reference ticks; never obscure text, logo, or cover data.
- page.drawRectangle({x:0,y:h-36,width:w,height:36,color:background});
- page.drawRectangle({x:0,y:0,width:w,height:36,color:background});
+ const w=page.getWidth(),h=page.getHeight(),yellow=YELLOW;
+ // The only exception is the outer trim tick at 28 mm, outside the sheet.
+ // Keep ALL calibrated spine folds untouched. Move only that OUTER mark 1.5 pt inside.
+ const farLeft=geom.guidesLeft[0]<0?1.5:geom.guidesLeft[0];
+ const marks=[farLeft,...geom.guidesLeft.slice(1),...geom.guidesRight];
  const line=(x,top)=>page.drawLine({start:{x,y:top?h:0},end:{x,y:top?h-32.2:32.2},thickness:.5,color:yellow});
- for(const x of [...geom.guidesLeft,...geom.guidesRight]){
-  if(x>=0 && x<=w){line(x,true);line(x,false);}
- }
- const leftCorner=geom.guidesLeft[0],rightCorner=geom.guidesRight.at(-1);
+ for(const x of marks){if(x>=0&&x<=w){line(x,true);line(x,false);}}
+ const rightCorner=geom.guidesRight.at(-1);
  for(const y of [h-32.2,32.2]){
-  page.drawLine({start:{x:Math.max(0,leftCorner-45),y},end:{x:Math.max(0,leftCorner),y},thickness:.5,color:yellow});
+  page.drawLine({start:{x:Math.max(0,farLeft-45),y},end:{x:farLeft,y},thickness:.5,color:yellow});
   page.drawLine({start:{x:rightCorner,y},end:{x:w,y},thickness:.5,color:yellow});
  }
- return geom;
+ return {...geom,drawnOuterLeft:farLeft,outerInsetPt:farLeft-geom.guidesLeft[0]};
 }
 /** Colored spine metadata mirrors the actual title's font size and pitch.
  * This deliberately replaces V4.26's extra-wide metadata gap.
@@ -758,20 +770,16 @@ async function generateColorPDF(data,mm,mode,customColor,customLogo=null){
  const {type,color}=validateCoverMode(mode,customColor);
  if(type==='polos')fail('Kesalahan mode cover warna.');
  const doc=await PDFDocument.create();
- const src=type==='customlogo2'?null:await PDFDocument.load(type==='custom'?COLOR_TRANSPARENT:COLOR_MASTERS);
- const sourceIndex=type==='maroon'?1:0;
- if(type==='custom'||type==='customlogo2'){
-  const pg=doc.addPage([mmPt(475),mmPt(320)]);
-  pg.drawRectangle({x:0,y:0,width:pg.getWidth(),height:pg.getHeight(),color:hexRgb(color)});
-  if(type==='custom'){
-   const [stamp]=await doc.embedPdf(COLOR_TRANSPARENT,[0]);
-   pg.drawPage(stamp,{x:0,y:0,width:pg.getWidth(),height:pg.getHeight()});
-  }
- } else {
-  const [page]=await doc.copyPages(src,[sourceIndex]);doc.addPage(page);
+ const page=doc.addPage([mmPt(475),mmPt(320)]);
+ const background=type==='merah'?rgb(1,0,0):type==='maroon'?MAROON:hexRgb(color);
+ // Uniform DeviceRGB page, no inherited maroon, no old crop marks, no overlays.
+ page.drawRectangle({x:0,y:0,width:page.getWidth(),height:page.getHeight(),color:background});
+ // Restore ONLY the original UIN logo image at exactly the PDF's measured location.
+ // Old PDF background and yellow guides are intentionally never embedded.
+ if(type!=='customlogo2'){
+  const uinLogo=await doc.embedPng(COLOR_LOGO);
+  page.drawImage(uinLogo,{x:893.2254,y:page.getHeight()-523.4554,width:213.5674,height:213.5674});
  }
- const page=doc.getPage(0);
- const background=type==='merah'?rgb(1,0,0):type==='maroon'?rgb(139/255,0,0):hexRgb(color);
  // A shifted yellow crop mark falling OUTSIDE the 475mm page is a
  // production safety failure, not a cosmetic warning. 28mm on the supplied
  // color master has this problem; never export a PDF with a missing trim mark.
@@ -784,21 +792,14 @@ async function generateColorPDF(data,mm,mode,customColor,customLogo=null){
  if(leftCornerStart<0){
   warnings.push(`Tanda sudut potong belakang dipendekkan ${(-leftCornerStart/mmPt(1)).toFixed(2)} mm agar tidak keluar kertas 475 mm. Jika tanda sudut harus panjang penuh, perlu revisi master cetak.`);
  }
- // Full 3-row reference is incomplete/unsafe; generate only from calibrated
- // original yellow guidelines and reject any truly missing vertical tick.
- if(anticipatedMarks.leftmostMarkClipped&&type!=='customlogo2'){
-   fail(`Mode warna ${mm} mm: garis potong kiri terluar keluar dari kertas 475 mm sebanyak ${(-anticipatedMarks.guidesLeft[0]/mmPt(1)).toFixed(2)} mm. PDF diblokir. Perlu master belakang yang diperbaiki atau penyesuaian trim yang disetujui operator.`);
+ // 28 mm: the original reference's furthest OUTER trim mark is outside 475 mm.
+ // Our fresh vector geometry retains exact spine folds and moves only that outer mark.
+ if(anticipatedMarks.leftmostMarkClipped){
+  warnings.push(`Warna ${mm} mm: hanya tanda potong luar kiri ditempatkan 1.5 pt dari tepi halaman; dua garis lipatan punggung tetap pada ukuran asli. Periksa proof sebelum cetak.`);
  }
- if(anticipatedMarks.guidesLeft[0]<mmPt(1.1))
-   warnings.push(`Tanda potong belakang kiri hanya ${(anticipatedMarks.guidesLeft[0]/mmPt(1)).toFixed(2)} mm dari tepi kertas; periksa sebelum cetak.`);
+ if(anticipatedMarks.guidesLeft[0]>=0&&anticipatedMarks.guidesLeft[0]<mmPt(1.1))
+   warnings.push(`Tanda potong kiri hanya ${(anticipatedMarks.guidesLeft[0]/mmPt(1)).toFixed(2)} mm dari tepi kertas; periksa sebelum cetak.`);
  const marks=drawPrecisionColorGuides(page,mm,background);
- if(type==='customlogo2'&&anticipatedMarks.leftmostMarkClipped){
-   // UIN 28mm: the original furthest-back guide is 0.59mm outside the paper.
-   // Keep BOTH exact 28mm spine folds; inset only the outermost trim tick.
-   const x=1.5,h=page.getHeight();
-   for(const top of [true,false])page.drawLine({start:{x,y:top?h:0},end:{x,y:top?h-32.2:32.2},thickness:.5,color:YELLOW});
-   warnings.push('Custom Logo V2 28 mm: penanda potong belakang paling luar digeser ke dalam 1.5 pt (sekitar 0.53 mm dari tepi kertas); lebar punggung tetap tepat 28 mm. Periksa uji cetak.');
- }
  if(Math.abs(page.getWidth()-mmPt(475))>.3||Math.abs(page.getHeight()-mmPt(320))>.3)fail('Template warna bukan 475 × 320 mm.');
  const fonts=await getFonts(doc,warnings);
  const logoDetail=type==='customlogo2'?await embedCustomCoverLogo(doc,page,type,customLogo):null;
@@ -810,7 +811,10 @@ async function generateColorPDF(data,mm,mode,customColor,customLogo=null){
  single(page,fonts,norm(data.nama),12,1000.7,628.1,330,'Nama warna',warnings,8,false,YELLOW,nameUnderlineEnabled(data));
  single(page,fonts,`NIM. ${norm(data.nim)}`,12,1000.7,641.4,330,'NIM warna',warnings,9,false,YELLOW);
  const hasCity=!!norm(data.kota),hasFaculty=!!norm(data.fakultas),cityShift=hasCity?13.3:0;
- single(page,fonts,`PROGRAM STUDI ${upper(data.prodi)}`,12,1000.7,(hasFaculty?767.1:780.4)-cityShift,395,'Prodi warna',warnings,9,false,YELLOW);
+ const frontStudyTop=(hasFaculty?767.1:780.4)-cityShift;
+ const programLine=resolveProgramJenjang(data,type);
+ if(programLine)single(page,fonts,programLine,12,1000.7,frontStudyTop-13.29,395,'Program/Jenjang warna',warnings,8.5,false,YELLOW);
+ single(page,fonts,`PROGRAM STUDI ${upper(data.prodi)}`,12,1000.7,frontStudyTop,395,'Prodi warna',warnings,9,false,YELLOW);
  if(hasFaculty)single(page,fonts,`FAKULTAS ${upper(data.fakultas)}`,12,1000.7,780.4-cityShift,395,'Fakultas warna',warnings,9,false,YELLOW);
  single(page,fonts,upper(canonicalUniversity(data.universitas)),12,1000.7,793.7-cityShift,395,'Universitas warna',warnings,9,false,YELLOW);
  if(hasCity)single(page,fonts,upper(data.kota),12,1000.7,793.7,395,'Kota warna',warnings,9,false,YELLOW);
@@ -833,7 +837,7 @@ async function generateColorPDF(data,mm,mode,customColor,customLogo=null){
  if(reread.getPageCount()!==1||Math.abs(reread.getPage(0).getWidth()-mmPt(475))>.3||Math.abs(reread.getPage(0).getHeight()-mmPt(320))>.3)fail('PDF warna gagal validasi ukuran 475 × 320 mm.');
  return {bytes:out,warnings,details:{mode:type,mm,spine_font_pt:spine.size,spine_lines:spine.lines.length,reference_3row_page:refStatus.referencePage,reference_3row_verified:refStatus.referenceAvailable,
     title_anchor_pt:spine.titleCenterTopPt,title_bounds_pt:spine.titleBoundsPt,
-    guide_left:marks.left,guide_right:marks.right,paper_mm:COLOR_PRINT_MM,spine_metadata_font_pt:metadata.size,spine_metadata_gap_mm:metadata.gapPt/mmPt(1),logo:logoDetail?'logo custom unggahan': 'logo asli dari PDF warna',logo_geometry:logoDetail}};
+    guide_left:marks.left,guide_right:marks.right,paper_mm:COLOR_PRINT_MM,spine_metadata_font_pt:metadata.size,spine_metadata_gap_mm:metadata.gapPt/mmPt(1),logo:logoDetail?'logo custom unggahan':'logo asli diekstrak tanpa garis dari PDF warna',logo_geometry:logoDetail,background_hex:type==='merah'?'#FF0000':type==='maroon'?'#8B0000':color,guide_origin:'vector baru (tanpa master garis)'}};
 }
 
 /** UNIRA/Universitas Madura cover, measured from the uploaded 484x330mm reference.\n * Coordinates are in PDF points, origin at the upper-left for all text.\n * The supplied sample is a 10mm spine; all LEFT crop guides move by the\n * width delta while the RIGHT front cover and its title remain unchanged.\n * At 28mm, the leftmost horizontal corner is shortened if it crosses x=0.\n */
@@ -971,7 +975,7 @@ export const UIM_REFERENCE=Object.freeze({
   spineSafeTopPt:94,spineSafeBottomPt:494,
   spineTypeAndNameTopPt:673,spineYearTopPt:803
 });
-const UIM_BACKGROUND=rgb?.(139/255,0,0);
+const UIM_BACKGROUND=MAROON;
 export function uimSpineGeometry(mm){
  mm=Number(mm);
  if(!ALL.includes(mm))throw new PDFPreflightError('UIM: ketebalan hanya 10–28 mm.');
@@ -985,12 +989,10 @@ export function uimSpineGeometry(mm){
 }
 export function drawUimGuides(page,mm,warnings=[],background=UIM_BACKGROUND,insetOuter=false){
  const g=uimSpineGeometry(mm),h=page.getHeight(),w=page.getWidth();
- // Top/bottom strips are only 34pt high, safely outside every text anchor.
- page.drawRectangle({x:0,y:h-34,width:w,height:34,color:background});
- page.drawRectangle({x:0,y:0,width:w,height:34,color:background});
+ // No colored masking strips: this function only draws fresh vector guide strokes.
  const ink=YELLOW,top=h-32.20,bottom=32.20;
- const outerX=insetOuter&&g.leftGuides[0]<1.5?1.5:g.leftGuides[0];
- if(outerX!==g.leftGuides[0])warnings.push(`Custom Logo V1 ${mm} mm: penanda potong belakang paling luar digeser ke dalam ${(outerX-g.leftGuides[0]).toFixed(2)} pt supaya tetap terlihat pada batas kertas; posisi lipatan punggung tidak berubah.`);
+ const outerX=g.leftGuides[0]<1.5?1.5:g.leftGuides[0];
+ if(outerX!==g.leftGuides[0])warnings.push(`UIM ${mm} mm: hanya penanda potong luar kiri digeser ke dalam ${(outerX-g.leftGuides[0]).toFixed(2)} pt agar terlihat di kertas; posisi lipatan punggung tidak berubah.`);
  for(const x of [outerX,...g.leftGuides.slice(1),...g.rightGuides]){
   page.drawLine({start:{x,y:h},end:{x,y:top},color:ink,thickness:.5});
   page.drawLine({start:{x,y:0},end:{x,y:bottom},color:ink,thickness:.5});
@@ -1023,16 +1025,15 @@ export function chooseUimSpine(fonts,segs,mm,warnings){
  fail(`Judul terlalu panjang untuk punggung UIM ${mm} mm, meskipun tiga baris 6 pt.`);
 }
 async function generateUimPDF(data,mm,custom=null){
- if(!custom&&!UIM_MASTER)UIM_MASTER=await loadAsset('./uim_clean.pdf');
  mm=Number(mm);const segs=validate(data,mm),warnings=[];
- const doc=await PDFDocument.create();let page;
- if(custom){
-   page=doc.addPage([mmPt(475),mmPt(320)]);
-   page.drawRectangle({x:0,y:0,width:page.getWidth(),height:page.getHeight(),color:hexRgb(custom.color)});
- }else{
-   const master=await PDFDocument.load(UIM_MASTER);
-   if(master.getPageCount()!==1)fail('Master UIM harus satu halaman.');
-   [page]=await doc.copyPages(master,[0]);doc.addPage(page);
+ const doc=await PDFDocument.create();
+ const page=doc.addPage([mmPt(475),mmPt(320)]);
+ const uniformColor=custom?hexRgb(custom.color):MAROON;
+ page.drawRectangle({x:0,y:0,width:page.getWidth(),height:page.getHeight(),color:uniformColor});
+ // UIM reference image is only the logo (no baked-in yellow lines/background).
+ if(!custom){
+  const uimLogo=await doc.embedPng(UIM_LOGO);
+  page.drawImage(uimLogo,{x:917.5975,y:page.getHeight()-621.7690,width:165.7749,height:165.7749});
  }
  if(Math.abs(page.getWidth()-mmPt(475))>.35||Math.abs(page.getHeight()-mmPt(320))>.35)fail('Master UIM bukan 475 × 320 mm.');
  const geom=drawUimGuides(page,mm,warnings,custom?hexRgb(custom.color):UIM_BACKGROUND,!!custom);
@@ -1051,7 +1052,10 @@ async function generateUimPDF(data,mm,custom=null){
  single(page,fonts,upper(data.nama),12,cx,357.1,370,'Nama UIM',warnings,8,false,YELLOW,nameUnderlineEnabled(data));
  single(page,fonts,`NIM. ${norm(data.nim)}`,12,cx,370.4,355,'NIM UIM',warnings,9,false,YELLOW);
  const faculty=!!norm(data.fakultas),city=!!norm(data.kota),gap=13.29;
- const frontStack=[`PROGRAM STUDI ${upper(data.prodi)}`];
+ const frontStack=[];
+ const programLine=resolveProgramJenjang(data,custom?'customlogo1':'uim');
+ if(programLine)frontStack.push(programLine);
+ frontStack.push(`PROGRAM STUDI ${upper(data.prodi)}`);
  if(faculty)frontStack.push(`FAKULTAS ${upper(data.fakultas)}`);
  const institution=upper(canonicalUniversity(data.universitas));
  if(institution!=='UNIVERSITAS ISLAM MADURA')warnings.push('Pilihan UIM digunakan dengan nama universitas lain; periksa data dan contoh sebelum cetak.');
@@ -1071,7 +1075,7 @@ async function generateUimPDF(data,mm,custom=null){
  const bytes=new Uint8Array(await doc.save({useObjectStreams:true}));
  const check=await PDFDocument.load(bytes);
  if(check.getPageCount()!==1||Math.abs(check.getPage(0).getWidth()-mmPt(475))>.35||Math.abs(check.getPage(0).getHeight()-mmPt(320))>.35)fail('UIM: verifikasi ukuran kertas gagal.');
- return {bytes,warnings,details:{mode:custom?'customlogo1':'uim',mm,paper_mm:UIM_PRINT_MM,spine_font_pt:spine.size,spine_lines:spine.lines.length,guide_left:geom.left,guide_right:geom.right,logo:custom?'logo custom unggahan':'logo UIM asli dari PDF pengguna',logo_geometry:logoDetail,source_reference_mm:15}};
+ return {bytes,warnings,details:{mode:custom?'customlogo1':'uim',mm,paper_mm:UIM_PRINT_MM,spine_font_pt:spine.size,spine_lines:spine.lines.length,guide_left:geom.left,guide_right:geom.right,logo:custom?'logo custom unggahan':'logo UIM terpisah transparan',logo_geometry:logoDetail,source_reference_mm:15,background_hex:custom?custom.color:'#8B0000',guide_origin:'vector baru (tanpa master garis)'}};
 }
 
 /** V4.21 Dummybook: a SINGLE 420×297mm spread (back/spine/front).

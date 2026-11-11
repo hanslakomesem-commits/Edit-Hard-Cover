@@ -1,6 +1,6 @@
 import {readPDF,readWord,readPhoto,withTimeout,setOCRProgress} from './document-reader.js';
 import {resetOCR} from './ocr-fast.js';
-import {generatePDF,checkAssets,setUserFonts} from './pdf-engine.js?v=4.40';
+import {generatePDF,checkAssets,setUserFonts} from './pdf-engine.js?v=4.44';
 import {canonicalUniversity} from './classifier.js';
 import {readAbstractFromFile,isAbstractMetadata} from './abstract-reader.js';
 import {chooseDummyBackText,DUMMY_PAGE} from './dummybook-layout.js';
@@ -16,8 +16,28 @@ const REQUIRED=['judul',...FIELDS.filter(name=>!['fakultas','kota','bahasa'].inc
 const COVER_TYPES=['polos','poloslogoatas','polosv11','polosv22','merah','maroon','custom','customlogo1','customlogo2','unira','uim','dummybook','softips','covercd'];
 const sizesForStyle=style=>style==='covercd'?[]:style==='dummybook'?DUMMY_SIZES:style==='softips'?IPS_SIZES:availableMM;
 const validThickness=o=>o?.style==='covercd'||(sizesForStyle(o?.style).includes(Number(o?.thickness))&&o.thickness!==null);
-const unsafeProduction=o=>o&&['merah','maroon','custom'].includes(o.style)&&o.thickness===28;
+const unsafeProduction=o=>false; // V4.43: 28 mm now safe with rebuilt outer trim marker; spine folds unchanged.
 const isCustomLogoStyle=style=>style==='customlogo1'||style==='customlogo2';
+const PROGRAM_STYLES=['uim','custom','customlogo1','customlogo2','merah','maroon'];
+// Null means automatic. The empty string means the user deliberately hid the line.
+function autoProgramForOrder(o){
+ if(!o)return '';
+ const uni=String(canonicalUniversity(o.data?.universitas||'')).trim().toLocaleUpperCase('id-ID');
+ const isUIM=/^(?:UNIVERSITAS ISLAM MADURA|UIM)$/u.test(uni);
+ return o.style==='uim'||o.style==='customlogo1'||(PROGRAM_STYLES.includes(o.style)&&isUIM)?'PROGRAM MAGISTER (S2)':'';
+}
+function refreshProgramJenjang(){
+ const o=active(),row=$('programJenjangRow');if(!row)return;
+ const show=!!o&&PROGRAM_STYLES.includes(o.style);
+ row.classList.toggle('hidden',!show);
+ if(!show)return;
+ const value=o.data?.program_jenjang;
+ const desired=value===null||value===undefined?autoProgramForOrder(o):String(value);
+ if($('programJenjangInput').value!==desired)$('programJenjangInput').value=desired;
+ $('programJenjangHint').textContent=value===null||value===undefined?
+  (desired?'Otomatis: '+desired+'. Edit untuk mengganti; hapus untuk menyembunyikan.':'Default kosong untuk pola UIN. Isi jika ingin menambah jenjang.'):
+  (desired?'Nilai manual untuk pesanan ini. Tekan Otomatis untuk mengembalikan aturan sesuai template.':'Baris Program/Jenjang sengaja dikosongkan dan tidak dicetak. Tekan Otomatis untuk menampilkannya lagi.');
+}
 const hasCustomLogo=o=>!isCustomLogoStyle(o?.style)||!!o?.custom_logo?.bytes?.byteLength;
 const isPdf=f=>!!f&&(/\.pdf$/iu.test(f.name)||f.type==='application/pdf');
 const isWord=f=>!!f&&/\.docx$/iu.test(f.name);
@@ -48,7 +68,7 @@ function offerDownload(blob,name,which){
  return link;
 }
 function active(){return orders.find(o=>o.id===activeId)||null;}
-function newData(){return {judul:'',title_segments:[],nama:'',nim:'',prodi:'',fakultas:'',universitas:'',kota:'',jenis_dokumen:'',bulan_tahun:'',bahasa:'auto',nama_garis_bawah:false,abstract_text:''};}
+function newData(){return {judul:'',title_segments:[],nama:'',nim:'',prodi:'',fakultas:'',universitas:'',kota:'',jenis_dokumen:'',bulan_tahun:'',bahasa:'auto',nama_garis_bawah:false,abstract_text:'',program_jenjang:null};}
 function notice(message,type='info'){
  const n=$('notice');n.textContent=message;n.className='notice '+type;
  const near=$('batchFeedback');
@@ -132,12 +152,12 @@ function renderOrders(){
     desc.append(title,sub);open.append(num,desc);open.addEventListener('click',()=>selectOrder(o.id));
     const select=document.createElement('select');select.className='order-select';select.setAttribute('aria-label',`Ketebalan pesanan ${orderNumber(o)}`);
     const blank=document.createElement('option');blank.value='';blank.textContent='Pilih mm';select.append(blank);
-    for(const mm of sizesForStyle(o.style)){const opt=document.createElement('option');opt.value=String(mm);opt.textContent=`${mm} mm`;if(['merah','maroon','custom'].includes(o.style)&&mm===28){opt.disabled=true;opt.textContent='28 mm (warna: perlu master)';}select.append(opt);}
+    for(const mm of sizesForStyle(o.style)){const opt=document.createElement('option');opt.value=String(mm);opt.textContent=`${mm} mm`;select.append(opt);}
     if(isCoverCD(o)){select.disabled=true;select.innerHTML='<option value="">Tanpa punggung</option>';}
     else select.value=o.thickness===null?'':String(o.thickness);
     select.addEventListener('change',()=>setThickness(o.id,select.value?Number(select.value):null));
     const styleChoice=document.createElement('select');styleChoice.className='order-style';styleChoice.setAttribute('aria-label',`Jenis cover pesanan ${orderNumber(o)}`);
-    for(const [v,label] of [['polos','Polos V1 (Lama, tanpa logo)'],['poloslogoatas','Polos V2 (217 mm, tanpa logo)'],['polosv11','Polos V1.1 (215 mm, tanpa logo)'],['polosv22','Polos V2.1 (215 mm, tanpa logo)'],['merah','Merah'],['maroon','Maroon'],['custom','Custom Warna (lama)'],['customlogo1','Custom Logo V1 — UIM'],['customlogo2','Custom Logo V2 — UIN'],['unira','UNIRA'],['uim','UIM — Universitas Islam Madura'],['dummybook','Dummybook'],['softips','Soft Cover IPS'],['covercd','Cover CD']]){const opt=document.createElement('option');opt.value=v;opt.textContent=label;styleChoice.append(opt);}
+    for(const [v,label] of [['polos','Polos V1 (Lama, tanpa logo)'],['poloslogoatas','Polos V2 (217 mm, tanpa logo)'],['polosv11','Polos V1.1 (215 mm, tanpa logo)'],['polosv22','Polos V2.1 (215 mm, tanpa logo)'],['merah','Merah'],['maroon','Maroon #8B0000'],['custom','Custom Warna (lama)'],['customlogo1','Custom Logo V1 — UIM'],['customlogo2','Custom Logo V2 — UIN'],['unira','UNIRA'],['uim','UIM — Universitas Islam Madura'],['dummybook','Dummybook'],['softips','Soft Cover IPS'],['covercd','Cover CD']]){const opt=document.createElement('option');opt.value=v;opt.textContent=label;styleChoice.append(opt);}
     styleChoice.value=o.style;styleChoice.addEventListener('change',()=>setStyle(o.id,styleChoice.value));
     const remove=document.createElement('button');remove.type='button';remove.className='order-remove';remove.textContent='✕';remove.title=`Hapus pesanan ${orderNumber(o)}`;remove.addEventListener('click',()=>removeOrder(o.id));
     row.append(open,styleChoice,select,remove);target.append(row);
@@ -149,8 +169,8 @@ function renderThickness(){
   if(isCoverCD(a)){const hint=document.createElement('p');hint.className='template-msg';hint.textContent='Cover CD: ukuran tetap 137 × 137 mm. Tidak memerlukan ketebalan/punggung. Nama dan NIM di atas, logo kiri–kanan, judul di bawah.';target.append(hint);}
   for(const mm of sizesForStyle(a?.style)){
     const btn=document.createElement('button');btn.type='button';btn.className='size-button'+(a?.thickness===mm?' selected':'');
-    btn.innerHTML=`<b>${mm}</b><span>mm</span><small>${['merah','maroon','custom'].includes(a?.style)&&mm===28?'Perlu master':'Tersedia'}</small>`;
-    btn.disabled=!a||(['merah','maroon','custom'].includes(a.style)&&mm===28);btn.addEventListener('click',()=>setThickness(a.id,mm));target.append(btn);
+    btn.innerHTML=`<b>${mm}</b><span>mm</span><small>${mm===28&&['merah','maroon','custom','customlogo2'].includes(a?.style)?'Penanda luar menyesuaikan':'Tersedia'}</small>`;
+    btn.disabled=!a;btn.addEventListener('click',()=>setThickness(a.id,mm));target.append(btn);
   }
   $('selectedSize').textContent=isCoverCD(a)?'COVER CD · 137 × 137 mm':a?.thickness ? `${String(a.style||'polos').toUpperCase()} · ${a.thickness} mm` : 'Belum dipilih';
 }
@@ -192,6 +212,7 @@ function currentData(){
   for(const field of FIELDS)result[field]=document.querySelector(`[name="${field}"]`).value.trim();
   result.nama_garis_bawah=$('nameUnderline').checked;
   result.abstract_text=$('abstractText').value.trim();
+  result.program_jenjang=active()?.data?.program_jenjang??null;
   result.universitas=canonicalUniversity(result.universitas);
   result.tahun=(result.bulan_tahun.match(/\b\d{4}\b/u)||[])[0]||'';return result;
 }
@@ -218,7 +239,7 @@ function invalidateOrder(o){$('spineFontResult').textContent='Data diubah; buat 
 function markDirty(){
   if(painting)return;const o=active();if(!o)return;
   o.data=currentData();o.revision++;invalidateOrder(o);clearPDFPreview();
-  $('approveOrder').textContent='✓ Tandai data sudah diperiksa';renderOrders();updateDummyParagraphPreview();
+  $('approveOrder').textContent='✓ Tandai data sudah diperiksa';renderOrders();updateDummyParagraphPreview();refreshProgramJenjang();
 }
 function updateDummyParagraphPreview(){
  const el=$('dummyParagraphPreview');if(!el)return;
@@ -234,6 +255,7 @@ function updateDummyParagraphPreview(){
 }
 function renderCoverStyle(){
  const o=active();
+ refreshProgramJenjang();
  document.querySelectorAll('[data-cover-style]').forEach(b=>{b.classList.toggle('selected',b.dataset.coverStyle===(o?.style||'polos'));b.disabled=!o;});
  $('studentIdLabel').innerHTML=o?.style==='unira'?'NPM <i>*</i>':'NIM <i>*</i>';
  const optionalCD=isCoverCD(o);
@@ -267,7 +289,6 @@ function setStyle(id,style){
  let reset=false;
  if(isCoverCD(o) && o.thickness!==null){o.thickness=null;reset=true;}
  if(!isCoverCD(o)&&o.thickness!==null&&!validThickness(o)){o.thickness=null;reset=true;}
- if(unsafeProduction(o)){o.thickness=null;reset=true;}
  if(o.id===activeId){renderCoverStyle();renderThickness();clearPDFPreview();}
  renderOrders();
  notice(`Pesanan ${orderNumber(o)}: cover ${style.toUpperCase()} (${style==='dummybook'?'spread 420 × 297':style==='softips'?'330 × 210':style==='covercd'?'137 × 137':['polos','poloslogoatas','polosv11','polosv22'].includes(style)?'480 × 330':style==='unira'?'484 × 330':style==='uim'?'475 × 320':'475 × 320'} mm).`+(reset?' Ukuran punggung lama direset; pilih ukuran yang berlaku.':''),'info');
@@ -276,7 +297,6 @@ function setStyle(id,style){
 function setThickness(id,mm){
  const o=orders.find(x=>x.id===id);if(!o)return;
  if(mm!==null&&!sizesForStyle(o.style).includes(mm))return notice(`Ukuran punggung ${mm} mm tidak tersedia untuk ${o.style}.`,'error');
- if(mm===28&&['merah','maroon','custom'].includes(o.style))return notice('Warna 28 mm diblokir: garis potong belakang kiri keluar kertas.','error');
  o.thickness=mm;invalidateOrder(o);
  if(o.id===activeId){clearPDFPreview();renderThickness();$('approveOrder').textContent='✓ Tandai data sudah diperiksa';}
  renderOrders();step(3);
@@ -389,7 +409,6 @@ function approveActive(){
   a.data=currentData();const missing=[...validData(a.data,a.style),...(!hasCustomLogo(a)?['logo custom']:[])];
   if(missing.length)return notice(`Pesanan ${orderNumber(a)} belum lengkap: ${missing.join(', ')}.`,'error');
   if(!validThickness(a))return notice(`Pilih ukuran punggung untuk pesanan ${orderNumber(a)} terlebih dahulu.`,'error');
-  if(unsafeProduction(a))return notice('Warna 28 mm memerlukan master baru yang tidak memotong tanda belakang.','error');
   a.verified=true;a.status='disetujui';renderOrders();
   $('approveOrder').textContent='✓ Sudah diperiksa (klik untuk ulang)';
   notice(`Pesanan ${orderNumber(a)} ${a.data.nama} disetujui: ${coverDescriptor(a)}.`,'success');
@@ -399,7 +418,6 @@ async function makeSelectedPDF({downloadAfter=false}={}){
  a.data=currentData();const missing=[...validData(a.data,a.style),...(!hasCustomLogo(a)?['logo custom']:[])];
  if(missing.length)return notice(`Lengkapi: ${missing.join(', ')}.`,'error');
  if(!validThickness(a))return notice('Pilih ketebalan punggung terlebih dahulu.','error');
- if(unsafeProduction(a))return notice('Warna 28 mm belum aman; garis potong terpotong.','error');
  const button=$('generateButton');btnBusy(button,true,'Membuat PDF...');
  try{
   const result=await withTimeout(generatePDF(a.data,a.thickness,a.style,a.custom_color,isCustomLogoStyle(a.style)?{...a.custom_logo,widthMm:a.custom_logo_width_mm}:null),90000,'Pembuatan PDF lokal');
@@ -427,7 +445,7 @@ async function makeOrderZIP(){
  const incomplete=orders.filter(o=>validData(o.data,o.style).length || !hasCustomLogo(o) || !validThickness(o) || unsafeProduction(o));
  const eligible=orders.filter(o=>!incomplete.includes(o));
  if(incomplete.length){
-  const details=incomplete.slice(0,4).map(o=>`Pesanan ${orderNumber(o)} (${o.data.nama||o.file?.name||'belum terbaca'}): ${[...validData(o.data,o.style),...(!hasCustomLogo(o)?['logo custom']:[]),...(!validThickness(o)?['pilih ketebalan']:[]),...(unsafeProduction(o)?['warna 28 mm belum aman']:[])].join(', ')}`).join('\n');
+  const details=incomplete.slice(0,4).map(o=>`Pesanan ${orderNumber(o)} (${o.data.nama||o.file?.name||'belum terbaca'}): ${[...validData(o.data,o.style),...(!hasCustomLogo(o)?['logo custom']:[]),...(!validThickness(o)?['pilih ketebalan']:[]),].join(', ')}`).join('\n');
   if(!eligible.length){
    notice(`Belum bisa ekspor batch: semua pesanan belum lengkap. Perbaiki:\n${details}${incomplete.length>4?'\n...':''}`,'error');
    selectOrder(incomplete[0].id);return;
@@ -491,7 +509,10 @@ $('ocrButton').addEventListener('click',readSelected);$('ocrAllButton').addEvent
 $('titleEditor').addEventListener('input',markDirty);
 $('abstractText').addEventListener('input',()=>{markDirty();updateDummyParagraphPreview();});
 $('titleEditor').addEventListener('paste',event=>{event.preventDefault();document.execCommand('insertText',false,(event.clipboardData||window.clipboardData).getData('text/plain'));});
-document.querySelectorAll('#dataForm input').forEach(input=>input.addEventListener('input',markDirty));
+// Program/Jenjang keeps a separate nullable field so erasing it does not auto-fill again.
+$('programJenjangInput').addEventListener('input',event=>{const a=active();if(!a)return;a.data.program_jenjang=event.target.value;markDirty();});
+$('programJenjangAuto').addEventListener('click',()=>{const a=active();if(!a)return;a.data.program_jenjang=null;markDirty();refreshProgramJenjang();});
+document.querySelectorAll('#dataForm input:not(#programJenjangInput)').forEach(input=>input.addEventListener('input',markDirty));
 $('nameUnderline').addEventListener('change',markDirty);
  document.querySelectorAll('#dataForm select').forEach(input=>input.addEventListener('change',markDirty));
 document.querySelector('[name="universitas"]').addEventListener('blur',event=>{

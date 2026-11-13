@@ -1,6 +1,6 @@
 import {readPDF,readWord,readPhoto,withTimeout,setOCRProgress} from './document-reader.js';
 import {resetOCR} from './ocr-fast.js';
-import {generatePDF,checkAssets,setUserFonts} from './pdf-engine.js?v=4.45';
+import {generatePDF,checkAssets,setUserFonts} from './pdf-engine.js?v=4.46';
 import {canonicalUniversity} from './classifier.js';
 import {readAbstractFromFile,isAbstractMetadata} from './abstract-reader.js';
 import {chooseDummyBackText,DUMMY_PAGE} from './dummybook-layout.js';
@@ -168,7 +168,7 @@ function renderOrders(){
 }
 function renderThickness(){
   const target=$('thicknessOptions');target.replaceChildren();const a=active();
-  if(isNoSpine(a)){const hint=document.createElement('p');hint.className='template-msg';hint.textContent=isCoverCD(a)?'Cover CD: ukuran tetap 137 × 137 mm. Tidak memerlukan ketebalan/punggung. Nama dan NIM di atas, logo kiri–kanan, judul di bawah.':'Cover Artikel: ukuran tetap 475 × 320 mm. Tidak memakai punggung atau lipatan. Sampul depan di kanan, sisi kiri putih kosong.';target.append(hint);}
+  if(isNoSpine(a)){const hint=document.createElement('p');hint.className='template-msg';hint.textContent=isCoverCD(a)?'Cover CD: ukuran tetap 137 × 137 mm. Tidak memerlukan ketebalan/punggung. Nama dan NIM di atas, logo kiri–kanan, judul di bawah.':'Cover Artikel: ukuran tetap 475 × 320 mm. Tidak memakai punggung atau lipatan. Sampul depan di kanan, sisi kiri putih kosong. Dua garis tanda pendek di atas dan dua di bawah tetap dicetak sesuai contoh.';target.append(hint);}
   for(const mm of sizesForStyle(a?.style)){
     const btn=document.createElement('button');btn.type='button';btn.className='size-button'+(a?.thickness===mm?' selected':'');
     btn.innerHTML=`<b>${mm}</b><span>mm</span><small>${mm===28&&['merah','maroon','custom','customlogo2'].includes(a?.style)?'Penanda luar menyesuaikan':'Tersedia'}</small>`;
@@ -435,7 +435,7 @@ async function makeSelectedPDF({downloadAfter=false}={}){
   if(result.details?.logo_geometry){const g=result.details.logo_geometry;$('spineFontResult').textContent+=` • ukuran logo ${g.width_mm.toFixed(1)} × ${g.height_mm.toFixed(1)} mm (titik pusat tetap)`;}
   updatePDFPreview(a);renderOrders();step(4);
   if(downloadAfter)triggerDownload(a.pdfBlob,coverFileName(a));
-  notice(`PDF ${a.data.nama} — ${coverDescriptor(a)} berhasil. ${isCoverArtikel(a)?'Tanpa punggung: periksa posisi judul, nama, NIM, dan identitas kampus sebelum cetak.':isCoverCD(a)?'Periksa nama/NIM, dua logo, dan judul sebelum cetak.':`Judul punggung: ${result.details?.spine_lines||'?'} baris, font ${result.details?.spine_font_pt||'?'} pt. Periksa preview dan cetak uji.`}`+(result.warnings?.length?'\n'+result.warnings.join('\n'):''),result.warnings?.length?'info':'success');
+  notice(`PDF ${a.data.nama} — ${coverDescriptor(a)} berhasil. ${isCoverArtikel(a)?'Tanpa punggung: periksa judul, identitas kampus, serta dua tanda kecil di atas dan dua di bawah sebelum cetak.':isCoverCD(a)?'Periksa nama/NIM, dua logo, dan judul sebelum cetak.':`Judul punggung: ${result.details?.spine_lines||'?'} baris, font ${result.details?.spine_font_pt||'?'} pt. Periksa preview dan cetak uji.`}`+(result.warnings?.length?'\n'+result.warnings.join('\n'):''),result.warnings?.length?'info':'success');
  }catch(error){a.status='gagal';a.warnings=[String(error.message||error)];renderOrders();showWarnings(a);notice(`PDF gagal: ${error.message||error}`,'error');}
  finally{btnBusy(button,false);}
 }

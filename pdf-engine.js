@@ -1339,7 +1339,8 @@ async function generateCoverCDPDF(data){
 }
 
 /** Cover Artikel 475 × 320 mm: editable front on right, blank left.
- * Reference baselines extracted from the user's sample PDF, no spine or guides.
+ * Keep the ORIGINAL reference's FOUR short positioning marks: two at the
+ * upper edge and two at the lower edge (no long spine/fold guides).
  */
 async function generateArticleCoverPDF(data){
  if(!data||typeof data!=='object')fail('Data Cover Artikel tidak valid.');
@@ -1377,6 +1378,15 @@ async function generateArticleCoverPDF(data){
 
  const doc=await PDFDocument.create();
  const page=doc.addPage([mmPt(475),mmPt(320)]);
+ // V4.46: match the two tiny positioning marks at BOTH the top and bottom
+ // of cover artikel(1).pdf. Measured in original 475 x 320 mm PDF points.
+ // They must never be removed even though the ARTICLE cover has no spine text.
+ const markInk=rgb(0.13582,0.12105,0.12430);
+ for(const x of [693.13,721.16]){
+  for(const [top,bottom] of [[28.081,32.456],[874.344,882.081]]){
+   page.drawLine({start:{x,y:page.getHeight()-top},end:{x,y:page.getHeight()-bottom},thickness:1.4,color:markInk});
+  }
+ }
  const fonts=await getFonts(doc,warnings);
  const cx=997.9;
  let title=null;
@@ -1398,7 +1408,7 @@ async function generateArticleCoverPDF(data){
  const bytes=new Uint8Array(await doc.save({useObjectStreams:true}));
  const checked=await PDFDocument.load(bytes);
  if(checked.getPageCount()!==1||Math.abs(checked.getPage(0).getWidth()-mmPt(475))>.3||Math.abs(checked.getPage(0).getHeight()-mmPt(320))>.3)fail('PDF Cover Artikel gagal pemeriksaan ukuran kertas 475 × 320 mm.');
- return {bytes,warnings,details:{mode:'coverartikel',mm:null,paper_mm:COLOR_PRINT_MM,pages:1,has_spine:false,has_logo:false,title_lines:title.rows.length,title_font_pt:title.pt}};
+ return {bytes,warnings,details:{mode:'coverartikel',mm:null,paper_mm:COLOR_PRINT_MM,pages:1,has_spine:false,has_logo:false,position_marks:4,title_lines:title.rows.length,title_font_pt:title.pt}};
 }
 
 /** Main public API, backward-compatible with V3.8 */

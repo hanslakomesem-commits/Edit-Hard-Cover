@@ -1,6 +1,6 @@
 import {readPDF,readWord,readPhoto,withTimeout,setOCRProgress} from './document-reader.js';
 import {resetOCR} from './ocr-fast.js';
-import {generatePDF,checkAssets,setUserFonts} from './pdf-engine.js?v=4.44';
+import {generatePDF,checkAssets,setUserFonts} from './pdf-engine.js?v=4.45';
 import {canonicalUniversity} from './classifier.js';
 import {readAbstractFromFile,isAbstractMetadata} from './abstract-reader.js';
 import {chooseDummyBackText,DUMMY_PAGE} from './dummybook-layout.js';
@@ -13,9 +13,9 @@ import {IPS_SIZES} from './soft-ips-layout.js';
 const $ = id => document.getElementById(id);
 const FIELDS=['nama','nim','prodi','fakultas','universitas','kota','jenis_dokumen','bulan_tahun','bahasa'];
 const REQUIRED=['judul',...FIELDS.filter(name=>!['fakultas','kota','bahasa'].includes(name))];
-const COVER_TYPES=['polos','poloslogoatas','polosv11','polosv22','merah','maroon','custom','customlogo1','customlogo2','unira','uim','dummybook','softips','covercd'];
-const sizesForStyle=style=>style==='covercd'?[]:style==='dummybook'?DUMMY_SIZES:style==='softips'?IPS_SIZES:availableMM;
-const validThickness=o=>o?.style==='covercd'||(sizesForStyle(o?.style).includes(Number(o?.thickness))&&o.thickness!==null);
+const COVER_TYPES=['polos','poloslogoatas','polosv11','polosv22','merah','maroon','custom','customlogo1','customlogo2','unira','uim','dummybook','softips','covercd','coverartikel'];
+const sizesForStyle=style=>['covercd','coverartikel'].includes(style)?[]:style==='dummybook'?DUMMY_SIZES:style==='softips'?IPS_SIZES:availableMM;
+const validThickness=o=>['covercd','coverartikel'].includes(o?.style)||(sizesForStyle(o?.style).includes(Number(o?.thickness))&&o.thickness!==null);
 const unsafeProduction=o=>false; // V4.43: 28 mm now safe with rebuilt outer trim marker; spine folds unchanged.
 const isCustomLogoStyle=style=>style==='customlogo1'||style==='customlogo2';
 const PROGRAM_STYLES=['uim','custom','customlogo1','customlogo2','merah','maroon'];
@@ -86,8 +86,10 @@ function btnBusy(button,busy,message='Memproses...'){
 }
 function safeName(value){return String(value||'MAHASISWA').toLocaleUpperCase('id-ID').normalize('NFKD').replace(/[\u0300-\u036f]/g,'').replace(/[^A-Z0-9]+/g,'_').replace(/^_+|_+$/g,'').slice(0,45)||'MAHASISWA';}
 const isCoverCD=o=>o?.style==='covercd';
-const coverDescriptor=o=>isCoverCD(o)?'COVER CD 137 × 137 mm':`${String(o.style).toUpperCase()} ${o.thickness} mm`;
-const coverFileName=o=>`${String(orderNumber(o)).padStart(2,'0')}_${safeName(o.data.nama)}_${o.style.toUpperCase()}${isCoverCD(o)?'':`_${o.thickness}MM`}.pdf`;
+const isCoverArtikel=o=>o?.style==='coverartikel';
+const isNoSpine=o=>isCoverCD(o)||isCoverArtikel(o);
+const coverDescriptor=o=>isCoverCD(o)?'COVER CD 137 × 137 mm':isCoverArtikel(o)?'COVER ARTIKEL 475 × 320 mm (tanpa punggung)':`${String(o.style).toUpperCase()} ${o.thickness} mm`;
+const coverFileName=o=>`${String(orderNumber(o)).padStart(2,'0')}_${safeName(o.data.nama)}_${o.style.toUpperCase()}${isNoSpine(o)?'':`_${o.thickness}MM`}.pdf`;
 
 // Debounce agar banyak foto/PDF/DOCX yang dipilih bersama dibaca sebagai satu antrean.
 function scheduleAutoRead(){
@@ -153,11 +155,11 @@ function renderOrders(){
     const select=document.createElement('select');select.className='order-select';select.setAttribute('aria-label',`Ketebalan pesanan ${orderNumber(o)}`);
     const blank=document.createElement('option');blank.value='';blank.textContent='Pilih mm';select.append(blank);
     for(const mm of sizesForStyle(o.style)){const opt=document.createElement('option');opt.value=String(mm);opt.textContent=`${mm} mm`;select.append(opt);}
-    if(isCoverCD(o)){select.disabled=true;select.innerHTML='<option value="">Tanpa punggung</option>';}
+    if(isNoSpine(o)){select.disabled=true;select.innerHTML='<option value="">Tanpa punggung</option>';}
     else select.value=o.thickness===null?'':String(o.thickness);
     select.addEventListener('change',()=>setThickness(o.id,select.value?Number(select.value):null));
     const styleChoice=document.createElement('select');styleChoice.className='order-style';styleChoice.setAttribute('aria-label',`Jenis cover pesanan ${orderNumber(o)}`);
-    for(const [v,label] of [['polos','Polos V1 (Lama, tanpa logo)'],['poloslogoatas','Polos V2 (217 mm, tanpa logo)'],['polosv11','Polos V1.1 (215 mm, tanpa logo)'],['polosv22','Polos V2.1 (215 mm, tanpa logo)'],['merah','Merah'],['maroon','Maroon #8B0000'],['custom','Custom Warna (lama)'],['customlogo1','Custom Logo V1 — UIM'],['customlogo2','Custom Logo V2 — UIN'],['unira','UNIRA'],['uim','UIM — Universitas Islam Madura'],['dummybook','Dummybook'],['softips','Soft Cover IPS'],['covercd','Cover CD']]){const opt=document.createElement('option');opt.value=v;opt.textContent=label;styleChoice.append(opt);}
+    for(const [v,label] of [['polos','Polos V1 (Lama, tanpa logo)'],['poloslogoatas','Polos V2 (217 mm, tanpa logo)'],['polosv11','Polos V1.1 (215 mm, tanpa logo)'],['polosv22','Polos V2.1 (215 mm, tanpa logo)'],['merah','Merah'],['maroon','Maroon #8B0000'],['custom','Custom Warna (lama)'],['customlogo1','Custom Logo V1 — UIM'],['customlogo2','Custom Logo V2 — UIN'],['unira','UNIRA'],['uim','UIM — Universitas Islam Madura'],['dummybook','Dummybook'],['softips','Soft Cover IPS'],['covercd','Cover CD'],['coverartikel','Cover Artikel (Tanpa Punggung)']]){const opt=document.createElement('option');opt.value=v;opt.textContent=label;styleChoice.append(opt);}
     styleChoice.value=o.style;styleChoice.addEventListener('change',()=>setStyle(o.id,styleChoice.value));
     const remove=document.createElement('button');remove.type='button';remove.className='order-remove';remove.textContent='✕';remove.title=`Hapus pesanan ${orderNumber(o)}`;remove.addEventListener('click',()=>removeOrder(o.id));
     row.append(open,styleChoice,select,remove);target.append(row);
@@ -166,13 +168,13 @@ function renderOrders(){
 }
 function renderThickness(){
   const target=$('thicknessOptions');target.replaceChildren();const a=active();
-  if(isCoverCD(a)){const hint=document.createElement('p');hint.className='template-msg';hint.textContent='Cover CD: ukuran tetap 137 × 137 mm. Tidak memerlukan ketebalan/punggung. Nama dan NIM di atas, logo kiri–kanan, judul di bawah.';target.append(hint);}
+  if(isNoSpine(a)){const hint=document.createElement('p');hint.className='template-msg';hint.textContent=isCoverCD(a)?'Cover CD: ukuran tetap 137 × 137 mm. Tidak memerlukan ketebalan/punggung. Nama dan NIM di atas, logo kiri–kanan, judul di bawah.':'Cover Artikel: ukuran tetap 475 × 320 mm. Tidak memakai punggung atau lipatan. Sampul depan di kanan, sisi kiri putih kosong.';target.append(hint);}
   for(const mm of sizesForStyle(a?.style)){
     const btn=document.createElement('button');btn.type='button';btn.className='size-button'+(a?.thickness===mm?' selected':'');
     btn.innerHTML=`<b>${mm}</b><span>mm</span><small>${mm===28&&['merah','maroon','custom','customlogo2'].includes(a?.style)?'Penanda luar menyesuaikan':'Tersedia'}</small>`;
     btn.disabled=!a;btn.addEventListener('click',()=>setThickness(a.id,mm));target.append(btn);
   }
-  $('selectedSize').textContent=isCoverCD(a)?'COVER CD · 137 × 137 mm':a?.thickness ? `${String(a.style||'polos').toUpperCase()} · ${a.thickness} mm` : 'Belum dipilih';
+  $('selectedSize').textContent=isCoverCD(a)?'COVER CD · 137 × 137 mm':isCoverArtikel(a)?'COVER ARTIKEL · 475 × 320 mm':a?.thickness ? `${String(a.style||'polos').toUpperCase()} · ${a.thickness} mm` : 'Belum dipilih';
 }
 function renderPhoto(order){
   const im=$('imagePreview');const empty=$('emptyPreview');
@@ -262,6 +264,8 @@ function renderCoverStyle(){
  document.querySelectorAll('[name="universitas"],[name="jenis_dokumen"],[name="prodi"],[name="bulan_tahun"]').forEach(e=>{e.required=!optionalCD;});
  const facultyInput=document.querySelector('[name="fakultas"]');if(facultyInput)facultyInput.required=false;const cityInput=document.querySelector('[name="kota"]');if(cityInput)cityInput.required=false;
  const cdHint=$('cdCoverHint');if(cdHint)cdHint.classList.toggle('hidden',!optionalCD);
+ const articleHint=$('articleCoverHint');if(articleHint)articleHint.classList.toggle('hidden',!isCoverArtikel(o));
+ const documentTypeInput=document.querySelector('[name="jenis_dokumen"]');if(documentTypeInput)documentTypeInput.readOnly=isCoverArtikel(o);
  $('dummyAbstractPanel').classList.toggle('hidden',o?.style!=='dummybook');
  $('dummyAbstractStatus').textContent=o?.abstractStatus||'Tempel abstrak asli; pisahkan antarparagraf dengan satu baris kosong. Otomatis: 2 paragraf terakhir, atau 1/3 jika perlu.';
  updateDummyParagraphPreview();
@@ -283,15 +287,19 @@ function setStyle(id,style){
  const o=orders.find(x=>x.id===id);if(!o||!COVER_TYPES.includes(style))return;
  if(o.id===activeId)o.data=currentData();
  const previous=o.style;o.style=style;
+ if(style==='coverartikel'){
+  o.data.jenis_dokumen='ARTIKEL';
+  if(o.id===activeId)document.querySelector('[name="jenis_dokumen"]').value='ARTIKEL';
+ }
  if(isCustomLogoStyle(style)&&previous!==style)o.custom_logo_width_mm=style==='customlogo1'?58.5:75.3;
  if(isCustomLogoStyle(style)&&!['custom','customlogo1','customlogo2'].includes(previous)&&o.custom_color==='#1458A8')o.custom_color='#8B0000';
  invalidateOrder(o);
  let reset=false;
- if(isCoverCD(o) && o.thickness!==null){o.thickness=null;reset=true;}
- if(!isCoverCD(o)&&o.thickness!==null&&!validThickness(o)){o.thickness=null;reset=true;}
+ if(isNoSpine(o) && o.thickness!==null){o.thickness=null;reset=true;}
+ if(!isNoSpine(o)&&o.thickness!==null&&!validThickness(o)){o.thickness=null;reset=true;}
  if(o.id===activeId){renderCoverStyle();renderThickness();clearPDFPreview();}
  renderOrders();
- notice(`Pesanan ${orderNumber(o)}: cover ${style.toUpperCase()} (${style==='dummybook'?'spread 420 × 297':style==='softips'?'330 × 210':style==='covercd'?'137 × 137':['polos','poloslogoatas','polosv11','polosv22'].includes(style)?'480 × 330':style==='unira'?'484 × 330':style==='uim'?'475 × 320':'475 × 320'} mm).`+(reset?' Ukuran punggung lama direset; pilih ukuran yang berlaku.':''),'info');
+ notice(`Pesanan ${orderNumber(o)}: cover ${style.toUpperCase()} (${style==='dummybook'?'spread 420 × 297':style==='softips'?'330 × 210':style==='covercd'?'137 × 137':style==='coverartikel'?'475 × 320':['polos','poloslogoatas','polosv11','polosv22'].includes(style)?'480 × 330':style==='unira'?'484 × 330':style==='uim'?'475 × 320':'475 × 320'} mm).`+(reset?' Ukuran punggung lama direset; pilih ukuran yang berlaku.':''),'info');
  if(style==='dummybook'&&!o.data.abstract_text && o.file&&(isPdf(o.file)||isWord(o.file)))void populateAbstract(o,o.file);
 }
 function setThickness(id,mm){
@@ -417,17 +425,17 @@ async function makeSelectedPDF({downloadAfter=false}={}){
  const a=active();if(!a)return notice('Pilih pesanan terlebih dahulu.','error');
  a.data=currentData();const missing=[...validData(a.data,a.style),...(!hasCustomLogo(a)?['logo custom']:[])];
  if(missing.length)return notice(`Lengkapi: ${missing.join(', ')}.`,'error');
- if(!validThickness(a))return notice('Pilih ketebalan punggung terlebih dahulu.','error');
+ if(!validThickness(a))return notice('Pilih ketebalan punggung untuk jenis cover ini terlebih dahulu.','error');
  const button=$('generateButton');btnBusy(button,true,'Membuat PDF...');
  try{
   const result=await withTimeout(generatePDF(a.data,a.thickness,a.style,a.custom_color,isCustomLogoStyle(a.style)?{...a.custom_logo,widthMm:a.custom_logo_width_mm}:null),90000,'Pembuatan PDF lokal');
   a.pdfBlob=new Blob([result.bytes],{type:'application/pdf'});
-  $('spineFontResult').textContent=isCoverCD(a)?`Hasil Cover CD 137 × 137 mm • Judul ${result.details?.title_lines||'?'} baris • font ${result.details?.title_font_pt||'?'} pt • 2 logo`:`Hasil aktual: ${a.style.toUpperCase()} ${a.thickness} mm • ${result.details?.spine_lines??'?'} baris • font punggung ${result.details?.spine_font_pt??'?'} pt`+(a.style==='dummybook'?` • ${result.details?.back_paragraph_count} paragraf abstrak • 1 halaman 420 × 297 mm`:``)+(['polos','polosv11'].includes(a.style)&&result.details?.spine_year_font_pt?` • font tahun punggung ${result.details.spine_year_font_pt} pt`:``);
+  $('spineFontResult').textContent=isCoverArtikel(a)?`Cover Artikel • 475 × 320 mm • tanpa punggung • judul ${result.details?.title_lines||'?'} baris • font ${result.details?.title_font_pt||'?'} pt`:isCoverCD(a)?`Hasil Cover CD 137 × 137 mm • Judul ${result.details?.title_lines||'?'} baris • font ${result.details?.title_font_pt||'?'} pt • 2 logo`:`Hasil aktual: ${a.style.toUpperCase()} ${a.thickness} mm • ${result.details?.spine_lines??'?'} baris • font punggung ${result.details?.spine_font_pt??'?'} pt`+(a.style==='dummybook'?` • ${result.details?.back_paragraph_count} paragraf abstrak • 1 halaman 420 × 297 mm`:``)+(['polos','polosv11'].includes(a.style)&&result.details?.spine_year_font_pt?` • font tahun punggung ${result.details.spine_year_font_pt} pt`:``);
 
   if(result.details?.logo_geometry){const g=result.details.logo_geometry;$('spineFontResult').textContent+=` • ukuran logo ${g.width_mm.toFixed(1)} × ${g.height_mm.toFixed(1)} mm (titik pusat tetap)`;}
   updatePDFPreview(a);renderOrders();step(4);
   if(downloadAfter)triggerDownload(a.pdfBlob,coverFileName(a));
-  notice(`PDF ${a.data.nama} — ${coverDescriptor(a)} berhasil. ${isCoverCD(a)?'Periksa nama/NIM, dua logo, dan judul sebelum cetak.':`Judul punggung: ${result.details?.spine_lines||'?'} baris, font ${result.details?.spine_font_pt||'?'} pt. Periksa preview dan cetak uji.`}`+(result.warnings?.length?'\n'+result.warnings.join('\n'):''),result.warnings?.length?'info':'success');
+  notice(`PDF ${a.data.nama} — ${coverDescriptor(a)} berhasil. ${isCoverArtikel(a)?'Tanpa punggung: periksa posisi judul, nama, NIM, dan identitas kampus sebelum cetak.':isCoverCD(a)?'Periksa nama/NIM, dua logo, dan judul sebelum cetak.':`Judul punggung: ${result.details?.spine_lines||'?'} baris, font ${result.details?.spine_font_pt||'?'} pt. Periksa preview dan cetak uji.`}`+(result.warnings?.length?'\n'+result.warnings.join('\n'):''),result.warnings?.length?'info':'success');
  }catch(error){a.status='gagal';a.warnings=[String(error.message||error)];renderOrders();showWarnings(a);notice(`PDF gagal: ${error.message||error}`,'error');}
  finally{btnBusy(button,false);}
 }

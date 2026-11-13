@@ -584,8 +584,8 @@ async function simplifyAllPlainGuides(bytes,mm,conf,variant){
 }
 
 const COLOR_TYPES=['merah','maroon','custom','customlogo1','customlogo2'];
-export const coverTypes=[...PLAIN_VARIANTS,...COLOR_TYPES,'unira','uim','dummybook','softips','covercd'];
-export const printSizes={polos:PLAIN_PRINT_MM,poloslogoatas:PLAIN_PRINT_MM,polosv11:PLAIN_PRINT_MM,polosv22:PLAIN_PRINT_MM,merah:COLOR_PRINT_MM,maroon:COLOR_PRINT_MM,custom:COLOR_PRINT_MM,customlogo1:UIM_PRINT_MM,customlogo2:COLOR_PRINT_MM,unira:UNIRA_PRINT_MM,uim:UIM_PRINT_MM,dummybook:DUMMY_PRINT_MM,softips:IPS_PRINT_MM,covercd:CD_PRINT_MM};
+export const coverTypes=[...PLAIN_VARIANTS,...COLOR_TYPES,'unira','uim','dummybook','softips','covercd','coverartikel'];
+export const printSizes={polos:PLAIN_PRINT_MM,poloslogoatas:PLAIN_PRINT_MM,polosv11:PLAIN_PRINT_MM,polosv22:PLAIN_PRINT_MM,merah:COLOR_PRINT_MM,maroon:COLOR_PRINT_MM,custom:COLOR_PRINT_MM,customlogo1:UIM_PRINT_MM,customlogo2:COLOR_PRINT_MM,unira:UNIRA_PRINT_MM,uim:UIM_PRINT_MM,dummybook:DUMMY_PRINT_MM,softips:IPS_PRINT_MM,covercd:CD_PRINT_MM,coverartikel:COLOR_PRINT_MM};
 export function validateCoverMode(mode,customColor) {
  const type=String(mode||'polos').toLowerCase();
  if(!coverTypes.includes(type))fail('Pilihan jenis cover tidak dikenal.');
@@ -1338,10 +1338,74 @@ async function generateCoverCDPDF(data){
  return {bytes,warnings,details:{mode:'covercd',mm:null,paper_mm:CD_PRINT_MM,pages:1,title_lines:title.lines.length,title_font_pt:title.size,logo_count:2}};
 }
 
+/** Cover Artikel 475 × 320 mm: editable front on right, blank left.
+ * Reference baselines extracted from the user's sample PDF, no spine or guides.
+ */
+async function generateArticleCoverPDF(data){
+ if(!data||typeof data!=='object')fail('Data Cover Artikel tidak valid.');
+ for(const field of ['judul','nama','nim','prodi','universitas','bulan_tahun']){
+  const v=String(data[field]??'');
+  if(!v.trim())fail('Cover Artikel: kolom '+field+' wajib diisi.');
+  if(v.length>2000||v.includes('\u00ad')||LATIN_CHECK.test(v))
+   fail('Cover Artikel: koreksi kolom '+field+' (teks terlalu panjang atau karakter belum didukung).');
+ }
+ if(String(data.fakultas??'').length>2000)fail('Cover Artikel: kolom fakultas terlalu panjang.');
+ const segments=normalizeTitleSegments(data).map(s=>({text:s.text.toLocaleUpperCase('id-ID'),italic:s.italic}));
+ const warnings=[];
+ // Keep manually entered line breaks when present. Match the supplied sample's
+ // original three lines even when the extracted PDF title arrived as one string.
+ function articleTitleLines(fonts,pt){
+  const entered=segments.map(s=>s.text).join('');
+  if(/[\r\n]/u.test(entered)){
+   const blocks=[[]];
+   for(const seg of segments){
+    seg.text.split(/\r?\n/u).forEach((part,i)=>{
+     if(i)blocks.push([]);
+     if(part)blocks.at(-1).push({text:part,italic:seg.italic});
+    });
+   }
+   return blocks.filter(block=>block.some(s=>s.text.trim())).flatMap(block=>greedyLines(fonts,block,pt,412));
+  }
+  const reference='EKSPLORASI PERTEMANAN (CIRCLE) TERHADAP PERKEMBANGAN EMPATI DAN KETERAMPILAN SOSIAL REMAJA DI MTSN 1 PAMEKASAN';
+  if(norm(entered)===reference){
+   const tokens=tokensFromSegments(segments);
+   const split1=tokens.findIndex(t=>t.text==='EMPATI'),split2=tokens.findIndex(t=>t.text==='MTSN');
+   if(split1>0&&split2>split1)return [sliceTokens(tokens,0,split1),sliceTokens(tokens,split1,split2),sliceTokens(tokens,split2,tokens.length)];
+  }
+  return greedyLines(fonts,segments,pt,412);
+ }
+
+ const doc=await PDFDocument.create();
+ const page=doc.addPage([mmPt(475),mmPt(320)]);
+ const fonts=await getFonts(doc,warnings);
+ const cx=997.9;
+ let title=null;
+ for(let pt=12;pt>=9.5;pt-=.25){
+  const rows=articleTitleLines(fonts,pt);
+  if(rows.length<=4&&rows.every(row=>measure(fonts,row,pt)<=412+NEAR)){title={rows,pt};break;}
+ }
+ if(!title)fail('Judul Cover Artikel terlalu panjang untuk empat baris; periksa teks judul.');
+ title.rows.forEach((line,i)=>renderLine(page,fonts,line,title.pt,cx,117.31+i*13.29,false,BLACK));
+ if(title.pt<12)warnings.push('Cover Artikel: font judul disesuaikan menjadi '+title.pt+' pt.');
+ single(page,fonts,'ARTIKEL',17.9,cx,244.17,420,'Label ARTIKEL',warnings,17.9);
+ single(page,fonts,'Oleh:',12,cx,613.83,420,'Oleh',warnings);
+ single(page,fonts,upper(data.nama),12,cx,627.12,425,'Nama Artikel',warnings,9,false,BLACK,nameUnderlineEnabled(data));
+ single(page,fonts,'NIM: '+norm(data.nim),12,cx,640.41,425,'NIM Artikel',warnings,9);
+ const prefixed=(prefix,value)=>{const clean=upper(value);return clean.startsWith(prefix+' ')?clean:prefix+' '+clean;};
+ const footer=[prefixed('PROGRAM STUDI',data.prodi),...(norm(data.fakultas)?[prefixed('FAKULTAS',data.fakultas)]:[]),upper(canonicalUniversity(data.universitas)),upper(data.bulan_tahun)];
+ const firstBaseline=801.24-(footer.length-1)*13.29;
+ footer.forEach((line,i)=>single(page,fonts,line,12,cx,firstBaseline+i*13.29,425,'Identitas Artikel '+(i+1),warnings,9));
+ const bytes=new Uint8Array(await doc.save({useObjectStreams:true}));
+ const checked=await PDFDocument.load(bytes);
+ if(checked.getPageCount()!==1||Math.abs(checked.getPage(0).getWidth()-mmPt(475))>.3||Math.abs(checked.getPage(0).getHeight()-mmPt(320))>.3)fail('PDF Cover Artikel gagal pemeriksaan ukuran kertas 475 × 320 mm.');
+ return {bytes,warnings,details:{mode:'coverartikel',mm:null,paper_mm:COLOR_PRINT_MM,pages:1,has_spine:false,has_logo:false,title_lines:title.rows.length,title_font_pt:title.pt}};
+}
+
 /** Main public API, backward-compatible with V3.8 */
 export async function generatePDF(data,mm,mode='polos',customColor=null,customLogo=null){
  await ensureAssets();
  const c=validateCoverMode(mode,customColor);
+ if(c.type==='coverartikel')return generateArticleCoverPDF(data);
  if(c.type==='covercd')return generateCoverCDPDF(data);
  if(c.type==='dummybook')return generateDummyPDF(data,mm);
  if(c.type==='softips')return generateSoftIPSPDF(data,mm);

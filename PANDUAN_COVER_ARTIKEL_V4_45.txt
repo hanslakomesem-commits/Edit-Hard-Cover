@@ -1,0 +1,22 @@
+ZAIN.NET COVER — V4.45 — COVER ARTIKEL TANPA PUNGGUNG
+
+MENU BARU
+- Jenis Cover -> Cover Artikel — Tanpa Punggung.
+- Kertas 475 × 320 mm (ikuti PDF referensi yang disertakan di assets/).
+- Sisi kiri putih kosong, teks akademik pada sisi kanan. Tanpa punggung, logo, atau garis lipatan.
+- Teks ARTIKEL otomatis. Judul, nama, NIM, program studi, fakultas (opsional), universitas, bulan/tahun dapat diedit.
+- Tidak perlu memilih ketebalan. Mendukung unduh PDF sendiri, ZIP batch, dan gabung PDF.
+
+PEMASANGAN GITHUB PAGES
+1. Buka repository hanslakomesem-commits/Edit-Hard-Cover pada branch main.
+2. Unggah semua isi folder Edit-Hard-Cover-main ini ke ROOT repository, termasuk assets dan tests (jangan unggah folder pembungkusnya jika mengunggah file satu per satu).
+3. Commit changes. GitHub Pages memperbarui situs setelah proses deployment selesai.
+4. Refresh paksa browser (Ctrl+F5), lalu masuk menu Cover Artikel.
+5. Gunakan menu + Pesanan Manual atau unggah PDF/DOCX/foto. Pilih Cover Artikel, periksa identitas, lalu klik Buat & Lihat PDF.
+6. Cetak dengan skala 100% dan ukuran kertas 475 × 320 mm.
+
+KETERANGAN
+- Perubahan hanya pada index.html, app.js, pdf-engine.js; ditambah file referensi PDF, tes, dan panduan.
+- Aset lainnya tetap dipertahankan.
+- Skrip PASANG_COVER_ARTIKEL.py bawaan ZIP lama tidak perlu dijalankan lagi; perubahannya sudah diterapkan.
+- PDF menggunakan font Tinos sebagai alternatif Times New Roman; periksa hasil cetak fisik sebelum produksi.

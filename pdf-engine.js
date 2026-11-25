@@ -1381,30 +1381,31 @@ async function generateArticleCoverPDF(data){
  // V4.46: match the two tiny positioning marks at BOTH the top and bottom
  // of cover artikel(1).pdf. Measured in original 475 x 320 mm PDF points.
  // They must never be removed even though the ARTICLE cover has no spine text.
- const markInk=rgb(0.13582,0.12105,0.12430);
+ const articleInk=rgb(35/255,31/255,32/255); // #231F20, sampled from artikel.pdf
  for(const x of [693.13,721.16]){
   for(const [top,bottom] of [[28.081,32.456],[874.344,882.081]]){
-   page.drawLine({start:{x,y:page.getHeight()-top},end:{x,y:page.getHeight()-bottom},thickness:1.4,color:markInk});
+   page.drawLine({start:{x,y:page.getHeight()-top},end:{x,y:page.getHeight()-bottom},thickness:1.4,color:articleInk});
   }
  }
  const fonts=await getFonts(doc,warnings);
- const cx=997.9;
+ // Centers measured from artikel.pdf; PDF page is 475 x 320 mm.
+ const titleCx=991.15175, labelCx=991.45244, authorCx=991.28635, footerCx=991.672;
  let title=null;
  for(let pt=12;pt>=9.5;pt-=.25){
   const rows=articleTitleLines(fonts,pt);
   if(rows.length<=4&&rows.every(row=>measure(fonts,row,pt)<=412+NEAR)){title={rows,pt};break;}
  }
  if(!title)fail('Judul Cover Artikel terlalu panjang untuk empat baris; periksa teks judul.');
- title.rows.forEach((line,i)=>renderLine(page,fonts,line,title.pt,cx,117.31+i*13.29,false,BLACK));
+ title.rows.forEach((line,i)=>renderLine(page,fonts,line,title.pt,titleCx,117.31+i*13.29,false,articleInk));
  if(title.pt<12)warnings.push('Cover Artikel: font judul disesuaikan menjadi '+title.pt+' pt.');
- single(page,fonts,'ARTIKEL',17.9,cx,244.17,420,'Label ARTIKEL',warnings,17.9);
- single(page,fonts,'Oleh:',12,cx,613.83,420,'Oleh',warnings);
- single(page,fonts,upper(data.nama),12,cx,627.12,425,'Nama Artikel',warnings,9,false,BLACK,nameUnderlineEnabled(data));
- single(page,fonts,'NIM: '+norm(data.nim),12,cx,640.41,425,'NIM Artikel',warnings,9);
+ single(page,fonts,'ARTIKEL',17.9,labelCx,244.225,420,'Label ARTIKEL',warnings,17.9,false,articleInk);
+ single(page,fonts,'Oleh:',12,authorCx,360.86,420,'Oleh',warnings,12,false,articleInk);
+ single(page,fonts,upper(data.nama),12,authorCx,374.15,425,'Nama Artikel',warnings,9,false,articleInk,false);
+ single(page,fonts,'NIM: '+norm(data.nim),12,authorCx,387.44,425,'NIM Artikel',warnings,9,false,articleInk);
  const prefixed=(prefix,value)=>{const clean=upper(value);return clean.startsWith(prefix+' ')?clean:prefix+' '+clean;};
  const footer=[prefixed('PROGRAM STUDI',data.prodi),...(norm(data.fakultas)?[prefixed('FAKULTAS',data.fakultas)]:[]),upper(canonicalUniversity(data.universitas)),upper(data.bulan_tahun)];
- const firstBaseline=801.24-(footer.length-1)*13.29;
- footer.forEach((line,i)=>single(page,fonts,line,12,cx,firstBaseline+i*13.29,425,'Identitas Artikel '+(i+1),warnings,9));
+ const firstBaseline=804.358-(footer.length-1)*13.29;
+ footer.forEach((line,i)=>single(page,fonts,line,12,footerCx,firstBaseline+i*13.29,425,'Identitas Artikel '+(i+1),warnings,9,false,articleInk));
  const bytes=new Uint8Array(await doc.save({useObjectStreams:true}));
  const checked=await PDFDocument.load(bytes);
  if(checked.getPageCount()!==1||Math.abs(checked.getPage(0).getWidth()-mmPt(475))>.3||Math.abs(checked.getPage(0).getHeight()-mmPt(320))>.3)fail('PDF Cover Artikel gagal pemeriksaan ukuran kertas 475 × 320 mm.');

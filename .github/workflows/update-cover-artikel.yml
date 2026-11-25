@@ -1,0 +1,100 @@
+name: Update Cover Artikel Layout
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - ".github/workflows/update-cover-artikel.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  patch-cover-artikel:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Patch only Cover Artikel generator
+        shell: python
+        run: |
+          from pathlib import Path
+
+          path = Path("pdf-engine.js")
+          if not path.exists():
+              raise SystemExit("pdf-engine.js tidak ditemukan di root repository.")
+
+          source = path.read_text(encoding="utf-8")
+          start = source.index("async function generateArticleCoverPDF(data){")
+          end = source.index("\n}\n\n/** Main public API", start)
+          block = source[start:end]
+
+          replacements = [
+              (
+                  " const markInk=rgb(0.13582,0.12105,0.12430);",
+                  " const articleInk=rgb(35/255,31/255,32/255); // #231F20, sampled from artikel.pdf"
+              ),
+              (
+                  "thickness:1.4,color:markInk",
+                  "thickness:1.4,color:articleInk"
+              ),
+              (
+                  " const cx=997.9;",
+                  " // Centers measured from artikel.pdf; PDF page is 475 x 320 mm.\n"
+                  " const titleCx=991.15175, labelCx=991.45244, authorCx=991.28635, footerCx=991.672;"
+              ),
+              (
+                  "title.pt,cx,117.31+i*13.29,false,BLACK",
+                  "title.pt,titleCx,117.31+i*13.29,false,articleInk"
+              ),
+              (
+                  "17.9,cx,244.17,420,'Label ARTIKEL',warnings,17.9",
+                  "17.9,labelCx,244.225,420,'Label ARTIKEL',warnings,17.9,false,articleInk"
+              ),
+              (
+                  "12,cx,613.83,420,'Oleh',warnings",
+                  "12,authorCx,360.86,420,'Oleh',warnings,12,false,articleInk"
+              ),
+              (
+                  "12,cx,627.12,425,'Nama Artikel',warnings,9,false,BLACK,nameUnderlineEnabled(data)",
+                  "12,authorCx,374.15,425,'Nama Artikel',warnings,9,false,articleInk,false"
+              ),
+              (
+                  "12,cx,640.41,425,'NIM Artikel',warnings,9",
+                  "12,authorCx,387.44,425,'NIM Artikel',warnings,9,false,articleInk"
+              ),
+              (
+                  "const firstBaseline=801.24-(footer.length-1)*13.29;",
+                  "const firstBaseline=804.358-(footer.length-1)*13.29;"
+              ),
+              (
+                  "12,cx,firstBaseline+i*13.29,425,'Identitas Artikel '+(i+1),warnings,9",
+                  "12,footerCx,firstBaseline+i*13.29,425,'Identitas Artikel '+(i+1),warnings,9,false,articleInk"
+              ),
+          ]
+
+          for old, new in replacements:
+              count = block.count(old)
+              if count != 1:
+                  raise SystemExit(
+                      f"Patch dibatalkan: pola tidak cocok tepat satu kali: {old!r} "
+                      f"(ditemukan {count}). Tidak ada file yang diubah."
+                  )
+              block = block.replace(old, new, 1)
+
+          updated = source[:start] + block + source[end:]
+          path.write_text(updated, encoding="utf-8")
+          print("Berhasil memperbarui fungsi generateArticleCoverPDF saja.")
+
+      - name: Commit changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add pdf-engine.js
+          if git diff --cached --quiet; then
+            echo "Tidak ada perubahan baru."
+            exit 0
+          fi
+          git commit -m "Match Cover Artikel to latest artikel.pdf"
+          git push
